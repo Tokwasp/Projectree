@@ -1,0 +1,14 @@
+#!/bin/bash
+
+BRANCH_NAME=$(git symbolic-ref --short HEAD)
+ISSUE_KEY=$(echo "$BRANCH_NAME" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+')
+
+if [ -n "$ISSUE_KEY" ]; then
+  COMMIT_SOURCE=$2
+  if [ -z "$COMMIT_SOURCE" ] || [ "$COMMIT_SOURCE" = "message" ]; then
+    if ! grep -q "$ISSUE_KEY" "$1"; then
+      sed -i.bak -e "1s/^/$ISSUE_KEY: /" "$1"
+      rm -f "$1.bak"
+    fi
+  fi
+fi
