@@ -1,3 +1,0 @@
-include:
-  - local: ".gitlab/ci/frontend.yml"
-# - local: ".gitlab/ci/backend.yml"
