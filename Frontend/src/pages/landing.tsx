@@ -7,7 +7,7 @@ export default function Landing() {
       <StarfieldBackground />
       <main>
         <span className={style.title}>Projectree</span>
-        <span className={style.info}>회의를 지식으로 변환하세요</span>
+        <span className={style.info}>당신의 프로젝트를 시각화하세요</span>
         <button className={style.startBtn}>Get Started</button>
       </main>
     </>
