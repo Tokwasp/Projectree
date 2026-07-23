@@ -1,0 +1,48 @@
+.header {
+  /* background: transparent; */
+  background-color: black;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* position: absolute;
+  top: 0; */
+  padding: 20px;
+}
+.logoContainer {
+  display: flex;
+  align-items: center;
+}
+.logoContainer span {
+  font-size: var(--text-2xl);
+  font-weight: bold;
+  margin-left: 10px;
+  color: white;
+}
+.logo {
+  height: 50px;
+}
+.loginBtn {
+  background: transparent;
+  color: var(--color-white);
+  padding: 10px 40px;
+  font-size: var(--text-md);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.loginBtn:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.loginBtn:active {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(0);
+}
