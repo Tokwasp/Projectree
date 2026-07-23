@@ -19,7 +19,7 @@ export default function StarfieldBackground() {
       originX: container.clientWidth / 2,
       originY: container.clientHeight / 2,
 
-      numStars: 250,
+      numStars: 350,
       baseSpeed: 3,
       trailLength: 0.8,
 
