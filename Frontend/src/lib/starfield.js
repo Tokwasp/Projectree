@@ -6,7 +6,7 @@ const Starfield = () => {
     baseSpeed: 1, // Base speed of stars (will affect acceleration)
     trailLength: 0.8, // Length of star trail (0-1)
     starColor: "rgb(255, 255, 255)", // Color of stars (only rgb)
-    canvasColor: "rgb(0, 0, 0)", // Canvas background color (only rgb)
+    canvasColor: "var(--color-background)", // Canvas background color (only rgb)
     hueJitter: 0, // Maximum hue variation in degrees (0-360)
     maxAcceleration: 10, // Maximum acceleration
     accelerationRate: 0.2, // Rate of acceleration
@@ -31,7 +31,7 @@ const Starfield = () => {
   let canvas, ctx;
   let width, height;
   let lastTimestamp = 0;
-  let canvasRGB = [0, 0, 0];
+  let canvasRGB = [27, 28, 30];
   let lastCanvasColor = config.canvasColor;
 
   let origin;

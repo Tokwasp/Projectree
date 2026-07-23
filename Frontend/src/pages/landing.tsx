@@ -4,7 +4,7 @@ import StarfieldBackground from "../components/landing/StarfieldBackground";
 export default function Landing() {
   return (
     <>
-      <StarfieldBackground />d
+      <StarfieldBackground />
     </>
   );
 }

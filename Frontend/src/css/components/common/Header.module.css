@@ -1,0 +1,55 @@
+.header {
+  /* background: transparent; */
+  background-color: black;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* position: absolute;
+  top: 0; */
+  padding: 20px;
+}
+.logoContainer {
+  display: flex;
+  align-items: center;
+}
+.logoContainer span {
+  font-size: var(--text-2xl);
+  font-weight: bold;
+  margin-left: 10px;
+  color: white;
+}
+.logo {
+  height: 50px;
+}
+.loginBtn {
+  background: transparent;
+  color: var(--color-white);
+  padding: 10px 40px;
+  font-size: var(--text-md);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.loginBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.loginBtn:active {
+  transform: translateY(1px) scale(0.98);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.loginBtn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
