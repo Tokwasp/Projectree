@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: projectree
+  # 호스트(IDE/gradle) 실행 시 프로젝트 루트의 .env를 읽어온다.
+  # 컨테이너에는 .env가 없지만(.dockerignore) optional 이라 무시되고,
+  # compose가 주입한 실제 환경변수가 항상 이 값보다 우선한다.
+  config:
+    import: optional:file:./.env[.properties]
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+    open-in-view: false
