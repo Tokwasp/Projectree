@@ -4,4 +4,5 @@ export interface ProjectSummary {
   ownerName: string;
   memberCount: number;
   createdAt: string;
+  thumbnailUrl?: string;
 }

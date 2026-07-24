@@ -8,10 +8,18 @@ interface ProjectCardProps {
 export default function ProjectCard({ project }: ProjectCardProps) {
   return (
     <article className={style.card}>
-      <div className={style.cardHeader}>
-        <div className={style.projectIcon} aria-hidden="true">
-          {project.title.charAt(0)}
-        </div>
+      <div className={style.projectVisual}>
+        {project.thumbnailUrl ? (
+          <img
+            className={style.projectThumbnail}
+            src={project.thumbnailUrl}
+            alt=""
+          />
+        ) : (
+          <span className={style.projectFallback} aria-hidden="true">
+            {project.title.charAt(0)}
+          </span>
+        )}
 
         <button
           className={style.menuButton}
@@ -22,10 +30,12 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         </button>
       </div>
 
-      <h3 className={style.projectName}>{project.title}</h3>
+      <div className={style.cardContent}>
+        <h3 className={style.projectName}>{project.title}</h3>
 
-      <div className={style.projectMeta}>
-        <span>팀원 {project.memberCount}명</span>
+        <div className={style.projectMeta}>
+          <span>팀원 {project.memberCount}명</span>
+        </div>
       </div>
     </article>
   );

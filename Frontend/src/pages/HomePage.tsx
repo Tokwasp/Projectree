@@ -1,4 +1,5 @@
 import RecentProjectSection from "../components/home/RecentProjectSection";
+import projectPlaceholder from "../assets/project-placeholder.svg";
 import type { ProjectSummary } from "../types/Project";
 
 const mockProjects: ProjectSummary[] = [
@@ -8,6 +9,7 @@ const mockProjects: ProjectSummary[] = [
     ownerName: "김싸피",
     memberCount: 6,
     createdAt: "2026-07-15T10:00:00",
+    thumbnailUrl: projectPlaceholder,
   },
   {
     projectId: 2,
@@ -15,6 +17,7 @@ const mockProjects: ProjectSummary[] = [
     ownerName: "이싸피",
     memberCount: 5,
     createdAt: "2026-07-16T09:30:00",
+    thumbnailUrl: projectPlaceholder,
   },
   {
     projectId: 3,
@@ -22,6 +25,7 @@ const mockProjects: ProjectSummary[] = [
     ownerName: "박싸피",
     memberCount: 4,
     createdAt: "2026-07-17T14:00:00",
+    thumbnailUrl: projectPlaceholder,
   },
   {
     projectId: 4,
@@ -29,6 +33,7 @@ const mockProjects: ProjectSummary[] = [
     ownerName: "최싸피",
     memberCount: 6,
     createdAt: "2026-07-18T11:20:00",
+    thumbnailUrl: projectPlaceholder,
   },
   {
     projectId: 5,
@@ -36,6 +41,7 @@ const mockProjects: ProjectSummary[] = [
     ownerName: "정싸피",
     memberCount: 5,
     createdAt: "2026-07-19T09:00:00",
+    thumbnailUrl: projectPlaceholder,
   },
   {
     projectId: 6,
@@ -43,6 +49,7 @@ const mockProjects: ProjectSummary[] = [
     ownerName: "한싸피",
     memberCount: 4,
     createdAt: "2026-07-20T13:30:00",
+    thumbnailUrl: projectPlaceholder,
   },
   {
     projectId: 7,
@@ -50,6 +57,7 @@ const mockProjects: ProjectSummary[] = [
     ownerName: "윤싸피",
     memberCount: 6,
     createdAt: "2026-07-21T10:40:00",
+    thumbnailUrl: projectPlaceholder,
   },
   {
     projectId: 8,
@@ -57,6 +65,7 @@ const mockProjects: ProjectSummary[] = [
     ownerName: "장싸피",
     memberCount: 5,
     createdAt: "2026-07-22T15:10:00",
+    thumbnailUrl: projectPlaceholder,
   },
 ];
 
