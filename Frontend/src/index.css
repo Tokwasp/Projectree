@@ -121,5 +121,8 @@ body,
   --header-height: 64px;
   --sidebar-width: 280px;
 
+  --app-header-height: 56px;
+  --app-sidebar-width: 184px;
+
   --container-width: 1200px;
 }
