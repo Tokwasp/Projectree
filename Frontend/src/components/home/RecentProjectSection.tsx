@@ -1,4 +1,4 @@
-import ProjectCard from "./ProjectCard";
+import ProjectCard from "../project/ProjectCard";
 import type { ProjectSummary } from "../../types/Project";
 import style from "../../css/components/home/RecentProjectSection.module.css";
 
