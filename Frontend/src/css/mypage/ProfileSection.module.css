@@ -1,0 +1,91 @@
+.section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.profileImage,
+.profileFallback {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+}
+
+.profileImage {
+  display: block;
+  object-fit: cover;
+}
+
+.profileFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  background: rgb(203 98 255 / 12%);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-semibold);
+}
+
+.profileInfo {
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
+}
+
+.email {
+  margin: var(--space-2) 0 0;
+  overflow: hidden;
+  color: var(--color-secondary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editButton {
+  height: var(--space-10);
+  padding: 0 var(--space-6);
+  flex-shrink: 0;
+  color: var(--color-white);
+  background: var(--color-primary);
+  border: 0;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+}
+
+.editButton:hover {
+  filter: brightness(0.95);
+}
+
+@media (max-width: 768px) {
+  .section {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profileImage,
+  .profileFallback {
+    width: 80px;
+    height: 80px;
+  }
+
+  .editButton {
+    align-self: flex-end;
+  }
+}
