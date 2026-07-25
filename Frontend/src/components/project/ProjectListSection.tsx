@@ -1,4 +1,4 @@
-import ProjectCard from "./ProjectCard";
+import ProjectGrid from "./ProjectGrid";
 import ProjectPagination from "./ProjectPagination";
 import ProjectToolbar from "./ProjectToolbar";
 import type { ProjectSummary } from "../../types/Project";
@@ -30,15 +30,11 @@ export default function ProjectListSection({
         onSearchChange={onSearchChange}
       />
 
-      {projects.length > 0 ? (
-        <div className={style.projectGrid}>
-          {projects.map((project) => (
-            <ProjectCard key={project.projectId} project={project} />
-          ))}
-        </div>
-      ) : (
-        <p className={style.emptyMessage}>검색 결과가 없습니다.</p>
-      )}
+      <ProjectGrid
+        projects={projects}
+        emptyMessage="검색 결과가 없습니다."
+      />
+
       <ProjectPagination
         currentPage={currentPage}
         totalPages={totalPages}

@@ -1,4 +1,4 @@
-import ProjectCard from "../project/ProjectCard";
+import ProjectGrid from "../project/ProjectGrid";
 import type { ProjectSummary } from "../../types/Project";
 import style from "../../css/components/home/RecentProjectSection.module.css";
 
@@ -19,15 +19,10 @@ export default function RecentProjectSection({
         </button>
       </div>
 
-      {projects.length > 0 ? (
-        <div className={style.projectGrid}>
-          {projects.map((project) => (
-            <ProjectCard key={project.projectId} project={project} />
-          ))}
-        </div>
-      ) : (
-        <p className={style.emptyMessage}>참여 중인 프로젝트가 없습니다.</p>
-      )}
+      <ProjectGrid
+        projects={projects}
+        emptyMessage="참여 중인 프로젝트가 없습니다."
+      />
     </section>
   );
 }
