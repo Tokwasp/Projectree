@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import ProjectGrid from "../project/ProjectGrid";
 import type { ProjectSummary } from "../../types/Project";
 import style from "../../css/components/home/RecentProjectSection.module.css";
@@ -14,9 +15,9 @@ export default function RecentProjectSection({
       <div className={style.sectionHeader}>
         <h1 className={style.title}>최근 프로젝트</h1>
 
-        <button className={style.viewAllButton} type="button">
+        <Link className={style.viewAllButton} to="/projects">
           전체 프로젝트 보기
-        </button>
+        </Link>
       </div>
 
       <ProjectGrid

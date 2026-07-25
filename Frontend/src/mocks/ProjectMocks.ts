@@ -66,7 +66,7 @@ export const mockProjects: ProjectSummary[] = [
     createdAt: "2026-07-22T15:10:00",
     thumbnailUrl: projectPlaceholder,
   },
-    {
+  {
     projectId: 9,
     title: "스마트 업무 관리 서비스",
     ownerName: "오싸피",

@@ -23,6 +23,7 @@
   border: 0;
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
+  text-decoration: none;
   cursor: pointer;
 }
 
