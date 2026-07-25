@@ -1,4 +1,4 @@
-import style from "../../css/components/project/ProjectToolbar.module.css";
+import style from "../../css/project/ProjectToolbar.module.css";
 
 interface ProjectToolbarProps {
   searchKeyword: string;

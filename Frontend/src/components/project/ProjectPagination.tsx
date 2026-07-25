@@ -1,4 +1,4 @@
-import style from "../../css/components/project/ProjectPagination.module.css";
+import style from "../../css/project/ProjectPagination.module.css";
 
 interface ProjectPaginationProps {
   currentPage: number;

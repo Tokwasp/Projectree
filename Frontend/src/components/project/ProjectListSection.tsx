@@ -2,7 +2,7 @@ import ProjectGrid from "./ProjectGrid";
 import ProjectPagination from "./ProjectPagination";
 import ProjectToolbar from "./ProjectToolbar";
 import type { ProjectSummary } from "../../types/Project";
-import style from "../../css/components/project/ProjectListSection.module.css";
+import style from "../../css/project/ProjectListSection.module.css";
 
 interface ProjectListSectionProps {
   projects: ProjectSummary[];

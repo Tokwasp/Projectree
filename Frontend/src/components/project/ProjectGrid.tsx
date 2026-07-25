@@ -1,6 +1,6 @@
 import ProjectCard from "./ProjectCard";
 import type { ProjectSummary } from "../../types/Project";
-import style from "../../css/components/project/ProjectGrid.module.css";
+import style from "../../css/project/ProjectGrid.module.css";
 
 interface ProjectGridProps {
   projects: ProjectSummary[];
