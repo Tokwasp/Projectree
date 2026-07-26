@@ -22,24 +22,21 @@
   height: 50px;
 }
 .loginBtn {
-  background: transparent;
+  background: #403747;
   color: var(--color-white);
   padding: 10px 40px;
   font-size: var(--text-md);
   cursor: pointer;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border: none;
 
   transition:
     background-color 0.2s ease,
-    border-color 0.2s ease,
     transform 0.2s ease;
 }
 
 .loginBtn:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
+  background: #cb62ff;
 }
 
 .loginBtn:active {
