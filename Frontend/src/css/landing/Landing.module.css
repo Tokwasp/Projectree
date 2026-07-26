@@ -12,12 +12,12 @@ main {
 .title {
   font-size: var(--text-title);
   font-weight: bold;
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
 }
 
 .info {
   font-size: var(--text-lg);
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-12);
   color: var(--color-gray-300);
 }
 
