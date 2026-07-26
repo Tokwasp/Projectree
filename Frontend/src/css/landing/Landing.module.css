@@ -46,3 +46,15 @@ main {
   transform: scale(0.98);
   filter: brightness(0.97);
 }
+
+.eclipseBlur {
+  position: absolute;
+  width: 800px;
+  height: 12.78rem;
+  background-color: rgba(203, 98, 255, 0.5);
+  border-radius: 50%;
+  filter: blur(6.67rem);
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 60%);
+}

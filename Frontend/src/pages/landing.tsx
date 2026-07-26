@@ -15,6 +15,7 @@ export default function Landing() {
           Get Started
         </button>
       </main>
+      <div className={style.eclipseBlur} />
     </>
   );
 }
