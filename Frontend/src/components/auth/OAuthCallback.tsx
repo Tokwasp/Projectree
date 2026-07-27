@@ -33,8 +33,8 @@ export default function OAuthCallback() {
       provider === "naver" ? getNaverRedirectUri() : getGoogleRedirectUri();
 
     request({ code, redirectUri })
-      .then((data) => {
-        navigate("/", { replace: true });
+      .then(() => {
+        navigate("/home", { replace: true });
       })
       .catch((error) => {
         console.error("소셜 로그인 실패:", error);
