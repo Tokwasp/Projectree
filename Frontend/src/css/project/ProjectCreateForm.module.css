@@ -1,27 +1,12 @@
-.backdrop {
-  position: fixed;
-  inset:
-    var(--app-header-height)
-    0
-    0
-    var(--app-sidebar-width);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-6);
-  background: rgb(27 28 30 / 45%);
-}
-
-.modal {
+.formContainer {
   width: 100%;
-  max-width: 880px;
-  max-height: calc(100vh - var(--space-12));
-  overflow-y: auto;
+  max-width: 960px;
+  margin: 0 auto;
+  overflow: hidden;
   background: var(--color-white);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .form {
@@ -190,20 +175,6 @@
 }
 
 @media (max-width: 768px) {
-  .backdrop {
-    align-items: flex-start;
-    inset:
-      var(--app-header-height)
-      0
-      0
-      var(--app-sidebar-width);
-    padding: var(--space-4);
-  }
-
-  .modal {
-    max-height: calc(100vh - var(--space-8));
-  }
-
   .content {
     grid-template-columns: 1fr;
     padding: var(--space-6);
