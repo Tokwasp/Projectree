@@ -1,10 +1,8 @@
 package com.ssafy.projectree;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class ProjectreeApplicationTests {
+class ProjectreeApplicationTests extends IntegrationTestSupport {
 
 	@Test
 	void contextLoads() {

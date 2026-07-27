@@ -20,6 +20,7 @@ repositories {
 dependencies {
 	// Lombok & mvc
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 
@@ -42,6 +43,10 @@ dependencies {
 	// H2
 	implementation 'org.springframework.boot:spring-boot-h2console'
 	runtimeOnly 'com.h2database:h2'
+
+	// Redis 세션 (Spring Session)
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.springframework.boot:spring-boot-starter-session-data-redis'
 
 	// .env 로딩은 application.yaml의 spring.config.import 로 처리 (Spring Boot 내장 기능)
 
