@@ -39,3 +39,7 @@ out/
 ### Env ###
 .env
 !.env.example
+
+### Claude ###
+.claude/
+.CLAUDE.md
