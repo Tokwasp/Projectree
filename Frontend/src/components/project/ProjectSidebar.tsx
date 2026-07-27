@@ -1,5 +1,10 @@
 import { Link, NavLink, useParams } from "react-router-dom";
 import Logo from "../../assets/logo.svg";
+import MemberIcon from "../../assets/icons/sidebar/member.png";
+import MeetingIcon from "../../assets/icons/sidebar/meeting.png";
+import NodeIcon from "../../assets/icons/sidebar/node.png";
+import ProjectHomeIcon from "../../assets/icons/sidebar/project-home.png";
+import SettingsIcon from "../../assets/icons/sidebar/settings.png";
 import style from "../../css/components/common/Sidebar.module.css";
 
 export default function ProjectSidebar() {
@@ -27,23 +32,53 @@ export default function ProjectSidebar() {
           to={projectHomePath}
           end
         >
-          프로젝트 홈
+          <img
+            className={style.menuIcon}
+            src={ProjectHomeIcon}
+            alt=""
+            aria-hidden="true"
+          />
+          <span>프로젝트 홈</span>
         </NavLink>
 
         <button className={style.menuButton} type="button">
-          회의
+          <img
+            className={style.menuIcon}
+            src={MeetingIcon}
+            alt=""
+            aria-hidden="true"
+          />
+          <span>회의</span>
         </button>
 
         <button className={style.menuButton} type="button">
-          노드
+          <img
+            className={style.menuIcon}
+            src={NodeIcon}
+            alt=""
+            aria-hidden="true"
+          />
+          <span>노드</span>
         </button>
 
         <button className={style.menuButton} type="button">
-          팀원
+          <img
+            className={style.menuIcon}
+            src={MemberIcon}
+            alt=""
+            aria-hidden="true"
+          />
+          <span>팀원</span>
         </button>
 
         <button className={style.menuButton} type="button">
-          설정
+          <img
+            className={style.menuIcon}
+            src={SettingsIcon}
+            alt=""
+            aria-hidden="true"
+          />
+          <span>설정</span>
         </button>
       </nav>
     </div>
