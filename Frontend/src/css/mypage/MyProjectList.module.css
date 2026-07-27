@@ -1,0 +1,92 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  color: var(--color-secondary);
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table th {
+  color: var(--color-secondary);
+  font-weight: var(--font-medium);
+}
+
+.table th:first-child,
+.table td:first-child {
+  width: 45%;
+}
+
+.table tbody tr:hover {
+  background: var(--color-gray-50);
+}
+
+.projectInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.projectThumbnail,
+.projectFallback {
+  width: var(--space-10);
+  height: var(--space-10);
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+}
+
+.projectThumbnail {
+  display: block;
+  object-fit: cover;
+}
+
+.projectFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  background: rgb(203 98 255 / 12%);
+  font-weight: var(--font-semibold);
+}
+
+.projectName {
+  overflow: hidden;
+  color: var(--color-text);
+  font-weight: var(--font-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emptyMessage {
+  margin: 0;
+  padding: var(--space-12);
+  color: var(--color-secondary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
