@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ProjectListSection from "../components/project/ProjectListSection";
 import { mockProjects } from "../mocks/ProjectMocks";
 
 const PROJECTS_PER_PAGE = 8;
 
 export default function ProjectPage() {
+  const navigate = useNavigate();
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -34,6 +36,7 @@ export default function ProjectPage() {
       totalPages={totalPages}
       onSearchChange={handleSearchChange}
       onPageChange={setCurrentPage}
+      onCreateClick={() => navigate("/projects/create")}
     />
   );
 }

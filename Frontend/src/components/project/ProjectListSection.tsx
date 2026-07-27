@@ -11,6 +11,7 @@ interface ProjectListSectionProps {
   totalPages: number;
   onSearchChange: (value: string) => void;
   onPageChange: (page: number) => void;
+  onCreateClick: () => void;
 }
 
 export default function ProjectListSection({
@@ -20,6 +21,7 @@ export default function ProjectListSection({
   totalPages,
   onSearchChange,
   onPageChange,
+  onCreateClick,
 }: ProjectListSectionProps) {
   return (
     <section className={style.section}>
@@ -28,6 +30,7 @@ export default function ProjectListSection({
       <ProjectToolbar
         searchKeyword={searchKeyword}
         onSearchChange={onSearchChange}
+        onCreateClick={onCreateClick}
       />
 
       <ProjectGrid

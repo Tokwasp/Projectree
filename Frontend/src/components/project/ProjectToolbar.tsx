@@ -3,11 +3,13 @@ import style from "../../css/project/ProjectToolbar.module.css";
 interface ProjectToolbarProps {
   searchKeyword: string;
   onSearchChange: (value: string) => void;
+  onCreateClick: () => void;
 }
 
 export default function ProjectToolbar({
   searchKeyword,
   onSearchChange,
+  onCreateClick,
 }: ProjectToolbarProps) {
   return (
     <div className={style.toolbar}>
@@ -20,7 +22,11 @@ export default function ProjectToolbar({
         onChange={(event) => onSearchChange(event.target.value)}
       />
 
-      <button className={style.createButton} type="button">
+      <button
+        className={style.createButton}
+        type="button"
+        onClick={onCreateClick}
+      >
         프로젝트 만들기
       </button>
     </div>
