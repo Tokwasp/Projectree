@@ -18,6 +18,7 @@
   height: 100vh;
   margin-left: var(--app-sidebar-width);
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .header {
