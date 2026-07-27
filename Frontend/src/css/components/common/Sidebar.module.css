@@ -31,6 +31,8 @@
 }
 
 .menuButton {
+  display: flex;
+  align-items: center;
   width: 100%;
   height: var(--space-10);
   padding: 0 var(--space-3);
@@ -39,6 +41,7 @@
   border: 0;
   border-radius: var(--radius-md);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 
