@@ -2,7 +2,7 @@ package com.ssafy.projectree.domain.member.service;
 
 import com.ssafy.projectree.domain.response.GoogleTokenResponse;
 import com.ssafy.projectree.domain.response.GoogleUserInfoResponse;
-import com.ssafy.projectree.global.config.GoogleOAuthProperties;
+import com.ssafy.projectree.global.config.session.GoogleOAuthProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
