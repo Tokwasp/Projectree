@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 
 @Configuration
-@EnableConfigurationProperties(GoogleOAuthProperties.class)
+@EnableConfigurationProperties({GoogleOAuthProperties.class, NaverOAuthProperties.class})
 public class RestClientConfig {
 
     @Bean
