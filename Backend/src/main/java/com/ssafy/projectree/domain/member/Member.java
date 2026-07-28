@@ -1,35 +1,35 @@
 package com.ssafy.projectree.domain.member;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.ssafy.projectree.domain.uploadfile.UploadFile;
+import com.ssafy.projectree.global.entity.BaseEntity;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "member")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Member {
+public class Member extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
+    private String email;
+
     @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(nullable = false)
-    private int age;
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "upload_file_id")
+    private UploadFile uploadFile;
 
     @Builder
-    public Member(String name, int age) {
+    public Member(String email, String name) {
+        this.email = email;
         this.name = name;
-        this.age = age;
     }
 }
