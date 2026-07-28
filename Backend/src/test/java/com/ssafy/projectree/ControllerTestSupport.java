@@ -2,6 +2,8 @@ package com.ssafy.projectree;
 
 import com.ssafy.projectree.domain.member.controller.AuthController;
 import com.ssafy.projectree.domain.member.service.AuthService;
+import com.ssafy.projectree.domain.project.controller.ProjectController;
+import com.ssafy.projectree.domain.project.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -9,7 +11,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(controllers = {
-        AuthController.class
+        AuthController.class,
+        ProjectController.class
 })
 public abstract class ControllerTestSupport {
 
@@ -21,5 +24,8 @@ public abstract class ControllerTestSupport {
 
     @MockitoBean
     protected AuthService authService;
+
+    @MockitoBean
+    protected ProjectService projectService;
 
 }
