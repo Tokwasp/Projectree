@@ -10,6 +10,7 @@ import ProjectCreatePage from "./pages/ProjectCreatePage";
 import ProjectHomePage from "./pages/ProjectHomePage";
 import MyPage from "./pages/MyPage";
 import ProjectPage from "./pages/ProjectPage";
+import ProjectMemberPage from "./pages/ProjectMemberPage";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
 
       <Route path="/projects/:projectId" element={<ProjectLayout />}>
         <Route index element={<ProjectHomePage />} />
+        <Route path="members" element={<ProjectMemberPage />} />
       </Route>
     </Routes>
   );
