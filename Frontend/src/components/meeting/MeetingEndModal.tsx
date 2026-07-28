@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import style from "../../css/meeting/MeetingEndModal.module.css";
 
 export interface MeetingOutputOptions {
@@ -20,9 +20,35 @@ export default function MeetingEndModal({
   const [createSummary, setCreateSummary] = useState(false);
   const [createNodes, setCreateNodes] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setCreateSummary(false);
+        setCreateNodes(false);
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) {
     return null;
   }
+
+  const handleClose = () => {
+    setCreateSummary(false);
+    setCreateNodes(false);
+    onClose();
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -31,15 +57,23 @@ export default function MeetingEndModal({
       createSummary,
       createNodes,
     });
+
+    setCreateSummary(false);
+    setCreateNodes(false);
   };
 
   return (
-    <div className={style.overlay}>
+    <div
+      className={style.overlay}
+      role="presentation"
+      onClick={handleClose}
+    >
       <section
         className={style.modal}
         role="dialog"
         aria-modal="true"
         aria-labelledby="meeting-end-title"
+        onClick={(event) => event.stopPropagation()}
       >
         <form onSubmit={handleSubmit}>
           <div className={style.header}>
@@ -102,7 +136,7 @@ export default function MeetingEndModal({
             <button
               className={style.cancelButton}
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
             >
               취소
             </button>
