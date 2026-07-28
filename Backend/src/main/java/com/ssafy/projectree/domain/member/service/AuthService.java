@@ -5,8 +5,8 @@ import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.member.controller.request.GoogleLoginRequest;
 import com.ssafy.projectree.domain.member.controller.response.GoogleLoginResponse;
-import com.ssafy.projectree.domain.response.GoogleTokenResponse;
-import com.ssafy.projectree.domain.response.GoogleUserInfoResponse;
+import com.ssafy.projectree.domain.member.controller.response.session.GoogleTokenResponse;
+import com.ssafy.projectree.domain.member.controller.response.session.GoogleUserInfoResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,7 +32,7 @@ public class AuthService {
     }
 
     private GoogleUserInfoResponse fetchUserInfo(GoogleLoginRequest request) {
-        GoogleTokenResponse token = googleOAuthClient.exchangeCode(
+        GoogleTokenResponse token = googleOAuthClient.getUserAccessToken(
                 request.getCode(),
                 request.getRedirectUri()
         );

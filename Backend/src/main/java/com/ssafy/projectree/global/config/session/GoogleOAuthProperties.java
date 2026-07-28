@@ -1,4 +1,4 @@
-package com.ssafy.projectree.global.config;
+package com.ssafy.projectree.global.config.session;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

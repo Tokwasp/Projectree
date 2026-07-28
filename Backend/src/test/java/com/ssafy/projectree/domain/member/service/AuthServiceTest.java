@@ -5,8 +5,8 @@ import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.member.controller.request.GoogleLoginRequest;
 import com.ssafy.projectree.domain.member.controller.response.GoogleLoginResponse;
-import com.ssafy.projectree.domain.response.GoogleTokenResponse;
-import com.ssafy.projectree.domain.response.GoogleUserInfoResponse;
+import com.ssafy.projectree.domain.member.controller.response.session.GoogleTokenResponse;
+import com.ssafy.projectree.domain.member.controller.response.session.GoogleUserInfoResponse;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +40,7 @@ class AuthServiceTest extends IntegrationTestSupport {
         GoogleLoginRequest request = createRequest("authorization-code");
         MockHttpSession session = new MockHttpSession();
 
-        given(googleOAuthClient.exchangeCode("authorization-code", REDIRECT_URI))
+        given(googleOAuthClient.getUserAccessToken("authorization-code", REDIRECT_URI))
                 .willReturn(createToken("google-access-token"));
         given(googleOAuthClient.getUserInfo("google-access-token"))
                 .willReturn(createUserInfo("ssafy@gmail.com", "김싸피"));
@@ -76,7 +76,7 @@ class AuthServiceTest extends IntegrationTestSupport {
         GoogleLoginRequest request = createRequest("authorization-code");
         MockHttpSession session = new MockHttpSession();
 
-        given(googleOAuthClient.exchangeCode("authorization-code", REDIRECT_URI))
+        given(googleOAuthClient.getUserAccessToken("authorization-code", REDIRECT_URI))
                 .willReturn(createToken("google-access-token"));
         given(googleOAuthClient.getUserInfo("google-access-token"))
                 .willReturn(createUserInfo("ssafy@gmail.com", "구글에서 바뀐 이름"));

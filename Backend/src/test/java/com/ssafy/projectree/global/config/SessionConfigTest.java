@@ -1,6 +1,7 @@
 package com.ssafy.projectree.global.config;
 
 import com.ssafy.projectree.domain.member.LoginMember;
+import com.ssafy.projectree.global.config.session.SessionConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.serializer.RedisSerializer;

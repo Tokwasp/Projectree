@@ -1,8 +1,8 @@
 package com.ssafy.projectree.domain.member.service;
 
-import com.ssafy.projectree.domain.response.GoogleTokenResponse;
-import com.ssafy.projectree.domain.response.GoogleUserInfoResponse;
-import com.ssafy.projectree.global.config.GoogleOAuthProperties;
+import com.ssafy.projectree.domain.member.controller.response.session.GoogleTokenResponse;
+import com.ssafy.projectree.domain.member.controller.response.session.GoogleUserInfoResponse;
+import com.ssafy.projectree.global.config.session.GoogleOAuthProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,18 +21,18 @@ public class GoogleOAuthClient {
     private final RestClient restClient;
     private final GoogleOAuthProperties properties;
 
-    public GoogleTokenResponse exchangeCode(String code, String redirectUri) {
-        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("code", code);
-        form.add("client_id", properties.getClientId());
-        form.add("client_secret", properties.getClientSecret());
-        form.add("redirect_uri", redirectUri);
-        form.add("grant_type", GRANT_TYPE_AUTHORIZATION_CODE);
+    public GoogleTokenResponse getUserAccessToken(String code, String redirectUri) {
+        MultiValueMap<String, String> requestMap = new LinkedMultiValueMap<>();
+        requestMap.add("code", code);
+        requestMap.add("client_id", properties.getClientId());
+        requestMap.add("client_secret", properties.getClientSecret());
+        requestMap.add("redirect_uri", redirectUri);
+        requestMap.add("grant_type", GRANT_TYPE_AUTHORIZATION_CODE);
 
         return restClient.post()
                 .uri(properties.getTokenUri())
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(form)
+                .body(requestMap)
                 .retrieve()
                 .body(GoogleTokenResponse.class);
     }

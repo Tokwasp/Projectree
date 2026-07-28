@@ -1,4 +1,4 @@
-package com.ssafy.projectree.global.config;
+package com.ssafy.projectree.global.config.session;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
