@@ -24,7 +24,6 @@ public class ProjectController {
     public ResponseEntity<ApiResponse<Integer>> createProject(
             @Valid @RequestBody ProjectCreateRequest request, HttpSession session
     ) {
-        System.out.println("호출됨~~");
         LoginMember loginMember = (LoginMember) session.getAttribute(SESSION_LOGIN_MEMBER);
         if (loginMember == null) {
             throw new IllegalStateException("로그인이 필요합니다.");
