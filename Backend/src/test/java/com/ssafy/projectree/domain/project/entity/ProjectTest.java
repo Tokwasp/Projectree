@@ -24,7 +24,7 @@ class ProjectTest {
         Project project = createProject("포트폴리오 사이트");
 
         // when
-        project.addMember(1, ProjectRole.OWNER);
+        addMember(project, 1, ProjectRole.OWNER);
 
         // then
         assertThat(project.getProjectMembers()).hasSize(1)
@@ -33,13 +33,27 @@ class ProjectTest {
                 .containsExactly(project, 1, ProjectRole.OWNER);
     }
 
+    @DisplayName("addMember는 넘겨받은 ProjectMember에 자신을 project로 주입한다.")
+    @Test
+    void addMember_assignsProject() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        ProjectMember projectMember = createMember(1, ProjectRole.OWNER);
+
+        // when
+        project.addMember(projectMember);
+
+        // then
+        assertThat(projectMember.getProject()).isSameAs(project);
+    }
+
     @DisplayName("removeMember로 해당 memberId의 멤버만 목록에서 제거된다.")
     @Test
     void removeMember() {
         // given
         Project project = createProject("포트폴리오 사이트");
-        project.addMember(1, ProjectRole.OWNER);
-        project.addMember(2, ProjectRole.MEMBER);
+        addMember(project, 1, ProjectRole.OWNER);
+        addMember(project, 2, ProjectRole.MEMBER);
 
         // when
         project.removeMember(2);
@@ -56,24 +70,10 @@ class ProjectTest {
     void removeMember_notParticipating() {
         // given
         Project project = createProject("포트폴리오 사이트");
-        project.addMember(1, ProjectRole.OWNER);
+        addMember(project, 1, ProjectRole.OWNER);
 
         // when
         project.removeMember(999);
-
-        // then
-        assertThat(project.getProjectMembers()).hasSize(1);
-    }
-
-    @DisplayName("removeMember에 null을 넘겨도 예외 없이 아무것도 제거되지 않는다.")
-    @Test
-    void removeMember_null() {
-        // given
-        Project project = createProject("포트폴리오 사이트");
-        project.addMember(1, ProjectRole.OWNER);
-
-        // when
-        project.removeMember(null);
 
         // then
         assertThat(project.getProjectMembers()).hasSize(1);
@@ -84,5 +84,16 @@ class ProjectTest {
                 .title(title)
                 .content("React로 만든 개인 포트폴리오입니다.")
                 .build();
+    }
+
+    private ProjectMember createMember(int memberId, ProjectRole role) {
+        return ProjectMember.builder()
+                .memberId(memberId)
+                .role(role)
+                .build();
+    }
+
+    private void addMember(Project project, int memberId, ProjectRole role) {
+        project.addMember(createMember(memberId, role));
     }
 }

@@ -3,12 +3,14 @@ package com.ssafy.projectree.domain.project.service;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.entity.Project;
+import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
-import jakarta.transaction.Transactional;
-import jakarta.validation.Valid;
+import com.ssafy.projectree.global.exception.BusinessException;
+import com.ssafy.projectree.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -17,18 +19,25 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
 
     @Transactional
-    public Integer createProject(@Valid ProjectCreateRequest dto, Integer memberId) {
+    public int createProject(ProjectCreateRequest dto, int memberId) {
         if (!memberRepository.existsById(memberId)) {
-            throw new IllegalArgumentException("존재하지 않는 회원입니다.");
+            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
         }
 
+        // 프로젝트 객체 생성
         Project project = Project.builder()
                 .title(dto.getTitle())
                 .content(dto.getContent())
                 .photoUrl(dto.getPhotoUrl())
                 .build();
 
-        project.addMember(memberId, ProjectRole.OWNER);
+        // 프로젝트 멤버 객체 생성
+        ProjectMember pm = ProjectMember.builder()
+                .memberId(memberId)
+                .role(ProjectRole.OWNER)
+                .build();
+
+        project.addMember(pm);
         return projectRepository.save(project).getId();
     }
 }

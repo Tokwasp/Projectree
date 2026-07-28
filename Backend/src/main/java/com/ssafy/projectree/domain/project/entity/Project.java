@@ -6,7 +6,6 @@ import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 @Entity
 @Table(name = "project")
@@ -16,7 +15,7 @@ public class Project extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private int id;
 
     @Column(nullable = false, length = 100)
     private String title;
@@ -37,17 +36,12 @@ public class Project extends BaseEntity {
         this.photoUrl = photoUrl;
     }
 
-    public void addMember(Integer memberId, ProjectRole role) {
-        this.projectMembers.add(
-                ProjectMember.builder()
-                        .project(this)
-                        .memberId(memberId)
-                        .role(role)
-                        .build()
-        );
+    public void addMember(ProjectMember pm) {
+        this.projectMembers.add(pm);
+        pm.assignProject(this);
     }
 
-    public void removeMember(Integer memberId) {
-        this.projectMembers.removeIf(pm -> Objects.equals(pm.getMemberId(), memberId));
+    public void removeMember(int memberId) {
+        this.projectMembers.removeIf(pm -> pm.getMemberId() == memberId);
     }
 }

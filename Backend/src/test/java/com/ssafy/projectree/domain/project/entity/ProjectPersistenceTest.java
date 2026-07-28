@@ -27,10 +27,10 @@ class ProjectPersistenceTest {
     void save_cascadesProjectMembers() {
         // given
         Project project = createProject("포트폴리오 사이트");
-        project.addMember(1, ProjectRole.OWNER);
+        addMember(project, 1, ProjectRole.OWNER);
 
         // when
-        Integer projectId = em.persistFlushFind(project).getId();
+        int projectId = em.persistFlushFind(project).getId();
         em.clear();
 
         // then
@@ -46,7 +46,7 @@ class ProjectPersistenceTest {
     void save_persistsRoleAsString() {
         // given
         Project project = createProject("포트폴리오 사이트");
-        project.addMember(1, ProjectRole.OWNER);
+        addMember(project, 1, ProjectRole.OWNER);
         em.persistAndFlush(project);
         em.clear();
 
@@ -78,8 +78,8 @@ class ProjectPersistenceTest {
     void removeMember_deletesRow() {
         // given
         Project project = createProject("포트폴리오 사이트");
-        project.addMember(1, ProjectRole.OWNER);
-        project.addMember(2, ProjectRole.MEMBER);
+        addMember(project, 1, ProjectRole.OWNER);
+        addMember(project, 2, ProjectRole.MEMBER);
         em.persistAndFlush(project);
 
         // when
@@ -96,8 +96,8 @@ class ProjectPersistenceTest {
     void addMember_duplicated() {
         // given
         Project project = createProject("포트폴리오 사이트");
-        project.addMember(1, ProjectRole.OWNER);
-        project.addMember(1, ProjectRole.MEMBER);
+        addMember(project, 1, ProjectRole.OWNER);
+        addMember(project, 1, ProjectRole.MEMBER);
 
         // when & then
         assertThatThrownBy(() -> em.persistAndFlush(project))
@@ -110,9 +110,9 @@ class ProjectPersistenceTest {
     void addMember_sameMemberAcrossProjects() {
         // given
         Project first = createProject("포트폴리오 사이트");
-        first.addMember(1, ProjectRole.OWNER);
+        addMember(first, 1, ProjectRole.OWNER);
         Project second = createProject("스터디 관리 앱");
-        second.addMember(1, ProjectRole.MEMBER);
+        addMember(second, 1, ProjectRole.MEMBER);
 
         // when
         em.persistAndFlush(first);
@@ -135,5 +135,14 @@ class ProjectPersistenceTest {
                 .title(title)
                 .content("React로 만든 개인 포트폴리오입니다.")
                 .build();
+    }
+
+    private void addMember(Project project, int memberId, ProjectRole role) {
+        project.addMember(
+                ProjectMember.builder()
+                        .memberId(memberId)
+                        .role(role)
+                        .build()
+        );
     }
 }

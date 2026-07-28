@@ -18,7 +18,7 @@ public class ProjectMember extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private int id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_id", nullable = false)
@@ -26,21 +26,21 @@ public class ProjectMember extends BaseEntity {
 
     // member는 다른 도메인이므로 엔티티가 아닌 id로 참조한다.
     @Column(name = "member_id", nullable = false)
-    private Integer memberId;
+    private int memberId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProjectRole role;
 
     @Builder
-    private ProjectMember(Project project, Integer memberId, ProjectRole role) {
-        this.project = project;
+    private ProjectMember(int memberId, ProjectRole role) {
         this.memberId = memberId;
         this.role = role;
     }
 
-    // 프로젝트 role 변경 메서드
-    public void changeRole(ProjectRole role) {
-        this.role = role;
+    // 빌더에서 project 제거하면서 다른 프로젝트 넣는 상황 방지
+    void assignProject(Project project) {
+        this.project = project;
     }
+
 }
