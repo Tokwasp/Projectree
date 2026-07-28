@@ -1,4 +1,4 @@
-package com.ssafy.projectree.domain.response;
+package com.ssafy.projectree.domain.member.controller.response.session;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
