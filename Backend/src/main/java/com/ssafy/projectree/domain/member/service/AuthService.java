@@ -32,7 +32,7 @@ public class AuthService {
     }
 
     private GoogleUserInfoResponse fetchUserInfo(GoogleLoginRequest request) {
-        GoogleTokenResponse token = googleOAuthClient.exchangeCode(
+        GoogleTokenResponse token = googleOAuthClient.getUserAccessToken(
                 request.getCode(),
                 request.getRedirectUri()
         );

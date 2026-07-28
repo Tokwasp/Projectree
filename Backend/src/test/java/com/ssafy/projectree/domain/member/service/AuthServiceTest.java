@@ -40,7 +40,7 @@ class AuthServiceTest extends IntegrationTestSupport {
         GoogleLoginRequest request = createRequest("authorization-code");
         MockHttpSession session = new MockHttpSession();
 
-        given(googleOAuthClient.exchangeCode("authorization-code", REDIRECT_URI))
+        given(googleOAuthClient.getUserAccessToken("authorization-code", REDIRECT_URI))
                 .willReturn(createToken("google-access-token"));
         given(googleOAuthClient.getUserInfo("google-access-token"))
                 .willReturn(createUserInfo("ssafy@gmail.com", "김싸피"));
@@ -76,7 +76,7 @@ class AuthServiceTest extends IntegrationTestSupport {
         GoogleLoginRequest request = createRequest("authorization-code");
         MockHttpSession session = new MockHttpSession();
 
-        given(googleOAuthClient.exchangeCode("authorization-code", REDIRECT_URI))
+        given(googleOAuthClient.getUserAccessToken("authorization-code", REDIRECT_URI))
                 .willReturn(createToken("google-access-token"));
         given(googleOAuthClient.getUserInfo("google-access-token"))
                 .willReturn(createUserInfo("ssafy@gmail.com", "구글에서 바뀐 이름"));
