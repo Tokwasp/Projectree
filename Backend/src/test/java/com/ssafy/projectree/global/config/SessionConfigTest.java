@@ -57,7 +57,7 @@ class SessionConfigTest {
                 .contains("\"@class\":\"com.ssafy.projectree.domain.member.LoginMember\"");
     }
 
-    @DisplayName("LoginMember는 타입 정보 덕분에 원래 타입 그대로 복원되고, 식별자도 Long으로 돌아온다.")
+    @DisplayName("LoginMember는 타입 정보 덕분에 원래 타입 그대로 복원되고, 식별자도 Integer로 돌아온다.")
     @Test
     void deserializeLoginMember() {
         // given
@@ -70,12 +70,12 @@ class SessionConfigTest {
         // then
         assertThat(deserialized).isInstanceOf(LoginMember.class)
                 .extracting("id", "name", "email")
-                .containsExactly(1L, "김싸피", "ssafy@gmail.com");
+                .containsExactly(1, "김싸피", "ssafy@gmail.com");
     }
 
     private LoginMember createLoginMember() {
         return LoginMember.builder()
-                .id(1L)
+                .id(1)
                 .name("김싸피")
                 .email("ssafy@gmail.com")
                 .build();

@@ -8,14 +8,14 @@ import lombok.Getter;
 @Getter
 public class LoginMember {
 
-    private final Long id;
+    private final int id;
     private final String name;
     private final String email;
 
     @Builder
     @JsonCreator
     private LoginMember(
-            @JsonProperty("id") Long id,
+            @JsonProperty("id") int id,
             @JsonProperty("name") String name,
             @JsonProperty("email") String email) {
         this.id = id;

@@ -16,13 +16,13 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import static com.ssafy.projectree.global.config.session.SessionConst.SESSION_LOGIN_MEMBER;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AuthService {
 
-    private static final String SESSION_LOGIN_MEMBER = "loginMember";
 
     private final GoogleOAuthClient googleOAuthClient;
     private final NaverOAuthClient naverOAuthClient;

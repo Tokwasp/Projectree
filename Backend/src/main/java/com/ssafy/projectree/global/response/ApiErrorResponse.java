@@ -16,7 +16,17 @@ public class ApiErrorResponse {
         this.errorMessage = errorCode.getMessage();
     }
 
+    public ApiErrorResponse(ErrorCode errorCode, String errorMessage) {
+        this.status = errorCode.getStatus().value();
+        this.errorCode = errorCode;
+        this.errorMessage = errorMessage;
+    }
+
     public static ApiErrorResponse of(ErrorCode errorCode) {
         return new ApiErrorResponse(errorCode);
+    }
+
+    public static ApiErrorResponse of(ErrorCode errorCode, String errorMessage) {
+        return new ApiErrorResponse(errorCode, errorMessage);
     }
 }
