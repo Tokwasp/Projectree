@@ -24,7 +24,7 @@ export function useSocialLogin() {
       client_id: NAVER_CLIENT_ID,
       redirect_uri: getNaverRedirectUri(),
       response_type: "code",
-      state,
+      state: state,
     });
     window.location.href = `https://nid.naver.com/oauth2.0/authorize?${params.toString()}`;
   };
