@@ -2,8 +2,9 @@ package com.ssafy.projectree.domain.member.service;
 
 import com.ssafy.projectree.domain.member.controller.response.session.NaverTokenResponse;
 import com.ssafy.projectree.domain.member.controller.response.session.NaverUserInfoResponse;
+import com.ssafy.projectree.domain.member.exception.AuthErrorCode;
 import com.ssafy.projectree.global.config.session.NaverOAuthProperties;
-import com.ssafy.projectree.global.exception.ErrorCode;
+import com.ssafy.projectree.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -43,7 +44,7 @@ public class NaverOAuthClient {
             log.warn("네이버 토큰 발급 실패 - error: {}, description: {}",
                     response == null ? null : response.getError(),
                     response == null ? null : response.getErrorDescription());
-            throw new IllegalArgumentException(ErrorCode.NAVER_TOKEN_FAILED.getMessage());
+            throw new CustomException(AuthErrorCode.NAVER_TOKEN_FAILED);
         }
         return response;
     }
@@ -59,7 +60,7 @@ public class NaverOAuthClient {
             log.warn("네이버 프로필 조회 실패 - resultCode: {}, message: {}",
                     response == null ? null : response.getResultCode(),
                     response == null ? null : response.getMessage());
-            throw new IllegalArgumentException(ErrorCode.NAVER_PROFILE_FAILED.getMessage());
+            throw new CustomException(AuthErrorCode.NAVER_PROFILE_FAILED);
         }
         return response;
     }

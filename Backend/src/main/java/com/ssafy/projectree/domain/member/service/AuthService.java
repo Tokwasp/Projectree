@@ -2,6 +2,7 @@ package com.ssafy.projectree.domain.member.service;
 
 import com.ssafy.projectree.domain.member.LoginMember;
 import com.ssafy.projectree.domain.member.Member;
+import com.ssafy.projectree.domain.member.exception.AuthErrorCode;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.member.controller.request.GoogleLoginRequest;
 import com.ssafy.projectree.domain.member.controller.request.NaverLoginRequest;
@@ -11,7 +12,7 @@ import com.ssafy.projectree.domain.member.controller.response.session.GoogleToke
 import com.ssafy.projectree.domain.member.controller.response.session.GoogleUserInfoResponse;
 import com.ssafy.projectree.domain.member.controller.response.session.NaverTokenResponse;
 import com.ssafy.projectree.domain.member.controller.response.session.NaverUserInfoResponse;
-import com.ssafy.projectree.global.exception.ErrorCode;
+import com.ssafy.projectree.global.exception.CustomException;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -69,7 +70,7 @@ public class AuthService {
 
     private Member findByEmailOrSave(NaverUserInfoResponse userInfo) {
         if (userInfo.hasNoEmail()) {
-            throw new IllegalArgumentException(ErrorCode.NAVER_EMAIL_REQUIRED.getMessage());
+            throw new CustomException(AuthErrorCode.NAVER_EMAIL_REQUIRED);
         }
         return memberRepository.findByEmail(userInfo.getEmail())
                 .orElseGet(() -> memberRepository.save(userInfo.toMember()));

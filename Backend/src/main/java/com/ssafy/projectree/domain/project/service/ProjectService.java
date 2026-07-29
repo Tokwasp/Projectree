@@ -6,8 +6,8 @@ import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
-import com.ssafy.projectree.global.exception.BusinessException;
-import com.ssafy.projectree.global.exception.ErrorCode;
+import com.ssafy.projectree.global.exception.CustomException;
+import com.ssafy.projectree.global.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +21,7 @@ public class ProjectService {
 
     public int createProject(ProjectCreateRequest request, int memberId) {
         if (!memberRepository.existsById(memberId)) {
-            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
+            throw new CustomException(CommonErrorCode.MEMBER_NOT_FOUND);
         }
 
         Project project = request.toEntity();

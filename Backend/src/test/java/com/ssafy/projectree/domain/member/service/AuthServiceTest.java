@@ -2,6 +2,7 @@ package com.ssafy.projectree.domain.member.service;
 
 import com.ssafy.projectree.IntegrationTestSupport;
 import com.ssafy.projectree.domain.member.Member;
+import com.ssafy.projectree.domain.member.exception.AuthErrorCode;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.member.controller.request.GoogleLoginRequest;
 import com.ssafy.projectree.domain.member.controller.request.NaverLoginRequest;
@@ -11,6 +12,7 @@ import com.ssafy.projectree.domain.member.controller.response.session.GoogleToke
 import com.ssafy.projectree.domain.member.controller.response.session.GoogleUserInfoResponse;
 import com.ssafy.projectree.domain.member.controller.response.session.NaverTokenResponse;
 import com.ssafy.projectree.domain.member.controller.response.session.NaverUserInfoResponse;
+import com.ssafy.projectree.global.exception.CustomException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
@@ -236,8 +238,9 @@ class AuthServiceTest extends IntegrationTestSupport {
 
         // when // then
         assertThatThrownBy(() -> authService.naverLogin(request, session))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("네이버 계정의 이메일 제공 동의가 필요합니다.");
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.NAVER_EMAIL_REQUIRED);
 
         assertThat(memberRepository.findAll()).isEmpty();
         assertThat(session.getAttribute("loginMember")).isNull();
