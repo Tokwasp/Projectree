@@ -16,6 +16,13 @@ spring:
         format_sql: true
     show-sql: true
     open-in-view: false
+    # data.sql을 Hibernate DDL 이후에 실행 (기본값 false면 테이블 생성 전에 실행되어 실패)
+    defer-datasource-initialization: true
+
+  # data.sql은 기본적으로 내장 DB에서만 실행되므로 MySQL에서도 실행되도록 always 로 지정
+  sql:
+    init:
+      mode: always
 
   # 레디스
   data:
