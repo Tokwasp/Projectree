@@ -4,13 +4,18 @@ import com.ssafy.projectree.ControllerTestSupport;
 import com.ssafy.projectree.domain.member.LoginMember;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.global.exception.CustomException;
-import com.ssafy.projectree.global.exception.CommonErrorCode;
+import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 
+import java.util.Arrays;
+import java.util.List;
+
 import static com.ssafy.projectree.global.config.session.SessionConst.SESSION_LOGIN_MEMBER;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
@@ -106,7 +111,7 @@ class ProjectControllerTest extends ControllerTestSupport {
     void createProject_memberNotFound() throws Exception {
         // given
         given(projectService.createProject(any(ProjectCreateRequest.class), anyInt()))
-                .willThrow(new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+                .willThrow(new CustomException(ProjectErrorCode.MEMBER_NOT_FOUND));
 
         // when // then
         mockMvc.perform(
@@ -131,6 +136,7 @@ class ProjectControllerTest extends ControllerTestSupport {
                                 .content(objectMapper.writeValueAsString(
                                         ProjectCreateRequest.builder()
                                                 .content("React로 만든 개인 포트폴리오입니다.")
+                                                .categoryIds(List.of(1))
                                                 .build()
                                 ))
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -166,6 +172,7 @@ class ProjectControllerTest extends ControllerTestSupport {
                                 .content(objectMapper.writeValueAsString(
                                         ProjectCreateRequest.builder()
                                                 .title("포트폴리오 사이트")
+                                                .categoryIds(List.of(1))
                                                 .build()
                                 ))
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -199,6 +206,7 @@ class ProjectControllerTest extends ControllerTestSupport {
                                         ProjectCreateRequest.builder()
                                                 .title("포트폴리오 사이트")
                                                 .content("가".repeat(201))
+                                                .categoryIds(List.of(1))
                                                 .build()
                                 ))
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -223,6 +231,136 @@ class ProjectControllerTest extends ControllerTestSupport {
                 )
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data").value(1));
+    }
+
+    @DisplayName("카테고리는 필수값이다.")
+    @Test
+    void createProject_withoutCategoryIds() throws Exception {
+        // when // then
+        mockMvc.perform(
+                        post("/api/projects")
+                                .session(loginSession(10))
+                                .content(objectMapper.writeValueAsString(
+                                        ProjectCreateRequest.builder()
+                                                .title("포트폴리오 사이트")
+                                                .content("React로 만든 개인 포트폴리오입니다.")
+                                                .build()
+                                ))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+
+        then(projectService).should(never())
+                .createProject(any(ProjectCreateRequest.class), anyInt());
+    }
+
+    @DisplayName("카테고리를 빈 배열로 보내면 400을 응답한다.")
+    @Test
+    void createProject_withEmptyCategoryIds() throws Exception {
+        // when // then
+        mockMvc.perform(
+                        post("/api/projects")
+                                .session(loginSession(10))
+                                .content(objectMapper.writeValueAsString(
+                                        createRequest("포트폴리오 사이트", List.of())
+                                ))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+
+        then(projectService).should(never())
+                .createProject(any(ProjectCreateRequest.class), anyInt());
+    }
+
+    @DisplayName("카테고리 배열에 null이 섞여 있으면 500이 아니라 400을 응답한다.")
+    @Test
+    void createProject_withNullInCategoryIds() throws Exception {
+        // when // then
+        mockMvc.perform(
+                        post("/api/projects")
+                                .session(loginSession(10))
+                                .content(objectMapper.writeValueAsString(
+                                        createRequest("포트폴리오 사이트", Arrays.asList(1, null))
+                                ))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+
+        then(projectService).should(never())
+                .createProject(any(ProjectCreateRequest.class), anyInt());
+    }
+
+    @DisplayName("카테고리 id가 정수가 아니면 400을 응답한다.")
+    @Test
+    void createProject_withNonIntegerCategoryId() throws Exception {
+        // when // then
+        mockMvc.perform(
+                        post("/api/projects")
+                                .session(loginSession(10))
+                                .content("""
+                                        {
+                                          "title": "포트폴리오 사이트",
+                                          "content": "React로 만든 개인 포트폴리오입니다.",
+                                          "categoryIds": ["프론트엔드"]
+                                        }
+                                        """)
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+
+        then(projectService).should(never())
+                .createProject(any(ProjectCreateRequest.class), anyInt());
+    }
+
+    @DisplayName("유효하지 않은 카테고리 id로 프로젝트를 생성하려 하면 400과 카테고리 오류 메시지를 응답한다.")
+    @Test
+    void createProject_invalidCategory() throws Exception {
+        // given
+        given(projectService.createProject(any(ProjectCreateRequest.class), anyInt()))
+                .willThrow(new CustomException(ProjectErrorCode.INVALID_REQUEST));
+
+        // when // then
+        mockMvc.perform(
+                        post("/api/projects")
+                                .session(loginSession(10))
+                                .content(objectMapper.writeValueAsString(
+                                        createRequest("포트폴리오 사이트", List.of(99))
+                                ))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.errorMessage").value("유효하지 않은 카테고리입니다."));
+    }
+
+    @DisplayName("요청 본문의 카테고리 목록이 서비스로 그대로 전달된다.")
+    @Test
+    void createProject_passesCategoryIds() throws Exception {
+        // given
+        given(projectService.createProject(any(ProjectCreateRequest.class), anyInt()))
+                .willReturn(1);
+        ArgumentCaptor<ProjectCreateRequest> captor =
+                ArgumentCaptor.forClass(ProjectCreateRequest.class);
+
+        // when
+        mockMvc.perform(
+                        post("/api/projects")
+                                .session(loginSession(10))
+                                .content(objectMapper.writeValueAsString(
+                                        createRequest("포트폴리오 사이트", List.of(2, 4))
+                                ))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isCreated());
+
+        // then
+        then(projectService).should().createProject(captor.capture(), anyInt());
+        assertThat(captor.getValue().getCategoryIds()).containsExactly(2, 4);
     }
 
     @DisplayName("본문이 JSON으로 파싱되지 않으면 400을 응답한다.")
@@ -286,9 +424,14 @@ class ProjectControllerTest extends ControllerTestSupport {
     }
 
     private ProjectCreateRequest createRequest(String title) {
+        return createRequest(title, List.of(1));
+    }
+
+    private ProjectCreateRequest createRequest(String title, List<Integer> categoryIds) {
         return ProjectCreateRequest.builder()
                 .title(title)
                 .content("React로 만든 개인 포트폴리오입니다.")
+                .categoryIds(categoryIds)
                 .build();
     }
 }
