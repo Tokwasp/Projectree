@@ -4,6 +4,7 @@ import { googleLogin, naverLogin } from "../../api/auth";
 import {
   getGoogleRedirectUri,
   getNaverRedirectUri,
+  popNaverState,
 } from "../../hooks/useSocialLogin";
 
 export default function OAuthCallback() {
@@ -17,6 +18,7 @@ export default function OAuthCallback() {
     hasRequestedRef.current = true;
 
     const code = searchParams.get("code");
+    const state = searchParams.get("state");
     const errorParam = searchParams.get("error");
 
     if (
@@ -28,12 +30,23 @@ export default function OAuthCallback() {
       return;
     }
 
-    const request = provider === "naver" ? naverLogin : googleLogin;
-    const redirectUri =
-      provider === "naver" ? getNaverRedirectUri() : getGoogleRedirectUri();
+    let request;
 
-    request({ code, redirectUri })
-      .then(() => {
+    if (provider === "naver") {
+      const savedState = popNaverState();
+      if (!state || state !== savedState) {
+        console.error("state 불일치", { state, savedState });
+        navigate("/", { replace: true });
+        return;
+      }
+      request = naverLogin({ code, state, redirectUri: getNaverRedirectUri() });
+    } else {
+      request = googleLogin({ code, redirectUri: getGoogleRedirectUri() });
+    }
+
+    request
+      .then((data) => {
+        console.log("로그인 응답:", data);
         navigate("/home", { replace: true });
       })
       .catch((error) => {
