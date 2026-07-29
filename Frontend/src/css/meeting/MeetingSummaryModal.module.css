@@ -210,6 +210,34 @@
   line-height: var(--leading-relaxed);
 }
 
+.editRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.deleteButton {
+  height: var(--space-10);
+  padding: 0 var(--space-3);
+  border: 1px solid rgb(220 38 38 / 24%);
+  border-radius: var(--radius-sm);
+  background: rgb(220 38 38 / 6%);
+  color: var(--color-error);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.deleteButton:hover {
+  border-color: rgb(220 38 38 / 40%);
+  background: rgb(220 38 38 / 10%);
+}
+
 .notice {
   margin-top: var(--space-3);
   padding: var(--space-3) var(--space-4);
@@ -276,6 +304,7 @@
 .editButton:focus-visible,
 .closeButton:focus-visible,
 .saveButton:focus-visible,
+.deleteButton:focus-visible,
 .summaryInput:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
@@ -310,5 +339,13 @@
 
   .footer {
     padding: var(--space-5);
+  }
+
+  .editRow {
+    grid-template-columns: 1fr;
+  }
+
+  .deleteButton {
+    justify-self: flex-end;
   }
 }

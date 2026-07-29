@@ -123,6 +123,18 @@ function MeetingSummaryDialog({
     }));
   };
 
+  const handleSummaryDelete = (
+    sectionKey: SummarySectionKey,
+    index: number,
+  ) => {
+    setContent((currentContent) => ({
+      ...currentContent,
+      [sectionKey]: currentContent[sectionKey].filter(
+        (_, summaryIndex) => summaryIndex !== index,
+      ),
+    }));
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -229,14 +241,27 @@ function MeetingSummaryDialog({
                         </span>
 
                         {isEditing ? (
-                          <textarea
-                            className={style.summaryInput}
-                            value={summary}
-                            aria-label={`${title} ${index + 1}`}
-                            onChange={(event) =>
-                              handleSummaryChange(event, key, index)
-                            }
-                          />
+                          <div className={style.editRow}>
+                            <textarea
+                              className={style.summaryInput}
+                              value={summary}
+                              aria-label={`${title} ${index + 1}`}
+                              onChange={(event) =>
+                                handleSummaryChange(event, key, index)
+                              }
+                            />
+
+                            <button
+                              className={style.deleteButton}
+                              type="button"
+                              aria-label={`${title} ${index + 1} 삭제`}
+                              onClick={() =>
+                                handleSummaryDelete(key, index)
+                              }
+                            >
+                              삭제
+                            </button>
+                          </div>
                         ) : (
                           <p>{summary}</p>
                         )}
