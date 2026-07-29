@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class NodeCategoryRepositoryTest extends IntegrationTestSupport {
 
@@ -55,6 +56,26 @@ class NodeCategoryRepositoryTest extends IntegrationTestSupport {
         assertThat(categories)
                 .extracting(NodeCategory::getId)
                 .containsExactly(1, 2, 3, 4, 5, 6);
+    }
+
+    @DisplayName("data.sql 시드의 id와 카테고리 짝이 정해진 값 그대로 저장되어 있다.")
+    @Test
+    void seedMapsIdToCategory() {
+        // when
+        List<NodeCategory> categories =
+                nodeCategoryRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+
+        // then
+        assertThat(categories)
+                .extracting(NodeCategory::getId, NodeCategory::getCategory)
+                .containsExactly(
+                        tuple(1, Category.Frontend),
+                        tuple(2, Category.Backend),
+                        tuple(3, Category.AI),
+                        tuple(4, Category.Infra),
+                        tuple(5, Category.Planning),
+                        tuple(6, Category.Design)
+                );
     }
 
     @DisplayName("category 컬럼에는 ordinal이 아니라 enum 이름이 문자열로 저장된다.")
