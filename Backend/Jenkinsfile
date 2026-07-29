@@ -1,0 +1,79 @@
+pipeline {
+    agent any
+
+    environment {
+        // AWS 및 ECR 설정 (본인 환경에 맞게 확인)
+        AWS_REGION     = 'ap-northeast-2'
+        ECR_REPOSITORY = 'ssafy-spring-backend' // 본인의 AWS ECR 리포지토리 이름
+        CONTAINER_NAME = 'ssafy-spring-container'
+        
+        // Jenkins Credentials ID
+        GITLAB_CREDENTIAL_ID = 'gitlab-token-id'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // GitLab Develop_BE 브랜치 코드 체크아웃
+                checkout scmGit(
+                    branches: [[name: '*/Develop_BE']],
+                    userRemoteConfigs: [[
+                        credentialsId: "${GITLAB_CREDENTIAL_ID}",
+                        url: 'https://lab.ssafy.com/s15-webmobile1-sub1/S15P11D205.git' // 본인 GitLab HTTP clone 주소
+                    ]]
+                )
+            }
+        }
+
+        stage('Gradle Build') {
+            steps {
+                // Monorepo 구조이므로 Backend 디렉토리로 이동하여 Gradle 빌드 실행
+                dir('Backend') {
+                    echo 'Building Spring Boot Application...'
+                    sh 'chmod +x ./gradlew'
+                    sh './gradlew clean bootJar -x test'
+                }
+            }
+        }
+
+        stage('Docker Image Build & ECR Push') {
+            steps {
+                dir('Backend') {
+                    script {
+                        echo 'Logging in to Amazon ECR...'
+                        // EC2에 부여된 IAM Role을 활용하여 ECR 로그인
+                        sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION}.amazonaws.com"
+                        
+                        def accountId = sh(script: "aws sts get-caller-identity --query Account --output text", returnStdout: true).trim()
+                        def imageTag = "${accountId}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${BUILD_NUMBER}"
+                        def latestTag = "${accountId}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest"
+
+                        echo "Building Docker Image: ${imageTag}"
+                        sh "docker build -t ${imageTag} -t ${latestTag} ."
+
+                        echo "Pushing Docker Image to ECR..."
+                        sh "docker push ${imageTag}"
+                        sh "docker push ${latestTag}"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to ECS') {
+            steps {
+                echo 'Force updating ECS Service...'
+                // ECS 서비스 새로운 태스크 배포 강제 업데이트
+                sh "aws ecs update-service --cluster ssafy-main-cluster2 --service ssafy-spring-service --force-new-deployment --region ${AWS_REGION}"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '🎉 CI/CD Pipeline Executed Successfully!'
+        }
+        failure {
+            echo '🚨 CI/CD Pipeline Failed.'
+        }
+    }
+}
