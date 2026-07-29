@@ -165,6 +165,64 @@ class ProjectTest {
         assertThat(project.getProjectMembers()).hasSize(1);
     }
 
+    @DisplayName("isOwner는 해당 memberId가 OWNER로 참여 중이면 true를 반환한다.")
+    @Test
+    void isOwner() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        addMember(project, 1, ProjectRole.OWNER);
+
+        // when // then
+        assertThat(project.isOwner(1)).isTrue();
+    }
+
+    @DisplayName("isOwner는 참여 중이지만 role이 OWNER가 아니면 false를 반환한다.")
+    @Test
+    void isOwner_withMemberRole() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        addMember(project, 1, ProjectRole.MEMBER);
+
+        // when // then
+        assertThat(project.isOwner(1)).isFalse();
+    }
+
+    @DisplayName("isOwner는 참여하지 않은 memberId면 false를 반환한다.")
+    @Test
+    void isOwner_notParticipating() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        addMember(project, 1, ProjectRole.OWNER);
+
+        // when // then
+        assertThat(project.isOwner(999)).isFalse();
+    }
+
+    @DisplayName("isOwner는 참여 멤버가 없으면 false를 반환한다.")
+    @Test
+    void isOwner_withoutMembers() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+
+        // when // then
+        assertThat(project.isOwner(1)).isFalse();
+    }
+
+    @DisplayName("isOwner는 여러 멤버 중 OWNER인 멤버만 true로 판별한다.")
+    @Test
+    void isOwner_amongMultipleMembers() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        addMember(project, 1, ProjectRole.MEMBER);
+        addMember(project, 2, ProjectRole.OWNER);
+        addMember(project, 3, ProjectRole.MEMBER);
+
+        // when // then
+        assertThat(project.isOwner(2)).isTrue();
+        assertThat(project.isOwner(1)).isFalse();
+        assertThat(project.isOwner(3)).isFalse();
+    }
+
     private Project createProject(String title) {
         return Project.builder()
                 .title(title)

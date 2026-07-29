@@ -18,9 +18,12 @@ import static com.ssafy.projectree.global.config.session.SessionConst.SESSION_LO
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -321,7 +324,7 @@ class ProjectControllerTest extends ControllerTestSupport {
     void createProject_invalidCategory() throws Exception {
         // given
         given(projectService.createProject(any(ProjectCreateRequest.class), anyInt()))
-                .willThrow(new CustomException(ProjectErrorCode.INVALID_REQUEST));
+                .willThrow(new CustomException(ProjectErrorCode.INVALID_CATEGORY));
 
         // when // then
         mockMvc.perform(
@@ -334,7 +337,7 @@ class ProjectControllerTest extends ControllerTestSupport {
                 )
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.errorCode").value("INVALID_CATEGORY"))
                 .andExpect(jsonPath("$.errorMessage").value("유효하지 않은 카테고리입니다."));
     }
 
@@ -401,6 +404,93 @@ class ProjectControllerTest extends ControllerTestSupport {
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(jsonPath("$.status").value(415))
                 .andExpect(jsonPath("$.errorCode").value("UNSUPPORTED_MEDIA_TYPE"));
+    }
+
+    @DisplayName("OWNER가 프로젝트를 삭제하면 200과 성공 메시지를 응답한다.")
+    @Test
+    void deleteProject() throws Exception {
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}", 1).session(loginSession(10)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("성공"))
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @DisplayName("경로의 projectId와 세션의 로그인 회원 id가 서비스로 그대로 전달된다.")
+    @Test
+    void deleteProject_passesProjectIdAndLoginMemberId() throws Exception {
+        // when
+        mockMvc.perform(delete("/api/projects/{projectId}", 7).session(loginSession(10)))
+                .andExpect(status().isOk());
+
+        // then
+        then(projectService).should().deleteProject(eq(7), eq(10));
+    }
+
+    @DisplayName("세션이 아예 없으면 401을 응답하고 서비스를 호출하지 않는다.")
+    @Test
+    void deleteProject_withoutSession() throws Exception {
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}", 1))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.errorMessage").value("로그인이 필요합니다."));
+
+        then(projectService).should(never()).deleteProject(anyInt(), anyInt());
+    }
+
+    @DisplayName("삭제 권한이 없으면 403과 권한 오류 메시지를 응답한다.")
+    @Test
+    void deleteProject_forbidden() throws Exception {
+        // given
+        willThrow(new CustomException(ProjectErrorCode.PROJECT_DELETE_FORBIDDEN))
+                .given(projectService).deleteProject(anyInt(), anyInt());
+
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}", 1).session(loginSession(10)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.errorCode").value("PROJECT_DELETE_FORBIDDEN"))
+                .andExpect(jsonPath("$.errorMessage").value("프로젝트 삭제 권한이 없습니다."));
+    }
+
+    @DisplayName("존재하지 않는 프로젝트를 삭제하려 하면 404를 응답한다.")
+    @Test
+    void deleteProject_projectNotFound() throws Exception {
+        // given
+        willThrow(new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND))
+                .given(projectService).deleteProject(anyInt(), anyInt());
+
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}", 999).session(loginSession(10)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.errorCode").value("PROJECT_NOT_FOUND"))
+                .andExpect(jsonPath("$.errorMessage").value("존재하지 않는 프로젝트입니다."));
+    }
+
+    @DisplayName("projectId가 정수가 아니면 500이 아니라 400을 응답하고 서비스를 호출하지 않는다.")
+    @Test
+    void deleteProject_withNonIntegerProjectId() throws Exception {
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}", "abc").session(loginSession(10)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+
+        then(projectService).should(never()).deleteProject(anyInt(), anyInt());
+    }
+
+    @DisplayName("projectId 없이 삭제를 요청하면 500이 아니라 405를 응답한다.")
+    @Test
+    void deleteProject_withoutProjectId() throws Exception {
+        // when // then
+        mockMvc.perform(delete("/api/projects").session(loginSession(10)))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.errorCode").value("METHOD_NOT_ALLOWED"));
+
+        then(projectService).should(never()).deleteProject(anyInt(), anyInt());
     }
 
     @DisplayName("존재하지 않는 경로로 요청하면 500이 아니라 404를 응답한다.")

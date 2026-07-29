@@ -259,7 +259,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
         assertThatThrownBy(() -> projectService.createProject(request, member.getId()))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
-                .isEqualTo(ProjectErrorCode.INVALID_REQUEST);
+                .isEqualTo(ProjectErrorCode.INVALID_CATEGORY);
     }
 
     @DisplayName("유효한 카테고리와 유효하지 않은 카테고리가 섞여 있으면 예외가 발생한다.")
@@ -274,7 +274,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
         assertThatThrownBy(() -> projectService.createProject(request, member.getId()))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
-                .isEqualTo(ProjectErrorCode.INVALID_REQUEST);
+                .isEqualTo(ProjectErrorCode.INVALID_CATEGORY);
     }
 
     @DisplayName("유효하지 않은 카테고리로 생성에 실패하면 프로젝트가 저장되지 않는다.")
@@ -306,6 +306,177 @@ class ProjectServiceTest extends IntegrationTestSupport {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ProjectErrorCode.MEMBER_NOT_FOUND);
+    }
+
+    @DisplayName("OWNER는 자신의 프로젝트를 삭제할 수 있다.")
+    @Test
+    void deleteProject() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+        int projectId = createProjectOwnedBy(member);
+
+        // when
+        projectService.deleteProject(projectId, member.getId());
+        flushAndClear();
+
+        // then
+        assertThat(projectRepository.findById(projectId)).isEmpty();
+    }
+
+    @DisplayName("프로젝트를 삭제하면 참여 멤버와 카테고리도 함께 삭제된다.")
+    @Test
+    void deleteProject_cascadesChildren() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+        ProjectCreateRequest request =
+                createRequest("포트폴리오 사이트", null, List.of(1, 2, 3));
+        int projectId = projectService.createProject(request, member.getId());
+        flushAndClear();
+
+        // when
+        projectService.deleteProject(projectId, member.getId());
+        flushAndClear();
+
+        // then
+        assertThat(countProjectMembers()).isZero();
+        assertThat(countProjectCategories()).isZero();
+    }
+
+    @DisplayName("OWNER가 아닌 참여 멤버가 삭제하려 하면 PROJECT_DELETE_FORBIDDEN 예외가 발생한다.")
+    @Test
+    void deleteProject_withMemberRole() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김싸피"));
+        Member participant = memberRepository.save(createMember("member@gmail.com", "이싸피"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, participant);
+
+        // when // then
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, participant.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_DELETE_FORBIDDEN);
+    }
+
+    @DisplayName("프로젝트에 참여하지 않은 회원이 삭제하려 하면 PROJECT_DELETE_FORBIDDEN 예외가 발생한다.")
+    @Test
+    void deleteProject_notParticipating() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김싸피"));
+        Member stranger = memberRepository.save(createMember("stranger@gmail.com", "박싸피"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when // then
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, stranger.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_DELETE_FORBIDDEN);
+    }
+
+    @DisplayName("삭제 권한이 없어 실패하면 프로젝트와 자식 행이 그대로 남는다.")
+    @Test
+    void deleteProject_forbidden_deletesNothing() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김싸피"));
+        Member stranger = memberRepository.save(createMember("stranger@gmail.com", "박싸피"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, stranger.getId()))
+                .isInstanceOf(CustomException.class);
+        flushAndClear();
+
+        // then
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(countProjectMembers()).isEqualTo(1L);
+        assertThat(countProjectCategories()).isEqualTo(1L);
+    }
+
+    @DisplayName("존재하지 않는 프로젝트를 삭제하려 하면 PROJECT_NOT_FOUND 예외가 발생한다.")
+    @Test
+    void deleteProject_projectNotFound() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+
+        // when // then
+        assertThatThrownBy(() -> projectService.deleteProject(999, member.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    @DisplayName("프로젝트 존재 검증이 권한 검증보다 먼저 수행된다.")
+    @Test
+    void deleteProject_validatesProjectBeforePermission() {
+        // given
+        Member stranger = memberRepository.save(createMember("stranger@gmail.com", "박싸피"));
+
+        // when // then
+        assertThatThrownBy(() -> projectService.deleteProject(999, stranger.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    @DisplayName("같은 프로젝트를 두 번 삭제하면 두 번째는 PROJECT_NOT_FOUND 예외가 발생한다.")
+    @Test
+    void deleteProject_twice() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+        int projectId = createProjectOwnedBy(member);
+        projectService.deleteProject(projectId, member.getId());
+        flushAndClear();
+
+        // when // then
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, member.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    @DisplayName("한 프로젝트를 삭제해도 다른 프로젝트는 남는다.")
+    @Test
+    void deleteProject_doesNotAffectOtherProjects() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+        int target = createProjectOwnedBy(member);
+        int other = projectService.createProject(
+                createRequest("스터디 관리 앱", null), member.getId());
+        flushAndClear();
+
+        // when
+        projectService.deleteProject(target, member.getId());
+        flushAndClear();
+
+        // then
+        assertThat(projectRepository.findById(target)).isEmpty();
+        assertThat(projectRepository.findById(other)).isPresent();
+    }
+
+    private int createProjectOwnedBy(Member owner) {
+        int projectId = projectService.createProject(
+                createRequest("포트폴리오 사이트", null), owner.getId());
+        flushAndClear();
+        return projectId;
+    }
+
+    private void joinAsMember(int projectId, Member member) {
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        project.addMember(ProjectMember.createMember(member.getId(), ProjectRole.MEMBER));
+        flushAndClear();
+    }
+
+    private Long countProjectMembers() {
+        return count("select count(*) from project_member");
+    }
+
+    private Long countProjectCategories() {
+        return count("select count(*) from project_category");
+    }
+
+    private Long count(String sql) {
+        Number count = (Number) entityManager.createNativeQuery(sql).getSingleResult();
+        return count.longValue();
     }
 
     private void flushAndClear() {
