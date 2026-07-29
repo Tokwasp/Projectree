@@ -2,13 +2,13 @@ pipeline {
     agent any
 
     environment {
-        // AWS 및 ECR 설정 (본인 환경에 맞게 확인)
+        // AWS 및 ECR 설정
         AWS_REGION     = 'ap-northeast-2'
         ECR_REPOSITORY = 'ssafy-spring-backend' // 본인의 AWS ECR 리포지토리 이름
         CONTAINER_NAME = 'ssafy-spring-container'
         
-        // Jenkins Credentials ID
-        GITLAB_CREDENTIAL_ID = 'gitlab-token-id'
+        // Jenkins Credentials ID (아까 등록하신 Username with password 타입 Credentials ID)
+        GITLAB_CREDENTIAL_ID = 'gitlab-git-credentials'
     }
 
     stages {
@@ -19,7 +19,7 @@ pipeline {
                     branches: [[name: '*/Develop_BE']],
                     userRemoteConfigs: [[
                         credentialsId: "${GITLAB_CREDENTIAL_ID}",
-                        url: 'https://lab.ssafy.com/s15-webmobile1-sub1/S15P11D205.git' // 본인 GitLab HTTP clone 주소
+                        url: 'https://lab.ssafy.com/s15-webmobile1-sub1/S15P11D205.git'
                     ]]
                 )
             }
@@ -40,11 +40,14 @@ pipeline {
             steps {
                 dir('Backend') {
                     script {
-                        echo 'Logging in to Amazon ECR...'
-                        // EC2에 부여된 IAM Role을 활용하여 ECR 로그인
-                        sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION}.amazonaws.com"
+                        echo 'Retrieving AWS Account ID...'
+                        // AWS Account ID를 먼 저 구해서 Groovy 변수에 담습니다.
+                        def accountId = sh(script: 'aws sts get-caller-identity --query Account --output text', returnStdout: true).trim()
                         
-                        def accountId = sh(script: "aws sts get-caller-identity --query Account --output text", returnStdout: true).trim()
+                        echo 'Logging in to Amazon ECR...'
+                        // 수정한 Account ID 변수를 사용하여 ECR 로그인
+                        sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${accountId}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+                        
                         def imageTag = "${accountId}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${BUILD_NUMBER}"
                         def latestTag = "${accountId}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest"
 
