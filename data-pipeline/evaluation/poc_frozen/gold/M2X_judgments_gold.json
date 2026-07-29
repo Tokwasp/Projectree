@@ -1,0 +1,57 @@
+{
+  "meetingId": "M2X",
+  "judgments": [
+    {
+      "itemId": "m1",
+      "result": "ATTACH",
+      "attachTo": "D-M1-03"
+    },
+    {
+      "itemId": "m2",
+      "result": "ATTACH",
+      "attachTo": "D-M1-03"
+    },
+    {
+      "itemId": "m3",
+      "result": "ATTACH",
+      "attachTo": "D-M1-05"
+    },
+    {
+      "itemId": "m4",
+      "result": "ATTACH",
+      "attachTo": "D-M1-06"
+    },
+    {
+      "itemId": "m5",
+      "result": "ATTACH",
+      "attachTo": "D-M1-04",
+      "note": "D-M1-05와의 판별이 채점 포인트"
+    },
+    {
+      "itemId": "m6",
+      "result": "NEW_DECISION",
+      "category": "AI"
+    },
+    {
+      "itemId": "m7",
+      "result": "ATTACH",
+      "attachTo": "m6"
+    },
+    {
+      "itemId": "m8",
+      "result": "MINUTES_ONLY",
+      "reason": "NO_RELATED_DECISION"
+    },
+    {
+      "itemId": "m9",
+      "result": "MINUTES_ONLY",
+      "reason": "NOT_CONFIRMED",
+      "note": "R3 확정: 보류 논의는 NOT_CONFIRMED"
+    },
+    {
+      "itemId": "m10",
+      "result": "ATTACH",
+      "attachTo": "D-M1-02"
+    }
+  ]
+}

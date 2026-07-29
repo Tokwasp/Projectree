@@ -1,0 +1,153 @@
+{
+  "meetingId": "M2X",
+  "items": [
+    {
+      "id": "m1",
+      "type": "ACTION",
+      "predictedCategory": "BACKEND",
+      "title": "SQS 컨슈머와 DLQ(재시도 3회) 설정 구현",
+      "content": "메시지 큐 컨슈머 및 3회 재시도 후 DLQ 이동 구성을 이번 주 내 구현.",
+      "evidence": [
+        {
+          "segmentId": "M2X-seg-002",
+          "quote": "컨슈머랑 DLQ 설정을 이번 주 안에 구현해 보려고요"
+        },
+        {
+          "segmentId": "M2X-seg-004",
+          "quote": "네 그거까지 해서 올릴게요"
+        }
+      ]
+    },
+    {
+      "id": "m2",
+      "type": "ISSUE",
+      "predictedCategory": "INFRA",
+      "title": "SQS 표준 큐는 메시지 순서 미보장",
+      "content": "동일 회의의 회의록·노드 요청 처리 순서가 뒤집힐 수 있음. FIFO는 처리량 제한으로 보류.",
+      "evidence": [
+        {
+          "segmentId": "M2X-seg-005",
+          "quote": "SQS 표준 큐는 메시지 순서가 보장이 안 되더라고요"
+        }
+      ]
+    },
+    {
+      "id": "m3",
+      "type": "ACTION",
+      "predictedCategory": "BACKEND",
+      "title": "회의 ID 기준 S3 키 구조로 STT 텍스트 저장 로직 구현",
+      "content": "버킷 구조를 회의 ID 기준으로 잡아 저장 로직 구현.",
+      "evidence": [
+        {
+          "segmentId": "M2X-seg-008",
+          "quote": "회의 아이디 기준으로 키 잡아서 저장하는 로직 오늘 구현할게요"
+        }
+      ]
+    },
+    {
+      "id": "m4",
+      "type": "ISSUE",
+      "predictedCategory": "INFRA",
+      "title": "장시간 녹음 시 WebM 파일 용량 증가",
+      "content": "1시간 녹음 테스트 결과 파일이 커서 누적 시 스토리지 부담 우려.",
+      "evidence": [
+        {
+          "segmentId": "M2X-seg-010",
+          "quote": "이거 몇 주 쌓이면 용량 꽤 나올 것 같은데요"
+        }
+      ]
+    },
+    {
+      "id": "m5",
+      "type": "ISSUE",
+      "predictedCategory": "BACKEND",
+      "title": "클로바 콜백 미수신 시 요청이 대기 상태로 방치됨 (타임아웃 없음)",
+      "content": "DB에 저장된 요청의 만료 처리가 없어 콜백 유실 시 상태가 갱신되지 않음.",
+      "evidence": [
+        {
+          "segmentId": "M2X-seg-012",
+          "quote": "클로바 콜백이 안 오면 저희가 디비에 저장해 둔 요청이 계속 대기 상태로 남아요"
+        }
+      ],
+      "note": "판별 사례: D-M1-05(S3 저장)와 어휘 유사하나 정답은 D-M1-04(요청 DB 저장)"
+    },
+    {
+      "id": "m6",
+      "type": "DECISION",
+      "predictedCategory": "AI",
+      "title": "회의록·노드 생성 전 잡담 제거 전처리 단계를 별도로 둔다",
+      "content": "프롬프트 내 처리에서 독립된 전처리 단계로 분리.",
+      "evidence": [
+        {
+          "segmentId": "M2X-seg-015",
+          "quote": "잡담 제거하는 전처리 단계를 하나 더 두는 게 어때요"
+        },
+        {
+          "segmentId": "M2X-seg-017",
+          "quote": "네 그럼 그렇게 가는 걸로 하죠"
+        }
+      ]
+    },
+    {
+      "id": "m7",
+      "type": "ACTION",
+      "predictedCategory": "AI",
+      "title": "잡담 제거 프롬프트 초안 작성 및 공유",
+      "content": "내일까지 초안 공유.",
+      "evidence": [
+        {
+          "segmentId": "M2X-seg-018",
+          "quote": "잡담 제거 프롬프트 초안 만들어서 내일까지 공유할게요"
+        }
+      ]
+    },
+    {
+      "id": "m8",
+      "type": "ACTION",
+      "predictedCategory": "INFRA",
+      "title": "Redis 캐시 도입 가능성 조사",
+      "content": "도입 결정 아님, 조사만 진행.",
+      "evidence": [
+        {
+          "segmentId": "M2X-seg-019",
+          "quote": "레디스 같은 거 한번 조사해 볼까 하는데요"
+        },
+        {
+          "segmentId": "M2X-seg-021",
+          "quote": "아직 도입하자는 건 아니고 그냥 조사만요"
+        }
+      ],
+      "note": "함정 사례: 유형 C — 관련 결정 없음"
+    },
+    {
+      "id": "m9",
+      "type": "ISSUE",
+      "predictedCategory": "INFRA",
+      "title": "향후 트래픽 증가 시 카프카 전환 필요 가능성 — 논의 보류",
+      "content": "현 시점 결정 대상 아님으로 합의.",
+      "evidence": [
+        {
+          "segmentId": "M2X-seg-022",
+          "quote": "SQS 말고 카프카로 가야 하는 거 아니냐는 얘기도 있었는데"
+        },
+        {
+          "segmentId": "M2X-seg-023",
+          "quote": "네 그건 나중에 다시 얘기하죠"
+        }
+      ]
+    },
+    {
+      "id": "m10",
+      "type": "ISSUE",
+      "predictedCategory": "AI",
+      "title": "오디오 라이브러리가 파이썬 3.13 휠 미제공으로 빌드 실패",
+      "content": "소스 빌드 시 도커 이미지 비대화 부작용.",
+      "evidence": [
+        {
+          "segmentId": "M2X-seg-024",
+          "quote": "오디오 라이브러리 하나가 아직 3.13 휠이 없어서 빌드가 깨지더라고요"
+        }
+      ]
+    }
+  ]
+}

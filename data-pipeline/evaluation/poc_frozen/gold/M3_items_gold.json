@@ -1,0 +1,202 @@
+{
+  "meetingId": "M3",
+  "items": [
+    {
+      "id": "m1",
+      "type": "DECISION",
+      "predictedCategory": "AI",
+      "title": "기술 용어 사전에 STT 오인식 변형(오타)을 포함해 구축한다",
+      "content": "오인식된 단어들을 표준 용어와 함께 사전에 등록해 보정에 활용.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-013",
+          "quote": "STT가 뽑아낼 수 있는 오타들을 좀 집어넣어서 추출하는 식으로 가는 게 좋을 것 같아요"
+        },
+        {
+          "segmentId": "M3-seg-014",
+          "quote": "저도 그게 좋을 것 같아. 좋을 것 같습니다"
+        }
+      ]
+    },
+    {
+      "id": "m2",
+      "type": "ISSUE",
+      "predictedCategory": "AI",
+      "title": "유사도 검색만으로 용어를 보정하면 오연결 위험",
+      "content": "RabbitMQ 논의에 카프카를 꺼내 오는 식의 잘못된 연결 가능.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-012",
+          "quote": "우리는 뭐 그냥 뭐 MQ를 레빈 MQ를 가지고 얘기하고 있었는데 갑자기 카프카를 꺼내 온다던가"
+        }
+      ]
+    },
+    {
+      "id": "m3",
+      "type": "DECISION",
+      "predictedCategory": "AI",
+      "title": "AI 출력에 검토 필요 플래그를 두지 않고 전체를 사용자가 검토한다",
+      "content": "플래그 판단 자체의 오류 가능성 때문에 전량 사용자 확인 방식 채택.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-045",
+          "quote": "사용자가 한 번씩은 읽어 보아야 되는 게 맞고"
+        },
+        {
+          "segmentId": "M3-seg-046",
+          "quote": "기록하는 건 없애고 전부 다 판단하는 식으로 출력을 하면 될 것 같아요"
+        }
+      ]
+    },
+    {
+      "id": "m4",
+      "type": "ISSUE",
+      "predictedCategory": "AI",
+      "title": "Decision 없이 Action·Issue만 추출되는 회의의 처리 방법 문제",
+      "content": "이런 항목을 그래프에 어떻게 붙일지가 미해결이었음.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-116",
+          "quote": "디시전이 없고 액션이랑 이슈 많이 있는 경우가 몇 개 나오더라고요"
+        },
+        {
+          "segmentId": "M3-seg-118",
+          "quote": "근데 그런 건 또 어떻게 붙여야 될지 몰라 가지고"
+        }
+      ]
+    },
+    {
+      "id": "m5",
+      "type": "ISSUE",
+      "predictedCategory": "AI",
+      "title": "구조를 강제하면 LLM이 가짜 Decision을 환각으로 생성",
+      "content": "없는 결정을 만들어 붙이는 환각 발생 확인.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-139",
+          "quote": "어떻게든 디시전 액션 이슈 구조로 만들어 줘라고 하니까 환각이 생기더라고요"
+        }
+      ]
+    },
+    {
+      "id": "m6",
+      "type": "DECISION",
+      "predictedCategory": "AI",
+      "title": "결정 없는 액션·이슈는 그래프에서 제외하고 사용자가 수동으로 붙일 수 있게 한다",
+      "content": "결정이 없으면 그래프에 넣지 않고, 사용자 노드 연결 기능으로 보완.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-231",
+          "quote": "자르고 노드를 붙일 수 있는 기능을 주는 게 나은 거 같아"
+        },
+        {
+          "segmentId": "M3-seg-148",
+          "quote": "사실 결정 상황이 없는데 액션 이슈만 있으면 의미가 없잖아요"
+        }
+      ]
+    },
+    {
+      "id": "m7",
+      "type": "DECISION",
+      "predictedCategory": "AI",
+      "title": "현행 Decision→Action→Issue 계층 구조를 유지하고 계속 생성·실험한다",
+      "content": "구조 변경 대안들을 보류하고 현 구조로 실험 지속.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-106",
+          "quote": "믿고 이 구조로 디시즌이랑 액션이랑 이슈를 계속 생성하겠습니다"
+        }
+      ]
+    },
+    {
+      "id": "m8",
+      "type": "ACTION",
+      "predictedCategory": "AI",
+      "title": "이번 회의의 액션·이슈를 이전 회의 결정에 붙이는 방식 실험",
+      "content": "이전 Decision 연결 방식을 시도해 보기로 함.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-258",
+          "quote": "그 나온 액션을 이 이전 디시전에 붙이고 해 볼까요?"
+        },
+        {
+          "segmentId": "M3-seg-251",
+          "quote": "그냥 일단 해 보기"
+        }
+      ]
+    },
+    {
+      "id": "m9",
+      "type": "DECISION",
+      "predictedCategory": "AI",
+      "title": "그래프에 회의 노드를 추가하자는 제안 — 미채택",
+      "content": "회의 노드 계층 추가 제안이 나왔으나 이전 회의가 무의미해진다는 반론으로 채택되지 않음.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-123",
+          "quote": "차라리 프로젝트라는 큰 그러니까 회의라는 노드를 여기에다가 한 개 더 만들어 버리는 거 어때요?"
+        },
+        {
+          "segmentId": "M3-seg-135",
+          "quote": "회의 1번 있고 2번 있으면 1번에 사실 필요가 없잖아"
+        }
+      ]
+    },
+    {
+      "id": "m10",
+      "type": "DECISION",
+      "predictedCategory": "INFRA",
+      "title": "CI/CD 파이프라인은 머지 시 도커 컴포즈 호출로 단순 구성, 백엔드 우선 적용",
+      "content": "환경 변수 등은 도커 설정에 위임하고 파이프라인은 컴포즈 호출만 담당.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-193",
+          "quote": "그냥 머지 되면은 도코 이미지 그냥 컴포즈업 하면 끝날 것 같습니다"
+        },
+        {
+          "segmentId": "M3-seg-182",
+          "quote": "사실 올라간 건 백엔드만 있기 때문에 백엔드만 정해도"
+        }
+      ]
+    },
+    {
+      "id": "m11",
+      "type": "ACTION",
+      "predictedCategory": "INFRA",
+      "title": "CI 스크립트 작성 후 동작 확인",
+      "content": "파이프라인 스크립트를 작성해 CI가 도는지 검증.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-201",
+          "quote": "쓱쓱 짜서 채식이 되는지 확인하겠습니다"
+        }
+      ]
+    },
+    {
+      "id": "m12",
+      "type": "DECISION",
+      "predictedCategory": "PLANNING",
+      "title": "이번 주는 MVP가 아니라 PoC를 우선한다",
+      "content": "중간발표 대비 PoC 필수, MVP는 확정 아님이라는 방향 공유.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-217",
+          "quote": "이번 주에 해야 되는 건 일단 POC는 무조건"
+        }
+      ]
+    },
+    {
+      "id": "m13",
+      "type": "ISSUE",
+      "predictedCategory": "AI",
+      "title": "한 회의의 결정·액션·이슈가 의미적으로 연결되지 않을 확률이 높음",
+      "content": "회의가 중구난방일수록 D-A-I가 한 흐름으로 묶이지 않음.",
+      "evidence": [
+        {
+          "segmentId": "M3-seg-237",
+          "quote": "이 디시전이랑 액션이랑 이슈가 자 정말 한 흐름으로 매끄럽게 연결이 매끄럽게 딱딱딱 만들어지지 않을 수가 있다"
+        }
+      ]
+    }
+  ]
+}

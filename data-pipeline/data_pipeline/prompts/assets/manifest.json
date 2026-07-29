@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1",
+  "rendererVersion": "m2-0.1.0",
+  "assets": [
+    {
+      "name": "extraction-m2-current",
+      "kind": "EXTRACTION",
+      "version": "m2-0.1.0",
+      "changeType": "SEMANTIC",
+      "path": "extraction_m2_current.md",
+      "sha256": "1f8b9055be5c16de5e564c80ee1f993caef95c36f560d8948b18796970221971"
+    },
+    {
+      "name": "judgment-m2-current",
+      "kind": "JUDGMENT",
+      "version": "m2-0.1.0-rev1",
+      "changeType": "SEMANTIC",
+      "path": "judgment_m2_current.md",
+      "sha256": "e26f2322c3478341974ce9ec03c5fe63fff80b57123f193b54b7b4e2dc796540"
+    },
+    {
+      "name": "extraction-poc-v3-lts",
+      "kind": "EXTRACTION",
+      "version": "poc-v3-lts",
+      "changeType": "SEMANTIC",
+      "path": "extraction_poc_v3_lts.md",
+      "sha256": "d719d6bcfbf544268bede4a79b17cf04eeffd2ce81f50c86eb624db3482b7b1d"
+    },
+    {
+      "name": "judgment-poc-v4-lts",
+      "kind": "JUDGMENT",
+      "version": "poc-v4-lts",
+      "changeType": "SEMANTIC",
+      "path": "judgment_poc_v4_lts.md",
+      "sha256": "258e5b42b74f2f1a25960e9eaf4f15d5894f77e48088b6938eaaf481d4f1c352"
+    }
+  ]
+}
