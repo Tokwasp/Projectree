@@ -44,3 +44,10 @@ google:
   client-secret: ${GOOGLE_CLIENT_SECRET}
   token-uri: https://oauth2.googleapis.com/token
   userinfo-uri: https://www.googleapis.com/oauth2/v3/userinfo
+
+# 네이버 Oauth
+naver:
+  client-id: ${NAVER_CLIENT_ID}
+  client-secret: ${NAVER_CLIENT_SECRET}
+  token-uri: https://nid.naver.com/oauth2.0/token
+  userinfo-uri: https://openapi.naver.com/v1/nid/me

@@ -16,25 +16,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ApiErrorResponse> handleBusinessException(BusinessException e) {
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<ApiErrorResponse> handleBusinessException(CustomException e) {
         ErrorCode errorCode = e.getErrorCode();
-        log.warn("business exception: {}", errorCode);
+        log.warn("reason: {}", errorCode.getDomain());
 
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(ApiErrorResponse.of(errorCode));
-    }
-
-    @ExceptionHandler(DomainException.class)
-    public ResponseEntity<ApiErrorResponse> handleDomainException(DomainException e) {
-        ErrorCode errorCode = e.getErrorCode();
-        Domain domain = e.getDomain();
-        log.warn("domain exception: {}", errorCode);
-
-        return ResponseEntity
-                .status(errorCode.getStatus())
-                .body(ApiErrorResponse.of(errorCode, domain.getDescription()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -47,7 +36,7 @@ public class GlobalExceptionHandler {
                 .orElse("");
         log.warn("validation failed: {}", fieldErrors);
 
-        return errorResponse(ErrorCode.INVALID_REQUEST);
+        return errorResponse(CommonErrorCode.INVALID_REQUEST);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -56,7 +45,7 @@ public class GlobalExceptionHandler {
     ) {
         log.warn("unreadable request body: {}", e.getMessage());
 
-        return errorResponse(ErrorCode.INVALID_REQUEST);
+        return errorResponse(CommonErrorCode.INVALID_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)
@@ -70,23 +59,23 @@ public class GlobalExceptionHandler {
 
         log.error("unhandled exception", e);
 
-        return errorResponse(ErrorCode.INTERNAL_SERVER_ERROR);
+        return errorResponse(CommonErrorCode.INTERNAL_SERVER_ERROR);
     }
 
     private ErrorCode toErrorCode(HttpStatusCode statusCode) {
         if (statusCode.equals(HttpStatus.NOT_FOUND)) {
-            return ErrorCode.ENDPOINT_NOT_FOUND;
+            return CommonErrorCode.ENDPOINT_NOT_FOUND;
         }
         if (statusCode.equals(HttpStatus.METHOD_NOT_ALLOWED)) {
-            return ErrorCode.METHOD_NOT_ALLOWED;
+            return CommonErrorCode.METHOD_NOT_ALLOWED;
         }
         if (statusCode.equals(HttpStatus.UNSUPPORTED_MEDIA_TYPE)) {
-            return ErrorCode.UNSUPPORTED_MEDIA_TYPE;
+            return CommonErrorCode.UNSUPPORTED_MEDIA_TYPE;
         }
         if (statusCode.is4xxClientError()) {
-            return ErrorCode.INVALID_REQUEST;
+            return CommonErrorCode.INVALID_REQUEST;
         }
-        return ErrorCode.INTERNAL_SERVER_ERROR;
+        return CommonErrorCode.INTERNAL_SERVER_ERROR;
     }
 
     private ResponseEntity<ApiErrorResponse> errorResponse(ErrorCode errorCode) {

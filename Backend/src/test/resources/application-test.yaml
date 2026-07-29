@@ -43,3 +43,10 @@ google:
   client-secret: test-client-secret
   token-uri: https://oauth2.googleapis.com/token
   userinfo-uri: https://www.googleapis.com/oauth2/v3/userinfo
+
+# Naver Oauth
+naver:
+  client-id: test-client-id
+  client-secret: test-client-secret
+  token-uri: https://nid.naver.com/oauth2.0/token
+  userinfo-uri: https://openapi.naver.com/v1/nid/me

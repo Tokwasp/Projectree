@@ -3,8 +3,8 @@ package com.ssafy.projectree.domain.project.controller;
 import com.ssafy.projectree.ControllerTestSupport;
 import com.ssafy.projectree.domain.member.LoginMember;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
-import com.ssafy.projectree.global.exception.BusinessException;
-import com.ssafy.projectree.global.exception.ErrorCode;
+import com.ssafy.projectree.global.exception.CustomException;
+import com.ssafy.projectree.global.exception.CommonErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -106,7 +106,7 @@ class ProjectControllerTest extends ControllerTestSupport {
     void createProject_memberNotFound() throws Exception {
         // given
         given(projectService.createProject(any(ProjectCreateRequest.class), anyInt()))
-                .willThrow(new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+                .willThrow(new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
 
         // when // then
         mockMvc.perform(

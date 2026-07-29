@@ -91,12 +91,12 @@ class GlobalExceptionHandlerTest {
 
         @GetMapping("/probe/unauthorized")
         void unauthorized() {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+            throw new CustomException(CommonErrorCode.UNAUTHORIZED);
         }
 
         @GetMapping("/probe/member-not-found")
         void memberNotFound() {
-            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
+            throw new CustomException(CommonErrorCode.MEMBER_NOT_FOUND);
         }
 
         @PostMapping("/probe/validated")

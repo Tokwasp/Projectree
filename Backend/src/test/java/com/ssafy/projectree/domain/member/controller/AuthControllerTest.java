@@ -3,7 +3,9 @@ package com.ssafy.projectree.domain.member.controller;
 import com.ssafy.projectree.ControllerTestSupport;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.controller.request.GoogleLoginRequest;
+import com.ssafy.projectree.domain.member.controller.request.NaverLoginRequest;
 import com.ssafy.projectree.domain.member.controller.response.GoogleLoginResponse;
+import com.ssafy.projectree.domain.member.controller.response.NaverLoginResponse;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -100,6 +102,97 @@ class AuthControllerTest extends ControllerTestSupport {
         // when // then
         mockMvc.perform(
                         post("/api/auth/google")
+                                .content(objectMapper.writeValueAsString(request))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+        ;
+    }
+
+    @DisplayName("authorization code로 네이버 로그인을 하면 회원의 이름과 이메일, 프로필 이미지 URL을 응답한다.")
+    @Test
+    void naverLogin() throws Exception {
+        // given
+        NaverLoginRequest request = NaverLoginRequest.builder()
+                .code("authorization-code")
+                .state("csrf-state")
+                .build();
+
+        Member member = Member.builder()
+                .email("ssafy@naver.com")
+                .name("김싸피")
+                .build();
+
+        when(authService.naverLogin(any(NaverLoginRequest.class), any(HttpSession.class)))
+                .thenReturn(NaverLoginResponse.from(member));
+
+        // when // then
+        mockMvc.perform(
+                        post("/api/auth/naver")
+                                .content(objectMapper.writeValueAsString(request))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("성공"))
+                .andExpect(jsonPath("$.data.name").value("김싸피"))
+                .andExpect(jsonPath("$.data.email").value("ssafy@naver.com"))
+                .andExpect(jsonPath("$.data.imageUrl").value(""))
+        ;
+    }
+
+    @DisplayName("네이버 로그인을 할 때 authorization code는 필수값이다.")
+    @Test
+    void naverLoginWithoutCode() throws Exception {
+        // given
+        NaverLoginRequest request = NaverLoginRequest.builder()
+                .state("csrf-state")
+                .build();
+
+        // when // then
+        mockMvc.perform(
+                        post("/api/auth/naver")
+                                .content(objectMapper.writeValueAsString(request))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+        ;
+    }
+
+    @DisplayName("네이버 로그인을 할 때 state는 필수값이다.")
+    @Test
+    void naverLoginWithoutState() throws Exception {
+        // given
+        NaverLoginRequest request = NaverLoginRequest.builder()
+                .code("authorization-code")
+                .build();
+
+        // when // then
+        mockMvc.perform(
+                        post("/api/auth/naver")
+                                .content(objectMapper.writeValueAsString(request))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+        ;
+    }
+
+    @DisplayName("네이버 로그인을 할 때 authorization code는 공백일 수 없다.")
+    @Test
+    void naverLoginWithBlankCode() throws Exception {
+        // given
+        NaverLoginRequest request = NaverLoginRequest.builder()
+                .code("   ")
+                .state("csrf-state")
+                .build();
+
+        // when // then
+        mockMvc.perform(
+                        post("/api/auth/naver")
                                 .content(objectMapper.writeValueAsString(request))
                                 .contentType(MediaType.APPLICATION_JSON)
                 )

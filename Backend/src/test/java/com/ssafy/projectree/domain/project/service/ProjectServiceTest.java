@@ -8,8 +8,8 @@ import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
-import com.ssafy.projectree.global.exception.BusinessException;
-import com.ssafy.projectree.global.exception.ErrorCode;
+import com.ssafy.projectree.global.exception.CustomException;
+import com.ssafy.projectree.global.exception.CommonErrorCode;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
@@ -130,9 +130,9 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when // then
         assertThatThrownBy(() -> projectService.createProject(request, 999))
-                .isInstanceOf(BusinessException.class)
+                .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
+                .isEqualTo(CommonErrorCode.MEMBER_NOT_FOUND);
     }
 
     @DisplayName("존재하지 않는 회원 id로 프로젝트 생성에 실패하면 프로젝트가 저장되지 않는다.")
@@ -143,7 +143,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         assertThatThrownBy(() -> projectService.createProject(request, 999))
-                .isInstanceOf(BusinessException.class);
+                .isInstanceOf(CustomException.class);
 
         // then
         assertThat(projectRepository.count()).isZero();
