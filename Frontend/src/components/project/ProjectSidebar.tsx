@@ -10,6 +10,7 @@ import style from "../../css/components/common/Sidebar.module.css";
 export default function ProjectSidebar() {
   const { projectId } = useParams<{ projectId: string }>();
   const projectHomePath = `/projects/${projectId}`;
+  const projectMembersPath = `/projects/${projectId}/members`;
 
   return (
     <div className={style.container}>
@@ -61,7 +62,14 @@ export default function ProjectSidebar() {
           <span>노드</span>
         </button>
 
-        <button className={style.menuButton} type="button">
+        <NavLink
+          className={({ isActive }) =>
+            `${style.menuButton} ${
+              isActive ? style.menuButtonActive : ""
+            }`
+          }
+          to={projectMembersPath}
+        >
           <img
             className={style.menuIcon}
             src={MemberIcon}
@@ -69,7 +77,7 @@ export default function ProjectSidebar() {
             aria-hidden="true"
           />
           <span>팀원</span>
-        </button>
+        </NavLink>
 
         <button className={style.menuButton} type="button">
           <img
