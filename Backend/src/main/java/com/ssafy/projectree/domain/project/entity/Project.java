@@ -29,6 +29,9 @@ public class Project extends BaseEntity {
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectMember> projectMembers = new ArrayList<>();
 
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectCategory> projectCategories = new ArrayList<>();
+
     @Builder
     private Project(String title, String content, String photoUrl) {
         this.title = title;
@@ -39,6 +42,11 @@ public class Project extends BaseEntity {
     public void addMember(ProjectMember pm) {
         this.projectMembers.add(pm);
         pm.assignProject(this);
+    }
+
+    public void addCategory(ProjectCategory pc) {
+        this.projectCategories.add(pc);
+        pc.assignProject(this);
     }
 
     public void removeMember(int memberId) {
