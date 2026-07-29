@@ -16,9 +16,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * 비즈니스 예외는 ErrorCode에 정의된 상태 코드와 메시지를 그대로 내려주도록
-     */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiErrorResponse> handleBusinessException(BusinessException e) {
         ErrorCode errorCode = e.getErrorCode();
@@ -29,9 +26,17 @@ public class GlobalExceptionHandler {
                 .body(ApiErrorResponse.of(errorCode));
     }
 
-    /**
-     * @Valid 검증 실패
-     */
+    @ExceptionHandler(DomainException.class)
+    public ResponseEntity<ApiErrorResponse> handleDomainException(DomainException e) {
+        ErrorCode errorCode = e.getErrorCode();
+        Domain domain = e.getDomain();
+        log.warn("domain exception: {}", errorCode);
+
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiErrorResponse.of(errorCode, domain.getDescription()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValid(
             MethodArgumentNotValidException e
@@ -45,9 +50,6 @@ public class GlobalExceptionHandler {
         return errorResponse(ErrorCode.INVALID_REQUEST);
     }
 
-    /**
-     * 요청 본문이 JSON으로 파싱되지 않는 경우.
-     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiErrorResponse> handleHttpMessageNotReadable(
             HttpMessageNotReadableException e
@@ -57,12 +59,6 @@ public class GlobalExceptionHandler {
         return errorResponse(ErrorCode.INVALID_REQUEST);
     }
 
-    /**
-     * 나머지 예외를 처리
-     * Spring MVC 표준 예외(405, 415, 404 등)는 ErrorResponse를 구현하고 있으므로
-     * 그 상태 코드를 살려서 내려준다. 이 분기가 없으면 전부 500으로 나간다.
-     * ErrorResponse는 인터페이스라 @ExceptionHandler에 직접 지정할 수 없어 여기서 instanceof로 갈라낸다.
-     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleException(Exception e) {
         if (e instanceof ErrorResponse springMvcError) {
@@ -77,10 +73,6 @@ public class GlobalExceptionHandler {
         return errorResponse(ErrorCode.INTERNAL_SERVER_ERROR);
     }
 
-    /**
-     * 매핑하지 않은 4xx는 INVALID_REQUEST(400)로 모은다.
-     * 실제로 발생 가능한 406 등은 400으로 내려가므로, 필요해지면 ErrorCode를 추가한다.
-     */
     private ErrorCode toErrorCode(HttpStatusCode statusCode) {
         if (statusCode.equals(HttpStatus.NOT_FOUND)) {
             return ErrorCode.ENDPOINT_NOT_FOUND;
