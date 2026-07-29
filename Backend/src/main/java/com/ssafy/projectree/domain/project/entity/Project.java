@@ -44,4 +44,6 @@ public class Project extends BaseEntity {
     public void removeMember(int memberId) {
         this.projectMembers.removeIf(pm -> pm.getMemberId() == memberId);
     }
+
+
 }

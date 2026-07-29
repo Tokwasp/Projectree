@@ -1,5 +1,6 @@
 package com.ssafy.projectree.domain.project.dto.request;
 
+import com.ssafy.projectree.domain.project.entity.Project;
 import jakarta.validation.constraints.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,13 +19,19 @@ public class ProjectCreateRequest {
     @Size(max = 1024, message = "이미지 URL이 너무 깁니다.")
     private String photoUrl;
 
-    private ProjectCreateRequest() {
-    }
 
     @Builder
     private ProjectCreateRequest(String title, String content, String photoUrl) {
         this.title = title;
         this.content = content;
         this.photoUrl = photoUrl;
+    }
+
+    public Project toEntity() {
+        return Project.builder()
+                .title(title)
+                .content(content)
+                .photoUrl(photoUrl)
+                .build();
     }
 }

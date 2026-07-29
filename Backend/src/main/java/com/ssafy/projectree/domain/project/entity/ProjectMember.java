@@ -38,8 +38,14 @@ public class ProjectMember extends BaseEntity {
         this.role = role;
     }
 
-    // 빌더에서 project 제거하면서 다른 프로젝트 넣는 상황 방지
-    void assignProject(Project project) {
+    public static ProjectMember createMember(int memberId, ProjectRole role) {
+        return ProjectMember.builder()
+                .memberId(memberId)
+                .role(role)
+                .build();
+    }
+
+    public void assignProject(Project project) {
         this.project = project;
     }
 
