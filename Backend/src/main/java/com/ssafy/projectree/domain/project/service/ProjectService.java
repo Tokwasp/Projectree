@@ -19,6 +19,7 @@ public class ProjectService {
     private final MemberRepository memberRepository;
     private final ProjectRepository projectRepository;
 
+    @Transactional
     public int createProject(ProjectCreateRequest request, int memberId) {
         if (!memberRepository.existsById(memberId)) {
             throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);

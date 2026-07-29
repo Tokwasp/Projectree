@@ -19,6 +19,8 @@ public class ProjectCreateRequest {
     @Size(max = 1024, message = "이미지 URL이 너무 깁니다.")
     private String photoUrl;
 
+    private ProjectCreateRequest() {
+    }
 
     @Builder
     private ProjectCreateRequest(String title, String content, String photoUrl) {
