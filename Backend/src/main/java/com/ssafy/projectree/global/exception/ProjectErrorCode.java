@@ -9,10 +9,14 @@ import org.springframework.http.HttpStatus;
 public enum ProjectErrorCode implements ErrorCode {
 
     // 400
-    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "유효하지 않은 카테고리입니다."),
+    INVALID_CATEGORY(HttpStatus.BAD_REQUEST, "유효하지 않은 카테고리입니다."),
+
+    //403
+    PROJECT_DELETE_FORBIDDEN(HttpStatus.FORBIDDEN, "프로젝트 삭제 권한이 없습니다."),
 
     // 404
-    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다.");
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."),
+    PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 프로젝트입니다.");
 
     private final HttpStatus status;
     private final String message;

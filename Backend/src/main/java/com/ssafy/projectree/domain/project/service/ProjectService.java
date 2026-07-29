@@ -25,26 +25,50 @@ public class ProjectService {
 
     @Transactional
     public int createProject(ProjectCreateRequest request, int memberId) {
-        if (!memberRepository.existsById(memberId)) {
-            throw new CustomException(ProjectErrorCode.MEMBER_NOT_FOUND);
-        }
+        validateMember(memberId);
 
         Project project = request.toEntity();
         ProjectMember pm = ProjectMember.createMember(memberId, ProjectRole.OWNER);
 
+        addCategories(project, request);
+        project.addMember(pm);
+
+        return projectRepository.save(project).getId();
+    }
+
+    @Transactional
+    public void deleteProject(int projectId, int memberId) {
+        Project project = findProject(projectId);
+
+        if (!project.isOwner(memberId)) {
+            throw new CustomException(ProjectErrorCode.PROJECT_DELETE_FORBIDDEN);
+        }
+
+        projectRepository.delete(project);
+    }
+
+    private void validateMember(int memberId) {
+        if (!memberRepository.existsById(memberId)) {
+            throw new CustomException(ProjectErrorCode.MEMBER_NOT_FOUND);
+        }
+    }
+
+    private static void addCategories(Project project, ProjectCreateRequest request) {
         Set<Integer> categoryIds = new HashSet<>(request.getCategoryIds());
 
         for (Integer categoryId : categoryIds) {
             if (categoryId < 1 || categoryId > 6) {
-                throw new CustomException(ProjectErrorCode.INVALID_REQUEST);
+                throw new CustomException(ProjectErrorCode.INVALID_CATEGORY);
             }
 
             ProjectCategory pc = ProjectCategory.createProjectCategory(categoryId);
             project.addCategory(pc);
         }
+    }
 
-        project.addMember(pm);
-
-        return projectRepository.save(project).getId();
+    private Project findProject(int projectId) {
+        return projectRepository.findById(projectId)
+                .orElseThrow(() ->
+                        new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
     }
 }

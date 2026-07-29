@@ -53,5 +53,9 @@ public class Project extends BaseEntity {
         this.projectMembers.removeIf(pm -> pm.getMemberId() == memberId);
     }
 
-
+    public boolean isOwner(int memberId) {
+        return projectMembers.stream()
+                .anyMatch(pm -> pm.getMemberId() == memberId
+                        && pm.getRole() == ProjectRole.OWNER);
+    }
 }
