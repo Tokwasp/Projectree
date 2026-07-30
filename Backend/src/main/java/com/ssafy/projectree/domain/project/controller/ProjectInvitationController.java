@@ -5,7 +5,6 @@ import com.ssafy.projectree.domain.project.controller.dto.request.InvitationCrea
 import com.ssafy.projectree.domain.project.controller.dto.response.InviteResultsResponse;
 import com.ssafy.projectree.domain.project.controller.dto.response.PendingInvitationResponse;
 import com.ssafy.projectree.domain.project.service.ProjectInvitationService;
-import com.ssafy.projectree.domain.project.service.result.PendingInvitation;
 import com.ssafy.projectree.global.annotation.Login;
 import com.ssafy.projectree.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -34,9 +33,9 @@ public class ProjectInvitationController {
             @Valid @RequestBody InvitationCreateRequest request,
             @Login LoginMember loginMember
     ) {
-        InviteResultsResponse response = InviteResultsResponse.from(projectInvitationService.invite(
+        InviteResultsResponse response = projectInvitationService.invite(
                 projectId, loginMember.getId(), request.getInviteeMemberIds()
-        ));
+        );
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -47,9 +46,7 @@ public class ProjectInvitationController {
     ) {
         List<PendingInvitationResponse> response = projectInvitationService
                 .getPendingInvitations(projectId, loginMember.getId())
-                .stream()
-                .map(PendingInvitationResponse::from)
-                .toList();
+                ;
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

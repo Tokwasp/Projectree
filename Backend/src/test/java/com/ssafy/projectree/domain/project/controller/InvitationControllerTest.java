@@ -2,9 +2,9 @@ package com.ssafy.projectree.domain.project.controller;
 
 import com.ssafy.projectree.ControllerTestSupport;
 import com.ssafy.projectree.domain.member.LoginMember;
+import com.ssafy.projectree.domain.project.controller.dto.response.InvitationLandingResponse;
 import com.ssafy.projectree.domain.project.entity.InvitationStatus;
 import com.ssafy.projectree.domain.project.exception.InvitationErrorCode;
-import com.ssafy.projectree.domain.project.service.result.InvitationLanding;
 import com.ssafy.projectree.global.config.session.SessionConst;
 import com.ssafy.projectree.global.exception.CustomException;
 import org.junit.jupiter.api.Test;
@@ -13,6 +13,7 @@ import org.springframework.mock.web.MockHttpSession;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -23,8 +24,12 @@ class InvitationControllerTest extends ControllerTestSupport {
 
     @Test
     void getLanding_returnsInvitationLanding() throws Exception {
-        given(projectInvitationService.getLanding("token", 20))
-                .willReturn(new InvitationLanding("프로젝트", "초대자", InvitationStatus.PENDING, false));
+        InvitationLandingResponse landing = mock(InvitationLandingResponse.class);
+        given(landing.getProjectTitle()).willReturn("프로젝트");
+        given(landing.getInviterName()).willReturn("초대자");
+        given(landing.getStatus()).willReturn(InvitationStatus.PENDING);
+        given(landing.isExpired()).willReturn(false);
+        given(projectInvitationService.getLanding("token", 20)).willReturn(landing);
 
         mockMvc.perform(get("/api/invitations/token").session(loginSession()))
                 .andExpect(status().isOk())

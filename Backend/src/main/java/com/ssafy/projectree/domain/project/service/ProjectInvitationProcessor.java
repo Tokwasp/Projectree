@@ -4,13 +4,13 @@ import com.ssafy.projectree.domain.mail.entity.InvitationMail;
 import com.ssafy.projectree.domain.mail.repository.InvitationMailRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
+import com.ssafy.projectree.domain.project.controller.dto.response.InviteTargetResponse;
 import com.ssafy.projectree.domain.project.entity.ProjectInvitation;
 import com.ssafy.projectree.domain.project.entity.InvitationStatus;
 import com.ssafy.projectree.domain.project.repository.ProjectInvitationRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.domain.project.service.result.InviteResult;
-import com.ssafy.projectree.domain.project.service.result.MemberInviteResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -36,7 +36,7 @@ public class ProjectInvitationProcessor {
     // self-invocation은 프록시를 우회해 @Transactional이 적용되지 않으므로 별도 bean으로 분리한다.
     // 대상별 독립 커밋을 보장하기 위해 REQUIRES_NEW 트랜잭션을 사용한다.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public MemberInviteResult processInvite(int projectId, int inviterMemberId, int inviteeMemberId) {
+    public InviteTargetResponse processInvite(int projectId, int inviterMemberId, int inviteeMemberId) {
         LocalDateTime now = LocalDateTime.now();
 
         if (inviterMemberId == inviteeMemberId) {
@@ -71,7 +71,7 @@ public class ProjectInvitationProcessor {
         return reinvite(invitation, invitee, now);
     }
 
-    private MemberInviteResult createInvitation(
+    private InviteTargetResponse createInvitation(
             int projectId,
             int inviterMemberId,
             Member invitee,
@@ -91,7 +91,7 @@ public class ProjectInvitationProcessor {
         return result(invitee.getId(), InviteResult.INVITED);
     }
 
-    private MemberInviteResult resendInvitation(
+    private InviteTargetResponse resendInvitation(
             ProjectInvitation invitation,
             Member invitee,
             LocalDateTime now
@@ -103,7 +103,7 @@ public class ProjectInvitationProcessor {
         return result(invitee.getId(), InviteResult.RESENT);
     }
 
-    private MemberInviteResult reinvite(
+    private InviteTargetResponse reinvite(
             ProjectInvitation invitation,
             Member invitee,
             LocalDateTime now
@@ -123,7 +123,7 @@ public class ProjectInvitationProcessor {
         ));
     }
 
-    private MemberInviteResult result(int inviteeMemberId, InviteResult result) {
-        return new MemberInviteResult(inviteeMemberId, result);
+    private InviteTargetResponse result(int inviteeMemberId, InviteResult result) {
+        return InviteTargetResponse.of(inviteeMemberId, result);
     }
 }

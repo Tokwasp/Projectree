@@ -5,6 +5,10 @@ import com.ssafy.projectree.domain.mail.entity.MailSendStatus;
 import com.ssafy.projectree.domain.mail.repository.InvitationMailRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
+import com.ssafy.projectree.domain.project.controller.dto.response.InvitationLandingResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.InviteResultsResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.InviteTargetResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.PendingInvitationResponse;
 import com.ssafy.projectree.domain.project.entity.ProjectInvitation;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.InvitationStatus;
@@ -15,9 +19,6 @@ import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.service.result.InviteResult;
-import com.ssafy.projectree.domain.project.service.result.MemberInviteResult;
-import com.ssafy.projectree.domain.project.service.result.InvitationLanding;
-import com.ssafy.projectree.domain.project.service.result.PendingInvitation;
 import com.ssafy.projectree.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,33 +48,28 @@ public class ProjectInvitationService {
     private final InvitationTokenGenerator invitationTokenGenerator;
     private final ProjectInvitationProcessor projectInvitationProcessor;
 
-    public List<MemberInviteResult> invite(
+    public InviteResultsResponse invite(
             int projectId,
             int inviterMemberId,
             List<Integer> inviteeMemberIds
     ) {
         validateProjectAndOwner(projectId, inviterMemberId);
 
-        List<MemberInviteResult> results = new ArrayList<>();
+        List<InviteTargetResponse> results = new ArrayList<>();
         for (int inviteeMemberId : inviteeMemberIds) {
             results.add(processInvite(projectId, inviterMemberId, inviteeMemberId));
         }
-        return results;
+        return InviteResultsResponse.from(results);
     }
 
     @Transactional(readOnly = true)
-    public InvitationLanding getLanding(String rawToken, int loginMemberId) {
+    public InvitationLandingResponse getLanding(String rawToken, int loginMemberId) {
         LocalDateTime now = LocalDateTime.now();
         ProjectInvitation invitation = findInvitation(rawToken);
         validateInvitee(invitation, loginMemberId);
 
         Member inviter = memberRepository.findById(invitation.getInviterMemberId()).orElseThrow();
-        return new InvitationLanding(
-                invitation.getProject().getTitle(),
-                inviter.getName(),
-                invitation.getStatus(),
-                invitation.isExpired(now)
-        );
+        return InvitationLandingResponse.of(invitation, inviter.getName(), now);
     }
 
     /**
@@ -129,7 +125,7 @@ public class ProjectInvitationService {
     }
 
     @Transactional(readOnly = true)
-    public List<PendingInvitation> getPendingInvitations(int projectId, int loginMemberId) {
+    public List<PendingInvitationResponse> getPendingInvitations(int projectId, int loginMemberId) {
         LocalDateTime now = LocalDateTime.now();
         validateProjectAndOwner(projectId, loginMemberId);
 
@@ -153,7 +149,7 @@ public class ProjectInvitationService {
                 ));
 
         return invitations.stream()
-                .map(invitation -> toPendingInvitation(
+                .map(invitation -> PendingInvitationResponse.of(
                         invitation,
                         membersById.get(invitation.getInviteeMemberId()),
                         getLatestMailStatus(latestMailsByInvitationId.get(invitation.getId())),
@@ -173,13 +169,13 @@ public class ProjectInvitationService {
         }
     }
 
-    private MemberInviteResult processInvite(int projectId, int inviterMemberId, int inviteeMemberId) {
+    private InviteTargetResponse processInvite(int projectId, int inviterMemberId, int inviteeMemberId) {
         try {
             return projectInvitationProcessor.processInvite(projectId, inviterMemberId, inviteeMemberId);
         } catch (DataIntegrityViolationException e) {
             // 동시 초대로 유니크 제약에 걸린 대상은 방금 생성된 초대와 같은 쿨다운으로 처리한다.
             log.warn("초대 저장 중 무결성 위반, COOLDOWN으로 처리: {}", e.getMessage());
-            return new MemberInviteResult(inviteeMemberId, InviteResult.COOLDOWN);
+            return InviteTargetResponse.of(inviteeMemberId, InviteResult.COOLDOWN);
         }
     }
 
@@ -207,21 +203,4 @@ public class ProjectInvitationService {
         return latestMail == null ? MailSendStatus.NOT_REQUESTED : latestMail.getSendStatus();
     }
 
-    private PendingInvitation toPendingInvitation(
-            ProjectInvitation invitation,
-            Member invitee,
-            MailSendStatus mailSendStatus,
-            LocalDateTime now
-    ) {
-        return new PendingInvitation(
-                invitation.getId(),
-                invitation.getInviteeMemberId(),
-                invitee.getName(),
-                invitee.getEmail(),
-                invitation.getLastInvitedAt(),
-                invitation.getExpiresAt(),
-                invitation.isExpired(now),
-                mailSendStatus
-        );
-    }
 }

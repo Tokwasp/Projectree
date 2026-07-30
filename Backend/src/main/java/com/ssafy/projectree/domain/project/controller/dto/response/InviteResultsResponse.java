@@ -1,6 +1,5 @@
 package com.ssafy.projectree.domain.project.controller.dto.response;
 
-import com.ssafy.projectree.domain.project.service.result.MemberInviteResult;
 import lombok.Getter;
 
 import java.util.List;
@@ -8,13 +7,13 @@ import java.util.List;
 @Getter
 public class InviteResultsResponse {
 
-    private final List<MemberInviteResult> results;
+    private final List<InviteTargetResponse> results;
 
-    private InviteResultsResponse(List<MemberInviteResult> results) {
+    private InviteResultsResponse(List<InviteTargetResponse> results) {
         this.results = results;
     }
 
-    public static InviteResultsResponse from(List<MemberInviteResult> results) {
+    public static InviteResultsResponse from(List<InviteTargetResponse> results) {
         return new InviteResultsResponse(results);
     }
 }

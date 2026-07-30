@@ -1,7 +1,8 @@
 package com.ssafy.projectree.domain.project.controller.dto.response;
 
 import com.ssafy.projectree.domain.mail.entity.MailSendStatus;
-import com.ssafy.projectree.domain.project.service.result.PendingInvitation;
+import com.ssafy.projectree.domain.member.Member;
+import com.ssafy.projectree.domain.project.entity.ProjectInvitation;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -38,16 +39,21 @@ public class PendingInvitationResponse {
         this.mailSendStatus = mailSendStatus;
     }
 
-    public static PendingInvitationResponse from(PendingInvitation invitation) {
+    public static PendingInvitationResponse of(
+            ProjectInvitation invitation,
+            Member invitee,
+            MailSendStatus mailSendStatus,
+            LocalDateTime now
+    ) {
         return new PendingInvitationResponse(
-                invitation.invitationId(),
-                invitation.inviteeMemberId(),
-                invitation.inviteeName(),
-                invitation.inviteeEmail(),
-                invitation.lastInvitedAt(),
-                invitation.expiresAt(),
-                invitation.expired(),
-                invitation.mailSendStatus()
+                invitation.getId(),
+                invitation.getInviteeMemberId(),
+                invitee.getName(),
+                invitee.getEmail(),
+                invitation.getLastInvitedAt(),
+                invitation.getExpiresAt(),
+                invitation.isExpired(now),
+                mailSendStatus
         );
     }
 }

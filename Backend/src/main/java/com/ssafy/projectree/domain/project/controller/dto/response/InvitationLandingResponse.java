@@ -1,8 +1,10 @@
 package com.ssafy.projectree.domain.project.controller.dto.response;
 
 import com.ssafy.projectree.domain.project.entity.InvitationStatus;
-import com.ssafy.projectree.domain.project.service.result.InvitationLanding;
+import com.ssafy.projectree.domain.project.entity.ProjectInvitation;
 import lombok.Getter;
+
+import java.time.LocalDateTime;
 
 @Getter
 public class InvitationLandingResponse {
@@ -24,12 +26,16 @@ public class InvitationLandingResponse {
         this.expired = expired;
     }
 
-    public static InvitationLandingResponse from(InvitationLanding landing) {
+    public static InvitationLandingResponse of(
+            ProjectInvitation invitation,
+            String inviterName,
+            LocalDateTime now
+    ) {
         return new InvitationLandingResponse(
-                landing.projectTitle(),
-                landing.inviterName(),
-                landing.status(),
-                landing.expired()
+                invitation.getProject().getTitle(),
+                inviterName,
+                invitation.getStatus(),
+                invitation.isExpired(now)
         );
     }
 }

@@ -3,9 +3,10 @@ package com.ssafy.projectree.domain.project.controller;
 import com.ssafy.projectree.ControllerTestSupport;
 import com.ssafy.projectree.domain.mail.entity.MailSendStatus;
 import com.ssafy.projectree.domain.member.LoginMember;
+import com.ssafy.projectree.domain.project.controller.dto.response.InviteResultsResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.InviteTargetResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.PendingInvitationResponse;
 import com.ssafy.projectree.domain.project.service.result.InviteResult;
-import com.ssafy.projectree.domain.project.service.result.MemberInviteResult;
-import com.ssafy.projectree.domain.project.service.result.PendingInvitation;
 import com.ssafy.projectree.global.config.session.SessionConst;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -16,6 +17,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -28,7 +30,9 @@ class ProjectInvitationControllerTest extends ControllerTestSupport {
     @Test
     void invite_returnsResults() throws Exception {
         given(projectInvitationService.invite(anyInt(), anyInt(), anyList()))
-                .willReturn(List.of(new MemberInviteResult(20, InviteResult.INVITED)));
+                .willReturn(InviteResultsResponse.from(List.of(
+                        InviteTargetResponse.of(20, InviteResult.INVITED)
+                )));
 
         mockMvc.perform(post("/api/projects/1/invitations")
                         .session(loginSession())
@@ -42,13 +46,12 @@ class ProjectInvitationControllerTest extends ControllerTestSupport {
 
     @Test
     void getPendingInvitations_returnsPendingInvitations() throws Exception {
+        PendingInvitationResponse pendingInvitation = mock(PendingInvitationResponse.class);
+        given(pendingInvitation.getInvitationId()).willReturn(3);
+        given(pendingInvitation.getInviteeName()).willReturn("초대 대상");
+        given(pendingInvitation.getMailSendStatus()).willReturn(MailSendStatus.NOT_REQUESTED);
         given(projectInvitationService.getPendingInvitations(1, 10))
-                .willReturn(List.of(new PendingInvitation(
-                        3, 20, "초대 대상", "invitee@example.com",
-                        java.time.LocalDateTime.of(2026, 7, 30, 10, 0),
-                        java.time.LocalDateTime.of(2026, 7, 31, 10, 0),
-                        false, MailSendStatus.NOT_REQUESTED
-                )));
+                .willReturn(List.of(pendingInvitation));
 
         mockMvc.perform(get("/api/projects/1/invitations").session(loginSession()))
                 .andExpect(status().isOk())

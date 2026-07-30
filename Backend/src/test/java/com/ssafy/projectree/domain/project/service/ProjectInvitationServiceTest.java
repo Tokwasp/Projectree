@@ -11,15 +11,16 @@ import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectInvitation;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
+import com.ssafy.projectree.domain.project.controller.dto.response.InvitationLandingResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.InviteResultsResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.InviteTargetResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.PendingInvitationResponse;
 import com.ssafy.projectree.domain.project.exception.InvitationErrorCode;
 import com.ssafy.projectree.domain.project.exception.ProjectErrorCode;
 import com.ssafy.projectree.domain.project.repository.ProjectInvitationRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.domain.project.service.result.InviteResult;
-import com.ssafy.projectree.domain.project.service.result.InvitationLanding;
-import com.ssafy.projectree.domain.project.service.result.MemberInviteResult;
-import com.ssafy.projectree.domain.project.service.result.PendingInvitation;
 import com.ssafy.projectree.global.exception.CustomException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -233,11 +234,12 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         String rawToken = "landing-token";
         saveInvitationForToken(project, owner.getId(), invitee.getId(), rawToken, LocalDateTime.now());
 
-        InvitationLanding landing = projectInvitationService.getLanding(rawToken, invitee.getId());
+        InvitationLandingResponse landing = projectInvitationService.getLanding(rawToken, invitee.getId());
 
-        assertThat(landing).isEqualTo(new InvitationLanding(
-                project.getTitle(), owner.getName(), InvitationStatus.PENDING, false
-        ));
+        assertThat(landing.getProjectTitle()).isEqualTo(project.getTitle());
+        assertThat(landing.getInviterName()).isEqualTo(owner.getName());
+        assertThat(landing.getStatus()).isEqualTo(InvitationStatus.PENDING);
+        assertThat(landing.isExpired()).isFalse();
     }
 
     @DisplayName("만료된 대기 초대도 랜딩 조회에서는 상태와 만료 여부를 반환한다.")
@@ -249,10 +251,10 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         String rawToken = "expired-landing-token";
         saveInvitationForToken(project, owner.getId(), invitee.getId(), rawToken, LocalDateTime.now().minusHours(25));
 
-        InvitationLanding landing = projectInvitationService.getLanding(rawToken, invitee.getId());
+        InvitationLandingResponse landing = projectInvitationService.getLanding(rawToken, invitee.getId());
 
-        assertThat(landing.status()).isEqualTo(InvitationStatus.PENDING);
-        assertThat(landing.expired()).isTrue();
+        assertThat(landing.getStatus()).isEqualTo(InvitationStatus.PENDING);
+        assertThat(landing.isExpired()).isTrue();
     }
 
     @DisplayName("처리 완료된 초대도 랜딩 조회에서는 상태를 반환한다.")
@@ -268,10 +270,10 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         invitation.reject(LocalDateTime.now());
         projectInvitationRepository.saveAndFlush(invitation);
 
-        InvitationLanding landing = projectInvitationService.getLanding(rawToken, invitee.getId());
+        InvitationLandingResponse landing = projectInvitationService.getLanding(rawToken, invitee.getId());
 
-        assertThat(landing.status()).isEqualTo(InvitationStatus.REJECTED);
-        assertThat(landing.expired()).isFalse();
+        assertThat(landing.getStatus()).isEqualTo(InvitationStatus.REJECTED);
+        assertThat(landing.isExpired()).isFalse();
     }
 
     @DisplayName("무효 토큰으로 랜딩을 조회하면 초대를 찾을 수 없다.")
@@ -418,11 +420,11 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         canceled.cancel(LocalDateTime.now());
         projectInvitationRepository.saveAllAndFlush(List.of(accepted, rejected, canceled));
 
-        List<PendingInvitation> invitations = projectInvitationService.getPendingInvitations(
+        List<PendingInvitationResponse> invitations = projectInvitationService.getPendingInvitations(
                 project.getId(), owner.getId()
         );
 
-        assertThat(invitations).extracting(PendingInvitation::invitationId).containsExactly(pending.getId());
+        assertThat(invitations).extracting(PendingInvitationResponse::getInvitationId).containsExactly(pending.getId());
     }
 
     @DisplayName("대기 목록은 만료 여부와 초대 대상 회원 정보를 함께 반환한다.")
@@ -435,16 +437,16 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
                 project, owner.getId(), invitee.getId(), "expired-pending-token", LocalDateTime.now().minusHours(25)
         );
 
-        PendingInvitation pendingInvitation = projectInvitationService.getPendingInvitations(
+        PendingInvitationResponse pendingInvitation = projectInvitationService.getPendingInvitations(
                 project.getId(), owner.getId()
         ).getFirst();
 
-        assertThat(pendingInvitation.invitationId()).isEqualTo(invitation.getId());
-        assertThat(pendingInvitation.inviteeMemberId()).isEqualTo(invitee.getId());
-        assertThat(pendingInvitation.inviteeName()).isEqualTo(invitee.getName());
-        assertThat(pendingInvitation.inviteeEmail()).isEqualTo(invitee.getEmail());
-        assertThat(pendingInvitation.expired()).isTrue();
-        assertThat(pendingInvitation.mailSendStatus()).isEqualTo(MailSendStatus.NOT_REQUESTED);
+        assertThat(pendingInvitation.getInvitationId()).isEqualTo(invitation.getId());
+        assertThat(pendingInvitation.getInviteeMemberId()).isEqualTo(invitee.getId());
+        assertThat(pendingInvitation.getInviteeName()).isEqualTo(invitee.getName());
+        assertThat(pendingInvitation.getInviteeEmail()).isEqualTo(invitee.getEmail());
+        assertThat(pendingInvitation.isExpired()).isTrue();
+        assertThat(pendingInvitation.getMailSendStatus()).isEqualTo(MailSendStatus.NOT_REQUESTED);
     }
 
     @DisplayName("대기 목록은 초대 메일 중 가장 최근에 생성된 행의 발송 상태를 반환한다.")
@@ -464,11 +466,11 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         latestMail.succeed();
         invitationMailRepository.saveAndFlush(latestMail);
 
-        PendingInvitation pendingInvitation = projectInvitationService.getPendingInvitations(
+        PendingInvitationResponse pendingInvitation = projectInvitationService.getPendingInvitations(
                 project.getId(), owner.getId()
         ).getFirst();
 
-        assertThat(pendingInvitation.mailSendStatus()).isEqualTo(MailSendStatus.SENT);
+        assertThat(pendingInvitation.getMailSendStatus()).isEqualTo(MailSendStatus.SENT);
     }
 
     @DisplayName("신규 초대 시 초대와 발송 대기 메일이 함께 저장된다.")
@@ -480,12 +482,15 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         Project project = saveProjectWithMembers(owner.getId());
 
         // when
-        List<MemberInviteResult> results = projectInvitationService.invite(
+        InviteResultsResponse results = projectInvitationService.invite(
                 project.getId(), owner.getId(), List.of(invitee.getId())
         );
 
         // then
-        assertThat(results).containsExactly(new MemberInviteResult(invitee.getId(), InviteResult.INVITED));
+        assertThat(results.getResults()).singleElement().satisfies(result -> {
+            assertThat(result.getInviteeMemberId()).isEqualTo(invitee.getId());
+            assertThat(result.getResult()).isEqualTo(InviteResult.INVITED);
+        });
         ProjectInvitation invitation = projectInvitationRepository
                 .findByProjectIdAndInviteeMemberId(project.getId(), invitee.getId())
                 .orElseThrow();
@@ -514,13 +519,16 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         ));
 
         // when
-        List<MemberInviteResult> results = projectInvitationService.invite(
+        InviteResultsResponse results = projectInvitationService.invite(
                 project.getId(), owner.getId(), List.of(invitee.getId())
         );
 
         // then
         ProjectInvitation found = projectInvitationRepository.findById(invitation.getId()).orElseThrow();
-        assertThat(results).containsExactly(new MemberInviteResult(invitee.getId(), InviteResult.RESENT));
+        assertThat(results.getResults()).singleElement().satisfies(result -> {
+            assertThat(result.getInviteeMemberId()).isEqualTo(invitee.getId());
+            assertThat(result.getResult()).isEqualTo(InviteResult.RESENT);
+        });
         assertThat(found.getTokenHash()).isNotEqualTo("old-token");
         assertThat(invitationMailRepository.findAll()).hasSize(2);
     }
@@ -539,12 +547,15 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         String previousTokenHash = invitation.getTokenHash();
 
         // when
-        List<MemberInviteResult> results = projectInvitationService.invite(
+        InviteResultsResponse results = projectInvitationService.invite(
                 project.getId(), owner.getId(), List.of(invitee.getId())
         );
 
         // then
-        assertThat(results).containsExactly(new MemberInviteResult(invitee.getId(), InviteResult.COOLDOWN));
+        assertThat(results.getResults()).singleElement().satisfies(result -> {
+            assertThat(result.getInviteeMemberId()).isEqualTo(invitee.getId());
+            assertThat(result.getResult()).isEqualTo(InviteResult.COOLDOWN);
+        });
         assertThat(projectInvitationRepository.findById(invitation.getId()).orElseThrow().getTokenHash())
                 .isEqualTo(previousTokenHash);
         assertThat(invitationMailRepository.findAll()).hasSize(1);
@@ -568,12 +579,15 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         projectInvitationRepository.saveAndFlush(invitation);
 
         // when
-        List<MemberInviteResult> results = projectInvitationService.invite(
+        InviteResultsResponse results = projectInvitationService.invite(
                 project.getId(), owner.getId(), List.of(invitee.getId())
         );
 
         // then
-        assertThat(results).containsExactly(new MemberInviteResult(invitee.getId(), InviteResult.INVITED));
+        assertThat(results.getResults()).singleElement().satisfies(result -> {
+            assertThat(result.getInviteeMemberId()).isEqualTo(invitee.getId());
+            assertThat(result.getResult()).isEqualTo(InviteResult.INVITED);
+        });
         assertThat(projectInvitationRepository.findById(invitation.getId()).orElseThrow().getStatus())
                 .isEqualTo(InvitationStatus.PENDING);
     }
@@ -588,19 +602,22 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         Project project = saveProjectWithMembers(owner.getId(), alreadyMember.getId());
 
         // when
-        List<MemberInviteResult> results = projectInvitationService.invite(
+        InviteResultsResponse results = projectInvitationService.invite(
                 project.getId(),
                 owner.getId(),
                 List.of(invitee.getId(), owner.getId(), 999_999, alreadyMember.getId())
         );
 
         // then
-        assertThat(results).containsExactly(
-                new MemberInviteResult(invitee.getId(), InviteResult.INVITED),
-                new MemberInviteResult(owner.getId(), InviteResult.SELF_INVITE),
-                new MemberInviteResult(999_999, InviteResult.MEMBER_NOT_FOUND),
-                new MemberInviteResult(alreadyMember.getId(), InviteResult.ALREADY_MEMBER)
-        );
+        assertThat(results.getResults()).extracting(InviteTargetResponse::getInviteeMemberId)
+                .containsExactly(invitee.getId(), owner.getId(), 999_999, alreadyMember.getId());
+        assertThat(results.getResults()).extracting(InviteTargetResponse::getResult)
+                .containsExactly(
+                        InviteResult.INVITED,
+                        InviteResult.SELF_INVITE,
+                        InviteResult.MEMBER_NOT_FOUND,
+                        InviteResult.ALREADY_MEMBER
+                );
         assertThat(projectInvitationRepository.count()).isEqualTo(1);
         assertThat(invitationMailRepository.count()).isEqualTo(1);
     }

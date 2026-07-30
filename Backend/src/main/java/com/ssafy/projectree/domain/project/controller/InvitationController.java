@@ -26,9 +26,7 @@ public class InvitationController {
             @PathVariable String token,
             @Login LoginMember loginMember
     ) {
-        InvitationLandingResponse response = InvitationLandingResponse.from(
-                projectInvitationService.getLanding(token, loginMember.getId())
-        );
+        InvitationLandingResponse response = projectInvitationService.getLanding(token, loginMember.getId());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
