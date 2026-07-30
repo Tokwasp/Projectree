@@ -226,6 +226,84 @@ class ProjectPersistenceTest {
         assertThat(countProjectCategories()).isZero();
     }
 
+    @DisplayName("프로젝트를 삭제하면 cascade로 project_member 행도 함께 삭제된다.")
+    @Test
+    void delete_cascadesProjectMembers() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        addMember(project, 1, ProjectRole.OWNER);
+        addMember(project, 2, ProjectRole.MEMBER);
+        em.persistAndFlush(project);
+
+        // when
+        em.getEntityManager().remove(project);
+        em.flush();
+        em.clear();
+
+        // then
+        assertThat(countProjectMembers()).isZero();
+    }
+
+    @DisplayName("프로젝트를 삭제하면 cascade로 project_category 행도 함께 삭제된다.")
+    @Test
+    void delete_cascadesProjectCategories() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+        project.addCategory(ProjectCategory.createProjectCategory(2));
+        em.persistAndFlush(project);
+
+        // when
+        em.getEntityManager().remove(project);
+        em.flush();
+        em.clear();
+
+        // then
+        assertThat(countProjectCategories()).isZero();
+    }
+
+    @DisplayName("프로젝트를 삭제하면 project 행 자체도 삭제된다.")
+    @Test
+    void delete_removesProjectRow() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        addMember(project, 1, ProjectRole.OWNER);
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+        em.persistAndFlush(project);
+        int projectId = project.getId();
+
+        // when
+        em.getEntityManager().remove(project);
+        em.flush();
+        em.clear();
+
+        // then
+        assertThat(em.find(Project.class, projectId)).isNull();
+    }
+
+    @DisplayName("한 프로젝트를 삭제해도 다른 프로젝트의 멤버와 카테고리는 남는다.")
+    @Test
+    void delete_doesNotAffectOtherProjects() {
+        // given
+        Project target = createProject("포트폴리오 사이트");
+        addMember(target, 1, ProjectRole.OWNER);
+        target.addCategory(ProjectCategory.createProjectCategory(1));
+        Project other = createProject("스터디 관리 앱");
+        addMember(other, 1, ProjectRole.OWNER);
+        other.addCategory(ProjectCategory.createProjectCategory(1));
+        em.persistAndFlush(target);
+        em.persistAndFlush(other);
+
+        // when
+        em.getEntityManager().remove(target);
+        em.flush();
+        em.clear();
+
+        // then
+        assertThat(countProjectMembers()).isEqualTo(1L);
+        assertThat(countProjectCategories()).isEqualTo(1L);
+    }
+
     private Long countProjectCategories() {
         Number count = (Number) em.getEntityManager()
                 .createNativeQuery("select count(*) from project_category")

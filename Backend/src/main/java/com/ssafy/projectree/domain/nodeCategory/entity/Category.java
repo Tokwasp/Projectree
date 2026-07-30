@@ -13,4 +13,12 @@ public enum Category {
     Design("디자인");
 
     private final String description;
+
+    public static boolean isValidId(int id) {
+        return id >= 1 && id <= values().length;
+    }
+
+    public static boolean isNotValid(int id) {
+        return !isValidId(id);
+    }
 }
