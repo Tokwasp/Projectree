@@ -1,7 +1,9 @@
 package com.ssafy.projectree;
 
 import com.ssafy.projectree.domain.member.controller.AuthController;
+import com.ssafy.projectree.domain.member.controller.MemberController;
 import com.ssafy.projectree.domain.member.service.AuthService;
+import com.ssafy.projectree.domain.member.service.MemberService;
 import com.ssafy.projectree.domain.nodeCategory.controller.NodeCategoryController;
 import com.ssafy.projectree.domain.nodeCategory.service.NodeCategoryService;
 import com.ssafy.projectree.domain.project.controller.ProjectController;
@@ -14,6 +16,7 @@ import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(controllers = {
         AuthController.class,
+        MemberController.class,
         ProjectController.class,
         NodeCategoryController.class
 })
@@ -27,6 +30,9 @@ public abstract class ControllerTestSupport {
 
     @MockitoBean
     protected AuthService authService;
+
+    @MockitoBean
+    protected MemberService memberService;
 
     @MockitoBean
     protected ProjectService projectService;
