@@ -127,6 +127,112 @@ class ProjectPersistenceTest {
         assertThat(countProjectMembers()).isEqualTo(2L);
     }
 
+    @DisplayName("프로젝트를 저장하면 cascade로 카테고리도 함께 저장된다.")
+    @Test
+    void save_cascadesProjectCategories() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+        project.addCategory(ProjectCategory.createProjectCategory(2));
+
+        // when
+        int projectId = em.persistFlushFind(project).getId();
+        em.clear();
+
+        // then
+        Project found = em.find(Project.class, projectId);
+        assertThat(found.getProjectCategories())
+                .extracting(ProjectCategory::getCategoryId)
+                .containsExactlyInAnyOrder(1, 2);
+    }
+
+    @DisplayName("저장된 ProjectCategory는 project_id로 프로젝트를 참조한다.")
+    @Test
+    void save_linksProjectCategoryToProject() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+        int projectId = em.persistFlushFind(project).getId();
+        em.clear();
+
+        // when
+        Object storedProjectId = em.getEntityManager()
+                .createNativeQuery("select project_id from project_category")
+                .getSingleResult();
+
+        // then
+        assertThat(((Number) storedProjectId).intValue()).isEqualTo(projectId);
+    }
+
+    @DisplayName("같은 프로젝트에 같은 카테고리를 두 번 추가하면 유니크 제약 위반으로 저장에 실패한다.")
+    @Test
+    void addCategory_duplicated() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+
+        // when & then
+        assertThatThrownBy(() -> em.persistAndFlush(project))
+                .rootCause()
+                .isInstanceOf(SQLIntegrityConstraintViolationException.class);
+    }
+
+    @DisplayName("서로 다른 프로젝트는 같은 카테고리를 가질 수 있다.")
+    @Test
+    void addCategory_sameCategoryAcrossProjects() {
+        // given
+        Project first = createProject("포트폴리오 사이트");
+        first.addCategory(ProjectCategory.createProjectCategory(1));
+        Project second = createProject("스터디 관리 앱");
+        second.addCategory(ProjectCategory.createProjectCategory(1));
+
+        // when
+        em.persistAndFlush(first);
+        em.persistAndFlush(second);
+        em.clear();
+
+        // then
+        assertThat(countProjectCategories()).isEqualTo(2L);
+    }
+
+    @DisplayName("ProjectCategory도 BaseEntity 상속으로 createdAt과 updatedAt이 자동으로 채워진다.")
+    @Test
+    void save_fillsProjectCategoryAuditingColumns() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        ProjectCategory projectCategory = ProjectCategory.createProjectCategory(1);
+        project.addCategory(projectCategory);
+
+        // when
+        em.persistAndFlush(project);
+
+        // then
+        assertThat(projectCategory.getCreatedAt()).isNotNull();
+        assertThat(projectCategory.getUpdatedAt()).isNotNull();
+    }
+
+    @DisplayName("카테고리 없이도 프로젝트만 저장할 수 있다.")
+    @Test
+    void save_withoutCategories() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+
+        // when
+        em.persistAndFlush(project);
+        em.clear();
+
+        // then
+        assertThat(countProjectCategories()).isZero();
+    }
+
+    private Long countProjectCategories() {
+        Number count = (Number) em.getEntityManager()
+                .createNativeQuery("select count(*) from project_category")
+                .getSingleResult();
+        return count.longValue();
+    }
+
     private Long countProjectMembers() {
         Number count = (Number) em.getEntityManager()
                 .createNativeQuery("select count(*) from project_member")

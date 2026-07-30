@@ -17,6 +17,92 @@ class ProjectTest {
         assertThat(project.getProjectMembers()).isEmpty();
     }
 
+    @DisplayName("빌더로 생성하면 projectCategories가 빈 리스트로 초기화된다.")
+    @Test
+    void build_initializesProjectCategories() {
+        // given & when
+        Project project = createProject("포트폴리오 사이트");
+
+        // then
+        assertThat(project.getProjectCategories()).isEmpty();
+    }
+
+    @DisplayName("addCategory로 카테고리를 추가하면 목록에 담기고 project/categoryId가 세팅된다.")
+    @Test
+    void addCategory() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+
+        // when
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+
+        // then
+        assertThat(project.getProjectCategories()).hasSize(1)
+                .first()
+                .extracting("project", "categoryId")
+                .containsExactly(project, 1);
+    }
+
+    @DisplayName("addCategory는 넘겨받은 ProjectCategory에 자신을 project로 주입한다.")
+    @Test
+    void addCategory_assignsProject() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        ProjectCategory projectCategory = ProjectCategory.createProjectCategory(1);
+
+        // when
+        project.addCategory(projectCategory);
+
+        // then
+        assertThat(projectCategory.getProject()).isSameAs(project);
+    }
+
+    @DisplayName("addCategory를 여러 번 호출하면 추가한 순서대로 목록에 쌓인다.")
+    @Test
+    void addCategory_multiple() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+
+        // when
+        project.addCategory(ProjectCategory.createProjectCategory(2));
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+        project.addCategory(ProjectCategory.createProjectCategory(6));
+
+        // then
+        assertThat(project.getProjectCategories())
+                .extracting(ProjectCategory::getCategoryId)
+                .containsExactly(2, 1, 6);
+    }
+
+    @DisplayName("addCategory는 같은 카테고리를 중복으로 걸러내지 않는다. 중복 제거는 서비스 책임이다.")
+    @Test
+    void addCategory_doesNotDeduplicate() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+
+        // when
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+
+        // then
+        assertThat(project.getProjectCategories()).hasSize(2);
+    }
+
+    @DisplayName("멤버와 카테고리는 서로 다른 목록에 담긴다.")
+    @Test
+    void addMemberAndCategory_areIndependent() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+
+        // when
+        addMember(project, 1, ProjectRole.OWNER);
+        project.addCategory(ProjectCategory.createProjectCategory(1));
+
+        // then
+        assertThat(project.getProjectMembers()).hasSize(1);
+        assertThat(project.getProjectCategories()).hasSize(1);
+    }
+
     @DisplayName("addMember로 멤버를 추가하면 목록에 담기고 project/memberId/role이 세팅된다.")
     @Test
     void addMember() {

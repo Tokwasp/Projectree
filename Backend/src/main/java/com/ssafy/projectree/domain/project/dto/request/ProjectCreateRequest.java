@@ -5,6 +5,8 @@ import jakarta.validation.constraints.*;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 public class ProjectCreateRequest {
 
@@ -19,14 +21,18 @@ public class ProjectCreateRequest {
     @Size(max = 1024, message = "이미지 URL이 너무 깁니다.")
     private String photoUrl;
 
+    @NotEmpty(message = "카테고리를 하나 이상 선택해주세요.")
+    private List<@NotNull(message = "카테고리에는 null이 포함될 수 없습니다.") Integer> categoryIds;
+
     private ProjectCreateRequest() {
     }
 
     @Builder
-    private ProjectCreateRequest(String title, String content, String photoUrl) {
+    private ProjectCreateRequest(String title, String content, String photoUrl, List<Integer> categoryIds) {
         this.title = title;
         this.content = content;
         this.photoUrl = photoUrl;
+        this.categoryIds = categoryIds;
     }
 
     public Project toEntity() {
