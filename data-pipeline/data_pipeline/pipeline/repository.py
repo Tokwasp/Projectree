@@ -24,6 +24,8 @@ from data_pipeline.storage.evidence import upsert_node_evidence
 from data_pipeline.validation import SegmentInfo, resolve_item_evidence
 from data_pipeline.validation.plan import title_evidence_signature
 
+from .errors import TranscriptSegmentConflictError
+
 _SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
 _ALLOWED_CANDIDATE_NODE_TYPES = {"DECISION", "ACTION", "ISSUE"}
 
@@ -99,24 +101,46 @@ def upsert_meeting(session: Session, project_id: str, external_meeting_id: str) 
 
 
 def upsert_segments(session: Session, project_id: str, external_meeting_id: str, segments: list[dict]) -> int:
-    """세그먼트 저장 (UNIQUE 로 멱등). 이미 있으면 건너뛴다. 반환: 새로 삽입한 수."""
-    have = set(
-        session.execute(
-            select(TranscriptSegment.segment_id).where(
+    """Insert stable segments and reject changed text for an existing identity."""
+
+    existing_text_by_id = {
+        row.segment_id: (
+            row.raw_text if row.raw_text is not None else row.text,
+            (
+                row.normalized_text
+                if row.normalized_text is not None
+                else row.text
+            ),
+        )
+        for row in session.execute(
+            select(TranscriptSegment).where(
                 TranscriptSegment.project_id == project_id,
                 TranscriptSegment.external_meeting_id == external_meeting_id,
             )
         ).scalars()
-    )
+    }
     inserted = 0
     for position, seg in enumerate(segments):
         sid = seg.get("segmentId")
-        if not sid or sid in have:
+        if not sid:
             continue
         raw_text = str(seg.get("rawText", seg.get("text", "")))
         normalized_text = str(
             seg.get("normalizedText", seg.get("text", raw_text))
         )
+        existing_text = existing_text_by_id.get(sid)
+        if existing_text is not None:
+            existing_raw, existing_normalized = existing_text
+            if (
+                existing_raw != raw_text
+                or existing_normalized != normalized_text
+            ):
+                raise TranscriptSegmentConflictError(
+                    project_id=project_id,
+                    external_meeting_id=external_meeting_id,
+                    segment_id=str(sid),
+                )
+            continue
         session.add(TranscriptSegment(
             project_id=project_id,
             external_meeting_id=external_meeting_id,
@@ -136,7 +160,7 @@ def upsert_segments(session: Session, project_id: str, external_meeting_id: str,
             normalized_text=normalized_text,
             normalization_metadata=seg.get("normalization"),
         ))
-        have.add(sid)
+        existing_text_by_id[str(sid)] = (raw_text, normalized_text)
         inserted += 1
     return inserted
 
@@ -155,6 +179,7 @@ def get_candidate_for_review(
     session: Session,
     candidate_id: str | uuid.UUID,
     *,
+    project_id: str,
     for_update: bool = False,
 ) -> NodeCandidate | None:
     try:
@@ -168,7 +193,10 @@ def get_candidate_for_review(
     statement = (
         select(NodeCandidate)
         .options(selectinload(NodeCandidate.evidence))
-        .where(NodeCandidate.id == parsed_id)
+        .where(
+            NodeCandidate.id == parsed_id,
+            NodeCandidate.project_id == project_id,
+        )
     )
     if for_update:
         statement = statement.with_for_update()

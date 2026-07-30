@@ -167,6 +167,7 @@ def reanalyze_unattached_node(
     session_factory,
     node_id: str | uuid.UUID,
     *,
+    project_id: str,
     actor_id: str,
     expected_version: int,
     retrieval_config_version: str | None = None,
@@ -199,7 +200,10 @@ def reanalyze_unattached_node(
             session.execute(
                 select(Node)
                 .options(selectinload(Node.evidence))
-                .where(Node.id == parsed_id)
+                .where(
+                    Node.id == parsed_id,
+                    Node.project_id == project_id,
+                )
                 .with_for_update()
             )
             .scalars()
@@ -331,7 +335,12 @@ def reanalyze_unattached_node(
         session.close()
 
 
-def _locked_run_and_node(session, run_id: str | uuid.UUID):
+def _locked_run_and_node(
+    session,
+    run_id: str | uuid.UUID,
+    *,
+    project_id: str,
+):
     try:
         parsed_id = (
             run_id
@@ -341,8 +350,11 @@ def _locked_run_and_node(session, run_id: str | uuid.UUID):
     except (TypeError, ValueError) as exc:
         raise NodeValidationError("analysis_run_id must be a UUID") from exc
     run_source = session.execute(
-        select(NodeAnalysisRun.source_node_id).where(
-            NodeAnalysisRun.id == parsed_id
+        select(NodeAnalysisRun.source_node_id)
+        .join(Node, Node.id == NodeAnalysisRun.source_node_id)
+        .where(
+            NodeAnalysisRun.id == parsed_id,
+            Node.project_id == project_id,
         )
     ).scalar_one_or_none()
     if run_source is None:
@@ -350,11 +362,19 @@ def _locked_run_and_node(session, run_id: str | uuid.UUID):
             f"analysis run not found: {run_id}"
         )
     node = session.execute(
-        select(Node).where(Node.id == run_source).with_for_update()
+        select(Node)
+        .where(
+            Node.id == run_source,
+            Node.project_id == project_id,
+        )
+        .with_for_update()
     ).scalar_one()
     run = session.execute(
         select(NodeAnalysisRun)
-        .where(NodeAnalysisRun.id == parsed_id)
+        .where(
+            NodeAnalysisRun.id == parsed_id,
+            NodeAnalysisRun.source_node_id == node.id,
+        )
         .with_for_update()
     ).scalar_one()
     return run, node
@@ -389,12 +409,18 @@ def _supersede_obsolete_run(
 def mark_analysis_run_running(
     session_factory,
     run_id: str | uuid.UUID,
+    *,
+    project_id: str,
 ) -> AnalysisRunView:
     """Worker claim boundary; it performs no Retrieval itself."""
 
     session = session_factory()
     try:
-        run, node = _locked_run_and_node(session, run_id)
+        run, node = _locked_run_and_node(
+            session,
+            run_id,
+            project_id=project_id,
+        )
         if _supersede_obsolete_run(run, node):
             session.commit()
             return _run_view(run)
@@ -416,12 +442,18 @@ def mark_analysis_run_running(
 def mark_analysis_run_completed(
     session_factory,
     run_id: str | uuid.UUID,
+    *,
+    project_id: str,
 ) -> AnalysisRunView:
     """Persist a successful worker terminal state without model calls."""
 
     session = session_factory()
     try:
-        run, node = _locked_run_and_node(session, run_id)
+        run, node = _locked_run_and_node(
+            session,
+            run_id,
+            project_id=project_id,
+        )
         if _supersede_obsolete_run(run, node):
             session.commit()
             return _run_view(run)
@@ -444,6 +476,7 @@ def mark_analysis_run_failed(
     session_factory,
     run_id: str | uuid.UUID,
     *,
+    project_id: str,
     failure_code: str,
     failure_message: str,
 ) -> AnalysisRunView:
@@ -453,7 +486,11 @@ def mark_analysis_run_failed(
         raise NodeValidationError("failure_code must not be empty")
     session = session_factory()
     try:
-        run, node = _locked_run_and_node(session, run_id)
+        run, node = _locked_run_and_node(
+            session,
+            run_id,
+            project_id=project_id,
+        )
         if _supersede_obsolete_run(run, node):
             session.commit()
             return _run_view(run)

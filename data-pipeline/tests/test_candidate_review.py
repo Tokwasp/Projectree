@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from threading import Barrier
 
 import pytest
@@ -37,6 +38,21 @@ from data_pipeline.storage import (
 )
 
 from .support import count, ev, item, judgment, request_payload, seg
+
+edit_candidate = partial(edit_candidate, project_id="proj-01")
+reject_candidate = partial(reject_candidate, project_id="proj-01")
+complete_initial_review = partial(
+    complete_initial_review,
+    project_id="proj-01",
+)
+
+
+@pytest.fixture(autouse=True)
+def _enable_quarantined_legacy_approval_tests(monkeypatch):
+    monkeypatch.setenv(
+        "DATA_PIPELINE_UNSAFE_ENABLE_LEGACY_GRAPH_MUTATION_FOR_TESTS",
+        "1",
+    )
 
 
 def _persist(
@@ -700,23 +716,22 @@ def test_parent_validation_rejects_missing_rejected_minutes_cross_project_and_se
         project_id="other-project",
         rows=[_decision("other-d")],
     )[0]
-    edit_candidate(
-        session_factory,
-        action.candidate_id,
-        actor_id="reviewer",
-        expected_version=3,
-        parent_mode="CANDIDATE",
-        parent_candidate_id=other.candidate_id,
-    )
     with pytest.raises(CandidateValidationError):
-        approve_candidate(session_factory, action.candidate_id, actor_id="reviewer")
+        edit_candidate(
+            session_factory,
+            action.candidate_id,
+            actor_id="reviewer",
+            expected_version=3,
+            parent_mode="CANDIDATE",
+            parent_candidate_id=other.candidate_id,
+        )
 
     with pytest.raises(CandidateValidationError):
         edit_candidate(
             session_factory,
             action.candidate_id,
             actor_id="reviewer",
-            expected_version=4,
+            expected_version=3,
             parent_mode="CANDIDATE",
             parent_candidate_id=action.candidate_id,
         )
@@ -756,19 +771,14 @@ def test_minutes_parent_and_cross_project_node_are_rejected(session_factory):
             title="다른 프로젝트 결정",
         )
         other_node_id = str(other_node.id)
-    edit_candidate(
-        session_factory,
-        candidates["a1"].candidate_id,
-        actor_id="reviewer",
-        expected_version=1,
-        parent_mode="NODE",
-        parent_node_id=other_node_id,
-    )
     with pytest.raises(CandidateValidationError):
-        approve_candidate(
+        edit_candidate(
             session_factory,
             candidates["a1"].candidate_id,
             actor_id="reviewer",
+            expected_version=1,
+            parent_mode="NODE",
+            parent_node_id=other_node_id,
         )
     assert count(session_factory, Relation) == 0
 
@@ -868,31 +878,17 @@ def test_approval_version_conflict_and_request_partial_completion(session_factor
 
 
 def test_concurrent_approval_creates_at_most_one_node_and_event(
-    monkeypatch,
     session_factory,
 ):
-    import data_pipeline.pipeline.review as review
-
     candidate = _persist(
         session_factory,
         meeting_id="M-CONCURRENT-APPROVAL",
         rows=[_decision()],
     )[0]
     barrier = Barrier(2)
-    real_order = review._ordered_candidates
-
-    def synchronize_after_both_callers_read(candidates, effective_by_id):
-        ordered = real_order(candidates, effective_by_id)
-        barrier.wait(timeout=5)
-        return ordered
-
-    monkeypatch.setattr(
-        review,
-        "_ordered_candidates",
-        synchronize_after_both_callers_read,
-    )
 
     def approve(actor):
+        barrier.wait(timeout=5)
         return approve_candidate(
             session_factory,
             candidate.candidate_id,
@@ -940,7 +936,7 @@ def test_regenerated_same_source_item_candidates_each_create_their_own_node(
         request_id="req-source-2",
         rows=[
             (
-                item("m1", "DECISION", "재생성된 결정", "다른 생성 입력", []),
+                item("m1", "DECISION", "아키텍처 결정", "다른 생성 입력", []),
                 judgment("m1", "NEW_DECISION", category="BACKEND"),
             )
         ],

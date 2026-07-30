@@ -6,9 +6,9 @@
 
 항상 다음 순서로 읽는다.
 
-1. `docs/PROJECT_CONTEXT.md`
-2. `NEXT_CODEX_TASK.md`
-3. `NEXT_CODEX_TASK.md`가 가리키는 `tasks/*.md`
+1. `docs/CANDIDATE_NODE_CONFIRMATION_CONTRACT.md`
+2. `README.md`
+3. 현재 작업에서 별도 task 문서가 실제로 제공된 경우 해당 문서
 4. 변경 대상 코드와 기존 테스트
 
 문서와 코드가 충돌하면 임의로 추측하지 말고, 현재 task의 완료 조건을 만족하는 최소 변경을 우선한다.
@@ -32,9 +32,14 @@
 - 모든 extraction item은 먼저 `PROPOSED` 후보로 저장한다.
 - judgment 결과는 `suggestedDisposition`과 `suggestedParent`일 뿐이다.
 - `MINUTES_ONLY`로 추천된 항목도 삭제하거나 숨기지 않는다.
-- 사용자가 승인한 결과만 정식 `Node`/그래프에 반영한다.
-- 생성 파이프라인은 사용자 승인 전에 `Node`, `Relation`, 정식 `NodeEvidence`를 만들면 안 된다.
-- RAG는 향후 `CONFIRMED` 노드만 검색한다. 현재 Step 4A에서는 retrieval/embedding을 구현하지 않는다.
+- 1차 검토가 끝난 Candidate만 `UNATTACHED Node`로 만들고, 사용자가 최종
+  승인한 결과만 `ACTIVE` 그래프에 반영한다.
+- 생성 파이프라인은 Candidate 1차 검토 완료 전에 `Node`와 정식 `NodeEvidence`를 만들면 안 된다.
+- 1차 검토 완료 후에는 `UNATTACHED` Node와 Evidence만 만들며, 최종 승인 전에는
+  `ACTIVE` 전환이나 `Relation` 생성을 하면 안 된다.
+- Retrieval은 같은 프로젝트의 `ACTIVE`와 `UNATTACHED` Node를 검색하며,
+  현재 검색 Node 자신과 `MERGED`·`EXCLUDED`·`ARCHIVED` Node는 제외한다.
+- Retrieval과 B 모델은 추천만 생성하고 Node·Relation을 직접 변경하지 않는다.
 
 ## 4. 코드베이스 규칙
 

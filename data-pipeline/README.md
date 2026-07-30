@@ -13,8 +13,13 @@ LLM 추출·판단 및 evidence 검증에는 정규화된 `text`를 사용하고
 신규 흐름에서는 `complete_initial_review()`가 Candidate의 사용자 검토값으로
 `graph_state=UNATTACHED`, `analysis_status=PENDING` Node와 Evidence만 생성한다.
 LLM이 추천한 부모가 있더라도 이 단계에서는 `parent_id`나 Relation을 만들지 않는다.
-`approve_candidate()`와 `bulk_approve_candidates()`는 기존 호출자 호환용 경로이며,
-신규 흐름은 최종 승인 API가 구현될 때까지 이를 사용하지 않는다.
+확정 계약은 [`docs/CANDIDATE_NODE_CONFIRMATION_CONTRACT.md`](docs/CANDIDATE_NODE_CONFIRMATION_CONTRACT.md)에
+정리되어 있다.
+
+기존 `process_request()`, `apply_change_plan()`, `approve_candidate()`,
+`bulk_approve_candidates()`는 ACTIVE Node나 Relation을 직접 만들 수 있으므로 기본 실행이
+차단되어 있다. 과거 동작의 회귀 테스트에서만 pytest 실행 중 전용 환경변수로 열 수 있으며,
+신규 애플리케이션 코드에서는 이 경로를 호출하지 않는다.
 
 ## UNATTACHED Node 수정과 분석 무효화
 
@@ -147,9 +152,11 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-2026-07-30 오프라인 검증 결과는 `163 passed, 1 skipped`다. 폐기 가능한 임시 PostgreSQL DB를
-생성해 `TEST_POSTGRESQL_URL`로 전달한 전체 검증에서는 migration downgrade/upgrade 왕복까지
-포함해 `164 passed`를 확인했다. 일반 개발 DB인 `pipeline`을 `TEST_POSTGRESQL_URL`로 지정하지 않는다.
+`DATABASE_URL_TEST`가 PostgreSQL URL이면 테스트마다 별도의 폐기 가능한 데이터베이스를 만들고
+Alembic head를 적용한 뒤 삭제한다. 원본 URL의 데이터베이스는 관리자 연결에만 사용하며 테스트
+데이터를 쓰지 않는다. migration downgrade/upgrade 왕복 테스트의 `TEST_POSTGRESQL_URL`에는
+반드시 별도로 만든 폐기 가능한 DB만 지정한다. 일반 개발 DB인 `pipeline`을
+`TEST_POSTGRESQL_URL`로 지정하지 않는다.
 
 ## 디렉터리
 ```

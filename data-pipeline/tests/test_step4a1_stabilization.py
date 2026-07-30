@@ -23,6 +23,7 @@ from data_pipeline.storage import (
     NodeEvidence,
     Relation,
     Request,
+    TranscriptSegment,
 )
 
 from .support import count
@@ -141,7 +142,9 @@ def test_same_run_meeting_input_is_claimed_before_llm_and_returns_existing_candi
     assert count(session_factory, NodeCandidate) == 1
 
 
-def test_materially_different_transcript_for_same_meeting_allows_new_generation(session_factory):
+def test_changed_segment_text_for_same_meeting_rolls_back_new_candidates(
+    session_factory,
+):
     original = _meeting("M-REGENERATE")
     changed = copy.deepcopy(original)
     changed["segments"][0]["text"] += " 변경된 입력"
@@ -152,10 +155,21 @@ def test_materially_different_transcript_for_same_meeting_allows_new_generation(
     second = run_meeting(session_factory, meeting_input=changed, client=second_client)
 
     assert first.proposal_result.outcome == "NEWLY_CREATED_REVIEW_PENDING"
-    assert second.proposal_result.outcome == "NEWLY_CREATED_REVIEW_PENDING"
+    assert second.proposal_result.outcome == "FAILED_PERSISTENCE"
     assert first_client.calls == second_client.calls == 2
     assert count(session_factory, Request) == 2
-    assert count(session_factory, NodeCandidate) == 2
+    assert count(session_factory, NodeCandidate) == 1
+    with session_factory() as session:
+        stored_segment = session.query(TranscriptSegment).one()
+        assert stored_segment.raw_text == original["segments"][0]["text"]
+        assert (
+            stored_segment.normalized_text
+            == original["segments"][0]["text"]
+        )
+        statuses = sorted(
+            row.status for row in session.query(Request).all()
+        )
+        assert statuses == ["FAILED", "REVIEW_PENDING"]
 
 
 def test_existing_processing_claim_returns_in_progress_without_llm(session_factory):

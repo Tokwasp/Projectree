@@ -34,6 +34,7 @@ from data_pipeline.storage.models import NodeCandidate, Request
 from data_pipeline.validation import SegmentInfo, build_change_plan, validate_judgments
 
 from .apply import apply_change_plan
+from .legacy_guard import require_legacy_graph_mutation_test_mode
 from .errors import ApplyError, StaleVersionError
 from .repository import (
     create_generation_candidates,
@@ -482,6 +483,7 @@ def process_request(
     plan_id: str | None = None,
     lineage: Lineage | None = None,
 ) -> ApplyResult:
+    require_legacy_graph_mutation_test_mode("process_request")
     category_set = category_set or CategorySet.load()
     project_id = payload["projectId"]
     meeting_id = payload["externalMeetingId"]

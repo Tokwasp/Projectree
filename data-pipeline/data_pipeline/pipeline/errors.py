@@ -77,3 +77,27 @@ class AnalysisRunNotFoundError(NodeReviewError):
 
 class AnalysisRunStateError(NodeReviewError):
     pass
+
+
+class TranscriptSegmentConflictError(RuntimeError):
+    """A stable segment identity was reused with different text."""
+
+    def __init__(
+        self,
+        *,
+        project_id: str,
+        external_meeting_id: str,
+        segment_id: str,
+    ) -> None:
+        self.project_id = project_id
+        self.external_meeting_id = external_meeting_id
+        self.segment_id = segment_id
+        super().__init__(
+            "transcript segment text conflict: "
+            f"project={project_id}, meeting={external_meeting_id}, "
+            f"segment={segment_id}"
+        )
+
+
+class LegacyGraphMutationDisabledError(RuntimeError):
+    """Legacy graph mutation entry points are quarantined from product flows."""

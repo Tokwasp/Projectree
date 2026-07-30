@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -29,6 +31,7 @@ def test_reanalyze_is_idempotent_for_same_node_version_and_hash(
     created = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -36,6 +39,7 @@ def test_reanalyze_is_idempotent_for_same_node_version_and_hash(
     repeated = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="other-reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -57,6 +61,43 @@ def test_reanalyze_is_idempotent_for_same_node_version_and_hash(
         assert session.query(RetrievalResult).count() == 0
 
 
+def test_concurrent_reanalyze_returns_one_run_on_postgresql(
+    session_factory,
+):
+    with session_factory() as session:
+        if session.get_bind().dialect.name != "postgresql":
+            pytest.skip("requires PostgreSQL row locks and partial indexes")
+
+    node_id, _, _ = _initial_node(
+        session_factory,
+        meeting_id="M-ANALYSIS-CONCURRENT",
+    )
+    barrier = Barrier(2)
+
+    def request_run(actor_id: str):
+        barrier.wait(timeout=5)
+        return reanalyze_unattached_node(
+            session_factory,
+            node_id,
+            project_id="proj-01",
+            actor_id=actor_id,
+            expected_version=1,
+            retrieval_config_version="retrieval-test-v1",
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(
+            executor.map(request_run, ["reviewer-1", "reviewer-2"])
+        )
+
+    assert sorted(result.created for result in results) == [False, True]
+    assert len(
+        {result.run.analysis_run_id for result in results}
+    ) == 1
+    with session_factory() as session:
+        assert session.query(NodeAnalysisRun).count() == 1
+
+
 def test_database_rejects_duplicate_active_run_for_same_node_and_hash(
     session_factory,
 ):
@@ -67,6 +108,7 @@ def test_database_rejects_duplicate_active_run_for_same_node_and_hash(
     first = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -103,6 +145,7 @@ def test_reanalyze_prefers_existing_active_run_over_newer_failed_attempt(
     active = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -130,6 +173,7 @@ def test_reanalyze_prefers_existing_active_run_over_newer_failed_attempt(
     repeated = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -150,6 +194,7 @@ def test_analysis_status_change_updates_run_timestamp(session_factory):
     requested = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -163,6 +208,7 @@ def test_analysis_status_change_updates_run_timestamp(session_factory):
     mark_analysis_run_running(
         session_factory,
         requested.run.analysis_run_id,
+        project_id="proj-01",
     )
     with session_factory() as session:
         after = session.get(
@@ -183,6 +229,7 @@ def test_database_rejects_non_positive_retrieval_target_version(
     requested = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -223,6 +270,7 @@ def test_analysis_execution_transitions_without_incrementing_node_version(
     requested = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -231,17 +279,20 @@ def test_analysis_execution_transitions_without_incrementing_node_version(
     running = mark_analysis_run_running(
         session_factory,
         requested.run.analysis_run_id,
+        project_id="proj-01",
     )
     assert running.status.value == "RUNNING"
     completed = mark_analysis_run_completed(
         session_factory,
         requested.run.analysis_run_id,
+        project_id="proj-01",
     )
     assert completed.status.value == "COMPLETED"
 
     repeated = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -263,14 +314,20 @@ def test_only_failed_run_creates_retry_attempt(session_factory):
     first = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
     )
-    mark_analysis_run_running(session_factory, first.run.analysis_run_id)
+    mark_analysis_run_running(
+        session_factory,
+        first.run.analysis_run_id,
+        project_id="proj-01",
+    )
     failed = mark_analysis_run_failed(
         session_factory,
         first.run.analysis_run_id,
+        project_id="proj-01",
         failure_code="RETRIEVAL_FAILED",
         failure_message="temporary failure",
     )
@@ -279,6 +336,7 @@ def test_only_failed_run_creates_retry_attempt(session_factory):
     retry = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -286,6 +344,7 @@ def test_only_failed_run_creates_retry_attempt(session_factory):
     repeated_retry = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -313,15 +372,21 @@ def test_edit_supersedes_current_run_and_new_version_gets_new_run(
     first = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
     )
-    mark_analysis_run_running(session_factory, first.run.analysis_run_id)
+    mark_analysis_run_running(
+        session_factory,
+        first.run.analysis_run_id,
+        project_id="proj-01",
+    )
 
     edited = edit_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="editor",
         expected_version=1,
         title="분석 입력이 달라진 제목",
@@ -332,6 +397,7 @@ def test_edit_supersedes_current_run_and_new_version_gets_new_run(
     second = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=2,
         retrieval_config_version="retrieval-test-v1",
@@ -361,6 +427,7 @@ def test_new_config_hash_supersedes_pending_run_without_node_version_change(
     first = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v1",
@@ -368,6 +435,7 @@ def test_new_config_hash_supersedes_pending_run_without_node_version_change(
     second = reanalyze_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
         retrieval_config_version="retrieval-test-v2",

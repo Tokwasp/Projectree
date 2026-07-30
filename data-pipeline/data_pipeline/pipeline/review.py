@@ -37,6 +37,7 @@ from .errors import (
     CandidateVersionConflict,
 )
 from .repository import get_candidate_for_review, query_candidates_for_review
+from .legacy_guard import require_legacy_graph_mutation_test_mode
 
 _UNSET = object()
 _NODE_TYPES = frozenset({"DECISION", "ACTION", "ISSUE"})
@@ -327,13 +328,15 @@ def get_candidate(
     session_factory,
     candidate_id: str | uuid.UUID,
     *,
-    project_id: str | None = None,
+    project_id: str,
 ) -> CandidateView:
     with session_factory() as session:
-        candidate = get_candidate_for_review(session, candidate_id)
-        if candidate is None or (
-            project_id is not None and candidate.project_id != project_id
-        ):
+        candidate = get_candidate_for_review(
+            session,
+            candidate_id,
+            project_id=project_id,
+        )
+        if candidate is None:
             raise CandidateNotFoundError(f"candidate not found: {candidate_id}")
         return _candidate_view(candidate)
 
@@ -407,6 +410,7 @@ def edit_candidate(
     session_factory,
     candidate_id: str | uuid.UUID,
     *,
+    project_id: str,
     actor_id: str,
     expected_version: int,
     node_type: str | object = _UNSET,
@@ -430,7 +434,11 @@ def edit_candidate(
     )
     session = session_factory()
     try:
-        candidate = get_candidate_for_review(session, candidate_id)
+        candidate = get_candidate_for_review(
+            session,
+            candidate_id,
+            project_id=project_id,
+        )
         if candidate is None:
             raise CandidateNotFoundError(f"candidate not found: {candidate_id}")
         if candidate.review_status != "PENDING":
@@ -460,12 +468,24 @@ def edit_candidate(
         if reviewed_parent_candidate_id is not None:
             if reviewed_parent_candidate_id == candidate.id:
                 raise CandidateValidationError("candidate cannot be its own parent")
-            if session.get(NodeCandidate, reviewed_parent_candidate_id) is None:
+            parent_candidate = session.execute(
+                select(NodeCandidate).where(
+                    NodeCandidate.id == reviewed_parent_candidate_id,
+                    NodeCandidate.project_id == project_id,
+                )
+            ).scalar_one_or_none()
+            if parent_candidate is None:
                 raise CandidateValidationError("parent candidate does not exist")
         reviewed_parent_node_id = values.get("reviewed_parent_node_id")
         if (
             reviewed_parent_node_id is not None
-            and session.get(Node, reviewed_parent_node_id) is None
+            and session.execute(
+                select(Node).where(
+                    Node.id == reviewed_parent_node_id,
+                    Node.project_id == project_id,
+                )
+            ).scalar_one_or_none()
+            is None
         ):
             raise CandidateValidationError("parent node does not exist")
         before = _audit_snapshot(candidate)
@@ -474,6 +494,7 @@ def edit_candidate(
             update(NodeCandidate)
             .where(
                 NodeCandidate.id == candidate.id,
+                NodeCandidate.project_id == project_id,
                 NodeCandidate.version == expected_version,
                 NodeCandidate.review_status == "PENDING",
             )
@@ -487,7 +508,11 @@ def edit_candidate(
         )
         if result.rowcount != 1:
             session.rollback()
-            current = get_candidate_for_review(session, candidate_id)
+            current = get_candidate_for_review(
+                session,
+                candidate_id,
+                project_id=project_id,
+            )
             if current is None:
                 raise CandidateNotFoundError(f"candidate not found: {candidate_id}")
             if current.review_status != "PENDING":
@@ -520,12 +545,18 @@ def reject_candidate(
     session_factory,
     candidate_id: str | uuid.UUID,
     *,
+    project_id: str,
     actor_id: str,
     expected_version: int | None = None,
 ) -> CandidateReviewResult:
     session = session_factory()
     try:
-        candidate = get_candidate_for_review(session, candidate_id, for_update=True)
+        candidate = get_candidate_for_review(
+            session,
+            candidate_id,
+            project_id=project_id,
+            for_update=True,
+        )
         if candidate is None:
             raise CandidateNotFoundError(f"candidate not found: {candidate_id}")
         if candidate.review_status == "REJECTED":
@@ -681,6 +712,7 @@ def complete_initial_review(
     session_factory,
     candidate_id: str | uuid.UUID,
     *,
+    project_id: str,
     actor_id: str,
     expected_version: int | None = None,
 ) -> CandidateReviewResult:
@@ -695,6 +727,7 @@ def complete_initial_review(
         candidate = get_candidate_for_review(
             session,
             candidate_id,
+            project_id=project_id,
             for_update=True,
         )
         if candidate is None:
@@ -799,7 +832,11 @@ def complete_initial_review(
         )
     except IntegrityError as exc:
         session.rollback()
-        current = get_candidate_for_review(session, candidate_id)
+        current = get_candidate_for_review(
+            session,
+            candidate_id,
+            project_id=project_id,
+        )
         if current is not None and current.review_status == "APPROVED":
             return CandidateReviewResult(candidates=[_candidate_view(current)])
         raise CandidateReviewError(
@@ -825,6 +862,7 @@ def bulk_approve_candidates(
     function to bypass Retrieval and the separate final-approval services.
     """
 
+    require_legacy_graph_mutation_test_mode("bulk_approve_candidates")
     parsed_ids = list(dict.fromkeys(_uuid(value, field="candidate_id") for value in candidate_ids))
     if not parsed_ids:
         return CandidateReviewResult()
@@ -1174,6 +1212,7 @@ def approve_candidate(
 ) -> CandidateReviewResult:
     """Legacy single-candidate wrapper; do not use for the new review flow."""
 
+    require_legacy_graph_mutation_test_mode("approve_candidate")
     expected_versions = (
         {str(candidate_id): expected_version}
         if expected_version is not None

@@ -192,6 +192,7 @@ def edit_unattached_node(
     session_factory,
     node_id: str | uuid.UUID,
     *,
+    project_id: str,
     actor_id: str,
     expected_version: int,
     node_type: str | object = _UNSET,
@@ -215,7 +216,10 @@ def edit_unattached_node(
             session.execute(
                 select(Node)
                 .options(selectinload(Node.evidence))
-                .where(Node.id == parsed_id)
+                .where(
+                    Node.id == parsed_id,
+                    Node.project_id == project_id,
+                )
                 .with_for_update()
             )
             .scalars()

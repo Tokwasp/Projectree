@@ -54,6 +54,14 @@ from .support import (
 CS = CategorySet.load()
 
 
+@pytest.fixture(autouse=True)
+def _enable_quarantined_legacy_apply_tests(monkeypatch):
+    monkeypatch.setenv(
+        "DATA_PIPELINE_UNSAFE_ENABLE_LEGACY_GRAPH_MUTATION_FOR_TESTS",
+        "1",
+    )
+
+
 def _nodes(session_factory):
     with session_factory() as s:
         return {n.source_item_id: n for n in s.query(Node).all()}

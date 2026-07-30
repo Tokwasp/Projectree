@@ -66,6 +66,7 @@ def _initial_node(session_factory, *, meeting_id: str = "M-UNATTACHED"):
     reviewed = complete_initial_review(
         session_factory,
         candidate.candidate_id,
+        project_id="proj-01",
         actor_id="reviewer",
         expected_version=1,
     ).candidates[0]
@@ -85,6 +86,7 @@ def test_edit_unattached_node_invalidates_analysis_and_is_idempotent(
     result = edit_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="editor",
         expected_version=1,
         title="Redis 세션 캐시 최종안",
@@ -111,6 +113,7 @@ def test_edit_unattached_node_invalidates_analysis_and_is_idempotent(
     replayed = edit_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="other-editor",
         expected_version=1,
         title="Redis 세션 캐시 최종안",
@@ -123,6 +126,7 @@ def test_edit_unattached_node_invalidates_analysis_and_is_idempotent(
         edit_unattached_node(
             session_factory,
             node_id,
+            project_id="proj-01",
             actor_id="other-editor",
             expected_version=1,
             title="서로 다른 오래된 수정",
@@ -146,6 +150,7 @@ def test_edit_unattached_node_replaces_evidence_with_key_based_upsert(
     result = edit_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="editor",
         expected_version=1,
         evidence=[evidence, evidence],
@@ -172,6 +177,7 @@ def test_edit_unattached_node_rejects_invalid_evidence_without_partial_change(
         edit_unattached_node(
             session_factory,
             node_id,
+            project_id="proj-01",
             actor_id="editor",
             expected_version=1,
             title="롤백되어야 하는 제목",
@@ -208,6 +214,7 @@ def test_edit_unattached_node_rejects_active_node(session_factory):
         edit_unattached_node(
             session_factory,
             node_id,
+            project_id="proj-01",
             actor_id="editor",
             expected_version=1,
             title="수정 불가",
@@ -223,6 +230,7 @@ def test_edit_unattached_node_type_change_resets_lifecycle(session_factory):
     result = edit_unattached_node(
         session_factory,
         node_id,
+        project_id="proj-01",
         actor_id="editor",
         expected_version=1,
         node_type="ACTION",

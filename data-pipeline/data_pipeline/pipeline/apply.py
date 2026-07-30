@@ -32,6 +32,8 @@ from data_pipeline.contracts import (
 from data_pipeline.contracts.change_plan import CREATE_OPS
 from data_pipeline.contracts.enums import GraphState
 from data_pipeline.storage.models import GraphChangeEvent, Node, OutboxEvent
+
+from .legacy_guard import require_legacy_graph_mutation_test_mode
 from data_pipeline.storage.evidence import upsert_node_evidence
 from data_pipeline.validation.normalize import normalize_quote
 
@@ -123,6 +125,7 @@ def _find_duplicate(
 
 
 def apply_change_plan(session: Session, plan: ChangePlan, category_set: CategorySet) -> ApplyResult:
+    require_legacy_graph_mutation_test_mode("apply_change_plan")
     project_id = plan.projectId
     meeting_id = plan.externalMeetingId
     request_id = plan.requestId
