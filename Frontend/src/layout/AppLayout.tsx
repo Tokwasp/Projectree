@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Outlet } from "react-router-dom";
-import AppHeader from "../components/common/AppHeader";
-import Sidebar from "../components/common/Sidebar";
-import style from "../css/layout/AppLayout.module.css";
+import AppHeader from "../components/AppHeader/AppHeader";
+import Sidebar from "../components/Sidebar/Sidebar";
+import style from "./AppLayout.module.css";
 
 interface AppLayoutProps {
   sidebar?: ReactNode;
