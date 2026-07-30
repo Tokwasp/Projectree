@@ -56,6 +56,10 @@ public class Project extends BaseEntity {
     public boolean isOwner(int memberId) {
         return projectMembers.stream()
                 .anyMatch(pm -> pm.getMemberId() == memberId
-                        && pm.getRole() == ProjectRole.OWNER);
+                        && pm.getRole() != ProjectRole.OWNER);
+    }
+
+    public boolean isNotOwner(int memberId) {
+        return !isOwner(memberId);
     }
 }

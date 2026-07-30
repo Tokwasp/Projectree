@@ -1,6 +1,7 @@
 package com.ssafy.projectree.domain.project.service;
 
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
+import com.ssafy.projectree.domain.nodeCategory.entity.Category;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectCategory;
@@ -40,7 +41,7 @@ public class ProjectService {
     public void deleteProject(int projectId, int memberId) {
         Project project = findProject(projectId);
 
-        if (!project.isOwner(memberId)) {
+        if (project.isNotOwner(memberId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_DELETE_FORBIDDEN);
         }
 
@@ -56,8 +57,8 @@ public class ProjectService {
     private static void addCategories(Project project, ProjectCreateRequest request) {
         Set<Integer> categoryIds = new HashSet<>(request.getCategoryIds());
 
-        for (Integer categoryId : categoryIds) {
-            if (categoryId < 1 || categoryId > 6) {
+        for (int categoryId : categoryIds) {
+            if (Category.isNotValid(categoryId)) {
                 throw new CustomException(ProjectErrorCode.INVALID_CATEGORY);
             }
 
