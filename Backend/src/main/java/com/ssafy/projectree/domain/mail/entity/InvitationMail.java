@@ -31,12 +31,16 @@ import java.util.Objects;
                 )
         }
 )
+/**
+ * NOT_REQUESTED 상태의 행은 항상 최대 발송 시도 횟수보다 작은 시도 횟수를 가진다.
+ */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class InvitationMail extends BaseEntity {
 
     private static final int MAX_ATTEMPT_COUNT = 3;
     private static final int MAX_ERROR_MESSAGE_LENGTH = 500;
+    private static final String INTERRUPTED_SEND_MESSAGE = "발송 도중 서버가 중단되었습니다.";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -96,7 +100,16 @@ public class InvitationMail extends BaseEntity {
     public void fail(String reason) {
         requireRequestingState();
         errorMessage = truncate(Objects.requireNonNull(reason));
+        transitionToRetryOrFailed();
+    }
 
+    public void recoverFromInterruptedSend() {
+        requireRequestingState();
+        errorMessage = INTERRUPTED_SEND_MESSAGE;
+        transitionToRetryOrFailed();
+    }
+
+    private void transitionToRetryOrFailed() {
         if (attemptCount >= MAX_ATTEMPT_COUNT) {
             sendStatus = MailSendStatus.FAILED;
             inviteLink = null;
