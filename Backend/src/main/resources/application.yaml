@@ -38,6 +38,8 @@ spring:
 
 #CORS
 app:
+  invitation:
+    base-url: ${INVITATION_BASE_URL}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   session:
