@@ -1,0 +1,14 @@
+image: node:20
+
+stages:
+  - deploy
+
+deploy_to_vercel:
+  stage: deploy
+  only:
+    - Develop_FE  # Develop_FE 브랜치에 Push 또는 Merge가 발생할 때만 실행
+  script:
+    - npm install -g vercel
+    - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+    - vercel build --prod --token=$VERCEL_TOKEN
+    - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
