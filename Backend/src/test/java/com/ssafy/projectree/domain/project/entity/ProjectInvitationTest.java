@@ -94,6 +94,20 @@ class ProjectInvitationTest {
                 .isEqualTo(InvitationErrorCode.INVITATION_EXPIRED);
     }
 
+    @DisplayName("만료된 초대를 거절하면 INVITATION_EXPIRED 예외가 발생한다.")
+    @Test
+    void reject_expiredInvitation_throwsException() {
+        // given
+        ProjectInvitation invitation = createInvitation(INVITED_AT);
+        LocalDateTime expiresAt = invitation.getExpiresAt();
+
+        // when & then
+        assertThatThrownBy(() -> invitation.reject(expiresAt))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(InvitationErrorCode.INVITATION_EXPIRED);
+    }
+
     @DisplayName("만료된 초대도 소유자가 취소할 수 있다.")
     @Test
     void cancel_expiredInvitation() {

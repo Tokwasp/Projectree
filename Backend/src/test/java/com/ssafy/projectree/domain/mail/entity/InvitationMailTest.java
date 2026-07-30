@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class InvitationMailTest {
 
@@ -90,5 +91,66 @@ class InvitationMailTest {
 
         // then
         assertThat(mail.getErrorMessage()).hasSize(500);
+    }
+
+    @DisplayName("중단된 발송을 복구하면 시도 횟수는 유지한 채 재시도 대기 상태로 돌아간다.")
+    @Test
+    void recoverFromInterruptedSend_beforeMaximumAttempt_returnsToNotRequested() {
+        // given
+        InvitationMail mail = InvitationMail.queue(1, "invitee@example.com", "https://example.com/invitations/token");
+        mail.beginAttempt(REQUESTED_AT);
+
+        // when
+        mail.recoverFromInterruptedSend();
+
+        // then
+        assertThat(mail.getSendStatus()).isEqualTo(MailSendStatus.NOT_REQUESTED);
+        assertThat(mail.getAttemptCount()).isEqualTo(1);
+        assertThat(mail.getErrorMessage()).isEqualTo("발송 도중 서버가 중단되었습니다.");
+        assertThat(mail.getInviteLink()).isNotNull();
+    }
+
+    @DisplayName("마지막 발송 시도 중 중단된 메일을 복구하면 FAILED로 확정된다.")
+    @Test
+    void recoverFromInterruptedSend_atMaximumAttempt_marksMailAsFailed() {
+        // given
+        InvitationMail mail = InvitationMail.queue(1, "invitee@example.com", "https://example.com/invitations/token");
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            mail.beginAttempt(REQUESTED_AT.plusMinutes(attempt));
+            mail.fail("SMTP 연결에 실패했습니다.");
+        }
+        mail.beginAttempt(REQUESTED_AT.plusMinutes(3));
+
+        // when
+        mail.recoverFromInterruptedSend();
+
+        // then
+        assertThat(mail.getSendStatus()).isEqualTo(MailSendStatus.FAILED);
+        assertThat(mail.getAttemptCount()).isEqualTo(3);
+        assertThat(mail.getErrorMessage()).isEqualTo("발송 도중 서버가 중단되었습니다.");
+        assertThat(mail.getInviteLink()).isNull();
+    }
+
+    @DisplayName("발송 중이 아닌 메일을 복구하려 하면 예외가 발생한다.")
+    @Test
+    void recoverFromInterruptedSend_nonRequestingMail_throwsException() {
+        // given
+        InvitationMail mail = InvitationMail.queue(1, "invitee@example.com", "https://example.com/invitations/token");
+
+        // when & then
+        assertThatThrownBy(mail::recoverFromInterruptedSend)
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @DisplayName("발송 중인 메일에 다시 발송을 시작하려 하면 예외가 발생한다.")
+    @Test
+    void beginAttempt_requestingMail_throwsException() {
+        // given
+        InvitationMail mail = InvitationMail.queue(1, "invitee@example.com", "https://example.com/invitations/token");
+        mail.beginAttempt(REQUESTED_AT);
+
+        // when & then
+        assertThatThrownBy(() -> mail.beginAttempt(REQUESTED_AT.plusMinutes(1)))
+                .isInstanceOf(IllegalStateException.class);
     }
 }
