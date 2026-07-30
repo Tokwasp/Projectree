@@ -43,4 +43,15 @@ public class ProjectController {
 
         return ResponseEntity.ok(ApiResponse.success());
     }
+
+    @DeleteMapping("/{projectId}/members/me")
+    public ResponseEntity<ApiResponse<Void>> leaveProject(
+            @PathVariable int projectId,
+            @Login LoginMember loginMember
+    ) {
+
+        projectService.leaveProject(projectId, loginMember.getId());
+
+        return ResponseEntity.ok(ApiResponse.success());
+    }
 }

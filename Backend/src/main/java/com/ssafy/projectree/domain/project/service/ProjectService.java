@@ -48,6 +48,21 @@ public class ProjectService {
         projectRepository.delete(project);
     }
 
+    @Transactional
+    public void leaveProject(int projectId, int memberId) {
+        Project project = findProject(projectId);
+
+        if (project.isNotParticipant(memberId)) {
+            throw new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND);
+        }
+
+        if (project.isOwner(memberId)) {
+            throw new CustomException(ProjectErrorCode.PROJECT_LEAVE_FORBIDDEN);
+        }
+
+        project.removeMember(memberId);
+    }
+
     private void validateMember(int memberId) {
         if (!memberRepository.existsById(memberId)) {
             throw new CustomException(ProjectErrorCode.MEMBER_NOT_FOUND);
