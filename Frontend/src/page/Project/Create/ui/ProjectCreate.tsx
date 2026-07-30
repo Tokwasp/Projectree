@@ -223,7 +223,7 @@ export default function ProjectCreate() {
                         onChange={() => handleCategoryChange(category.id)}
                       />
 
-                      <span>{category.name}</span>
+                      <span>{category.category}</span>
                     </label>
                   ))}
               </div>

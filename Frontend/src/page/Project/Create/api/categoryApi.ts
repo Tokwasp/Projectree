@@ -2,7 +2,7 @@ import { apiRequest } from "../../../../api/apiClient";
 
 export interface NodeCategory {
   id: number;
-  name: string;
+  category: string;
 }
 
 let cachedCategories: NodeCategory[] | null = null;
