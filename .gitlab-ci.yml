@@ -6,8 +6,11 @@ stages:
 deploy_to_vercel:
   stage: deploy
   only:
-    - Develop_FE  # Develop_FE 브랜치에 Push 또는 Merge가 발생할 때만 실행
+    - Develop_FE
+  tags:
+    - ssafy  # SSAFY GitLab Shared Runner 태그 추가
   script:
+    - cd Frontend  # (모노레포인 경우 Frontend 폴더로 이동, 단일 프로젝트면 생략 가능)
     - npm install -g vercel
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
     - vercel build --prod --token=$VERCEL_TOKEN
