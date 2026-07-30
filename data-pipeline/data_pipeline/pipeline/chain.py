@@ -23,6 +23,10 @@ from typing import Any
 from data_pipeline.adapters import JudgmentContractAdapter, adapter_for_kind
 from data_pipeline.contracts import CategorySet, Lineage, ProposalPersistResult
 from data_pipeline.llm import ChatClient
+from data_pipeline.normalization import (
+    SttNormalizationService,
+    initialize_default_normalization_service,
+)
 from data_pipeline.prompts import (
     DEFAULT_PIPELINE_PROFILE_NAME,
     PipelineProfile,
@@ -40,13 +44,63 @@ from .service import (
     payload_hash,
 )
 
-NODE_GENERATION_PIPELINE_VERSION = "node-generation-0.3.0"
+NODE_GENERATION_PIPELINE_VERSION = "node-generation-0.4.0"
 # Compatibility export used by Step-2 callers.
 M2_PIPELINE_VERSION = NODE_GENERATION_PIPELINE_VERSION
 
 CREDIT_PER_INPUT_TOKEN = 0.0175
 CREDIT_PER_OUTPUT_TOKEN = 0.14
 logger = logging.getLogger(__name__)
+_DEFAULT_STT_NORMALIZER = initialize_default_normalization_service()
+
+
+def normalize_transcript_segments(
+    segments: list[dict],
+    *,
+    normalization_service: SttNormalizationService | None = None,
+) -> list[dict]:
+    """Preserve raw STT text and attach deterministic normalized text."""
+
+    service = normalization_service or _DEFAULT_STT_NORMALIZER
+    normalized_segments: list[dict] = []
+
+    for segment in segments:
+        normalized_segment = dict(segment)
+        raw_text = str(segment.get("rawText", segment.get("text", "")))
+        result = service.normalize(raw_text)
+        metadata = result.model_dump(
+            mode="json",
+            exclude={"original_text", "normalized_text"},
+        )
+
+        normalized_segment["rawText"] = raw_text
+        normalized_segment["normalizedText"] = result.normalized_text
+        normalized_segment["text"] = result.normalized_text
+        normalized_segment["normalization"] = metadata
+        normalized_segments.append(normalized_segment)
+
+    return normalized_segments
+
+
+def _llm_segments(segments: list[dict]) -> list[dict]:
+    """Expose normalized text without duplicating raw text in prompts."""
+
+    keys = (
+        "segmentId",
+        "sequenceNo",
+        "startMs",
+        "endMs",
+        "speakerLabel",
+        "text",
+    )
+    return [
+        {
+            key: segment.get(key)
+            for key in keys
+            if key in segment
+        }
+        for segment in segments
+    ]
 
 
 def estimate_credits(input_tokens: int, output_tokens: int) -> float:
@@ -81,11 +135,16 @@ def generation_input_hash(
     adapter_version: str,
     model: str,
     temperature: float | None,
+    normalization_service: SttNormalizationService | None = None,
 ) -> str:
-    """Hash only deterministic inputs available before generation."""
+    """Hash deterministic inputs after applying the production STT policy."""
 
     segments = []
-    for position, segment in enumerate(meeting_input.get("segments", [])):
+    prepared_segments = normalize_transcript_segments(
+        meeting_input.get("segments", []),
+        normalization_service=normalization_service,
+    )
+    for position, segment in enumerate(prepared_segments):
         segments.append({
             "segmentId": segment.get("segmentId"),
             "sequenceNo": segment.get("sequenceNo", position),
@@ -93,6 +152,12 @@ def generation_input_hash(
             "endMs": segment.get("endMs"),
             "speakerLabel": segment.get("speakerLabel"),
             "text": segment.get("text", ""),
+            "rawText": segment.get("rawText", segment.get("text", "")),
+            "normalizedText": segment.get(
+                "normalizedText",
+                segment.get("text", ""),
+            ),
+            "normalization": segment.get("normalization"),
         })
     value = {
         "version": GENERATION_INPUT_HASH_VERSION,
@@ -176,6 +241,7 @@ class GenerationOnlyRunResult:
     extraction_prompt: str
     judgment_prompt: str
     adapter_version: str
+    segments: list[dict]
 
     @property
     def input_tokens(self) -> int:
@@ -474,18 +540,28 @@ def run_generation_only(
     prompt_profile: str | PipelineProfile = DEFAULT_PIPELINE_PROFILE_NAME,
     judgment_adapter: JudgmentContractAdapter | None = None,
     term_corrections: list[dict[str, str]] | None = None,
+    normalization_service: SttNormalizationService | None = None,
+    _normalized_segments: list[dict] | None = None,
 ) -> GenerationOnlyRunResult:
     """Run the paired extraction and judgment stages without applying changes."""
 
     category_config = category_set or CategorySet.load()
     profile = get_pipeline_profile(prompt_profile)
     contract_adapter = _resolve_adapter(profile, judgment_adapter)
-    segments = meeting_input.get("segments", [])
+    segments = (
+        _normalized_segments
+        if _normalized_segments is not None
+        else normalize_transcript_segments(
+            meeting_input.get("segments", []),
+            normalization_service=normalization_service,
+        )
+    )
+    prompt_segments = _llm_segments(segments)
     candidates = meeting_input.get("candidates") or {"decisions": []}
 
     extraction_prompt = render_extraction_prompt(
         profile,
-        segments=segments,
+        segments=prompt_segments,
         category_values=category_config.values,
         term_corrections=term_corrections,
     )
@@ -515,12 +591,13 @@ def run_generation_only(
             extraction_prompt=extraction_prompt,
             judgment_prompt="",
             adapter_version=contract_adapter.version,
+            segments=segments,
         )
 
     judgment_run = run_judgment_only(
         client=client,
         items=items,
-        segments=segments,
+        segments=prompt_segments,
         candidates=candidates,
         prompt_profile=profile,
         judgment_adapter=contract_adapter,
@@ -538,6 +615,7 @@ def run_generation_only(
         extraction_prompt=extraction_prompt,
         judgment_prompt=judgment_run.prompt,
         adapter_version=contract_adapter.version,
+        segments=segments,
     )
 
 
@@ -553,13 +631,23 @@ def run_meeting(
     judgment_adapter: JudgmentContractAdapter | None = None,
     term_corrections: list[dict[str, str]] | None = None,
     force_retry: bool = False,
+    normalization_service: SttNormalizationService | None = None,
 ) -> MeetingRunResult:
+    normalizer = normalization_service or _DEFAULT_STT_NORMALIZER
+    normalized_segments = normalize_transcript_segments(
+        meeting_input.get("segments", []),
+        normalization_service=normalizer,
+    )
+    meeting_input = {
+        **meeting_input,
+        "segments": normalized_segments,
+    }
     category_config = category_set or CategorySet.load()
     profile = get_pipeline_profile(prompt_profile)
     project_id = meeting_input["projectId"]
     meeting_id = meeting_input["externalMeetingId"]
     request_id = meeting_input.get("requestId", f"req-{meeting_id}")
-    segments = meeting_input.get("segments", [])
+    segments = normalized_segments
     candidates = meeting_input.get("candidates") or {"decisions": []}
     client_settings = getattr(client, "settings", None)
     model = getattr(client_settings, "model", "unknown")
@@ -574,6 +662,7 @@ def run_meeting(
         adapter_version=contract_adapter.version,
         model=model,
         temperature=temperature,
+        normalization_service=normalizer,
     )
 
     lineage_model = Lineage(
@@ -595,6 +684,9 @@ def run_meeting(
             "promptProfile": profile.name,
             "inputHash": input_hash,
             "inputHashVersion": GENERATION_INPUT_HASH_VERSION,
+            "sttNormalizationSchemaVersion": "1.1",
+            "sttDictionaryVersion": normalizer.dictionary_version,
+            "sttDictionarySha256": normalizer.dictionary_sha256,
         },
     )
     claim = claim_generation_request(
@@ -629,6 +721,8 @@ def run_meeting(
         prompt_profile=profile,
         judgment_adapter=contract_adapter,
         term_corrections=term_corrections,
+        normalization_service=normalizer,
+        _normalized_segments=segments,
     )
 
     raw_extraction = (

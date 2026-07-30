@@ -24,10 +24,10 @@ from data_pipeline.storage.models import (
     Meeting,
     Node,
     NodeCandidate,
-    NodeEvidence,
     Relation,
     Request,
 )
+from data_pipeline.storage.evidence import upsert_node_evidence
 
 from .errors import (
     CandidateNotFoundError,
@@ -152,6 +152,11 @@ def _candidate_view(candidate: NodeCandidate) -> CandidateView:
         ),
         review_status=candidate.review_status,
         version=candidate.version,
+        initial_review_node_id=(
+            str(candidate.initial_review_node_id)
+            if candidate.initial_review_node_id
+            else None
+        ),
         confirmed_node_id=(
             str(candidate.confirmed_node_id)
             if candidate.confirmed_node_id
@@ -213,6 +218,11 @@ def _audit_snapshot(candidate: NodeCandidate) -> dict:
         "confirmedNodeId": (
             str(candidate.confirmed_node_id)
             if candidate.confirmed_node_id
+            else None
+        ),
+        "initialReviewNodeId": (
+            str(candidate.initial_review_node_id)
+            if candidate.initial_review_node_id
             else None
         ),
     }
@@ -637,9 +647,169 @@ def _node_snapshot(node: Node) -> dict:
         "content": node.content,
         "parentId": str(node.parent_id) if node.parent_id else None,
         "graphState": node.graph_state,
+        "analysisStatus": node.analysis_status,
+        "mergedIntoNodeId": (
+            str(node.merged_into_node_id)
+            if node.merged_into_node_id
+            else None
+        ),
         "lifecycleStatus": node.lifecycle_status,
         "version": node.version,
     }
+
+
+def _validate_initial_review_shape(
+    candidate: NodeCandidate,
+    effective: dict[str, Any],
+) -> None:
+    """Validate reviewed content without applying suggested graph relations."""
+
+    disposition = effective["disposition"]
+    if disposition not in _DISPOSITIONS:
+        raise CandidateValidationError(
+            f"candidate {candidate.id} has invalid disposition {disposition}"
+        )
+    if disposition == "MINUTES_ONLY":
+        return
+    if effective["type"] not in _NODE_TYPES:
+        raise CandidateValidationError(
+            f"candidate {candidate.id} requires a valid reviewed node type"
+        )
+
+
+def complete_initial_review(
+    session_factory,
+    candidate_id: str | uuid.UUID,
+    *,
+    actor_id: str,
+    expected_version: int | None = None,
+) -> CandidateReviewResult:
+    """Materialize reviewed Candidate content as an UNATTACHED Node only.
+
+    This is the new first-review boundary.  It deliberately ignores suggested
+    parent links and never creates a Relation or an ACTIVE Node.
+    """
+
+    session = session_factory()
+    try:
+        candidate = get_candidate_for_review(
+            session,
+            candidate_id,
+            for_update=True,
+        )
+        if candidate is None:
+            raise CandidateNotFoundError(f"candidate not found: {candidate_id}")
+        if candidate.review_status == "APPROVED":
+            session.rollback()
+            return CandidateReviewResult(candidates=[_candidate_view(candidate)])
+        if candidate.review_status == "REJECTED":
+            raise CandidateStateError("REJECTED candidate cannot complete review")
+        if expected_version is not None and candidate.version != expected_version:
+            raise CandidateVersionConflict(
+                str(candidate.id),
+                expected_version,
+                candidate.version,
+            )
+
+        effective = _effective(candidate)
+        _validate_initial_review_shape(candidate, effective)
+        before = _audit_snapshot(candidate)
+        reviewed_at = datetime.now(timezone.utc)
+        node: Node | None = None
+
+        if effective["disposition"] != "MINUTES_ONLY":
+            category = effective["category"]
+            category_row = session.get(Category, category) if category else None
+            if category_row is None or not category_row.is_active:
+                raise CandidateValidationError(
+                    f"candidate {candidate.id} has no active category"
+                )
+
+            node = Node(
+                source_candidate_id=candidate.id,
+                project_id=candidate.project_id,
+                source_meeting_id=candidate.external_meeting_id,
+                source_item_id=candidate.source_item_id,
+                node_type=effective["type"],
+                category=category,
+                title=effective["title"],
+                content=effective["content"],
+                parent_id=None,
+                graph_state=GraphState.UNATTACHED.value,
+                analysis_status="PENDING",
+                lifecycle_status=default_lifecycle_status(effective["type"]),
+                initial_reviewed_by=actor_id,
+                initial_reviewed_at=reviewed_at,
+            )
+            session.add(node)
+            session.flush()
+            candidate.initial_review_node_id = node.id
+
+            for evidence in candidate.evidence:
+                upsert_node_evidence(
+                    session,
+                    node_id=node.id,
+                    segment_id=evidence.segment_id,
+                    quote=evidence.quote,
+                    quote_start=evidence.quote_start,
+                    quote_end=evidence.quote_end,
+                    evidence_type=evidence.evidence_type,
+                    source_meeting_id=evidence.source_meeting_id,
+                )
+
+            request = session.get(Request, candidate.request_id)
+            session.add(
+                GraphChangeEvent(
+                    project_id=candidate.project_id,
+                    request_id=(
+                        request.external_request_id
+                        if request is not None
+                        else None
+                    ),
+                    node_id=node.id,
+                    item_id=candidate.source_item_id,
+                    change_type="CREATE",
+                    actor_type="USER",
+                    before=None,
+                    after=_node_snapshot(node),
+                    detail={
+                        "stage": "INITIAL_REVIEW",
+                        "actorId": actor_id,
+                    },
+                )
+            )
+
+        candidate.review_status = "APPROVED"
+        candidate.version += 1
+        candidate.reviewed_by = actor_id
+        candidate.reviewed_at = reviewed_at
+        _add_audit(
+            session,
+            candidate,
+            actor_id=actor_id,
+            action="APPROVE",
+            before=before,
+        )
+        _update_review_statuses(session, {candidate.request_id})
+        session.commit()
+
+        return CandidateReviewResult(
+            candidates=[_candidate_view(candidate)],
+            created_node_ids=[str(node.id)] if node is not None else [],
+        )
+    except IntegrityError as exc:
+        session.rollback()
+        current = get_candidate_for_review(session, candidate_id)
+        if current is not None and current.review_status == "APPROVED":
+            return CandidateReviewResult(candidates=[_candidate_view(current)])
+        raise CandidateReviewError(
+            "initial review integrity conflict"
+        ) from exc
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def bulk_approve_candidates(
@@ -649,6 +819,12 @@ def bulk_approve_candidates(
     actor_id: str,
     expected_versions: dict[str, int] | None = None,
 ) -> CandidateReviewResult:
+    """Legacy combined approval path kept only for existing callers.
+
+    New flows must call ``complete_initial_review`` and must not use this
+    function to bypass Retrieval and the separate final-approval services.
+    """
+
     parsed_ids = list(dict.fromkeys(_uuid(value, field="candidate_id") for value in candidate_ids))
     if not parsed_ids:
         return CandidateReviewResult()
@@ -809,6 +985,7 @@ def bulk_approve_candidates(
             effective = effective_by_id[candidate.id]
             before = _audit_snapshot(candidate)
             disposition = effective["disposition"]
+            approved_at = datetime.now(timezone.utc)
             node: Node | None = None
             if disposition != "MINUTES_ONLY":
                 category = effective["category"]
@@ -852,23 +1029,35 @@ def bulk_approve_candidates(
                         if disposition == "UNATTACHED"
                         else GraphState.ACTIVE.value
                     ),
+                    analysis_status="PENDING",
                     lifecycle_status=default_lifecycle_status(effective["type"]),
+                    initial_reviewed_by=actor_id,
+                    initial_reviewed_at=approved_at,
+                    confirmed_by=(
+                        actor_id
+                        if disposition != "UNATTACHED"
+                        else None
+                    ),
+                    confirmed_at=(
+                        approved_at
+                        if disposition != "UNATTACHED"
+                        else None
+                    ),
                 )
                 session.add(node)
                 session.flush()
                 candidate_node[candidate.id] = node
                 created_node_ids.append(str(node.id))
                 for evidence in candidate.evidence:
-                    session.add(
-                        NodeEvidence(
-                            node_id=node.id,
-                            segment_id=evidence.segment_id,
-                            quote=evidence.quote,
-                            quote_start=evidence.quote_start,
-                            quote_end=evidence.quote_end,
-                            evidence_type=evidence.evidence_type,
-                            source_meeting_id=evidence.source_meeting_id,
-                        )
+                    upsert_node_evidence(
+                        session,
+                        node_id=node.id,
+                        segment_id=evidence.segment_id,
+                        quote=evidence.quote,
+                        quote_start=evidence.quote_start,
+                        quote_end=evidence.quote_end,
+                        evidence_type=evidence.evidence_type,
+                        source_meeting_id=evidence.source_meeting_id,
                     )
                 request = session.get(Request, candidate.request_id)
                 session.add(
@@ -924,9 +1113,12 @@ def bulk_approve_candidates(
 
             candidate.review_status = "APPROVED"
             candidate.confirmed_node_id = node.id if node is not None else None
+            candidate.initial_review_node_id = (
+                node.id if node is not None else None
+            )
             candidate.version += 1
             candidate.reviewed_by = actor_id
-            candidate.reviewed_at = datetime.now(timezone.utc)
+            candidate.reviewed_at = approved_at
             affected_requests.add(candidate.request_id)
             _add_audit(
                 session,
@@ -980,6 +1172,8 @@ def approve_candidate(
     actor_id: str,
     expected_version: int | None = None,
 ) -> CandidateReviewResult:
+    """Legacy single-candidate wrapper; do not use for the new review flow."""
+
     expected_versions = (
         {str(candidate_id): expected_version}
         if expected_version is not None
@@ -998,6 +1192,7 @@ __all__ = [
     "get_candidate",
     "edit_candidate",
     "reject_candidate",
+    "complete_initial_review",
     "approve_candidate",
     "bulk_approve_candidates",
 ]

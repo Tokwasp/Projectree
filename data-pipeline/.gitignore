@@ -12,3 +12,4 @@ outputs/
 htmlcov/
 .venv/
 venv/
+*.egg-info/

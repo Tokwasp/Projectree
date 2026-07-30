@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .enums import GraphState, NodeType
+from .enums import AnalysisRunStatus, AnalysisStatus, GraphState, NodeType
 
 
 # --- 스프링이 읽는 노드 투영 DTO ---------------------------------------------
@@ -188,6 +189,7 @@ class CandidateView(BaseModel):
 
     review_status: str
     version: int
+    initial_review_node_id: str | None = None
     confirmed_node_id: str | None = None
     evidence: list[CandidateEvidenceView] = Field(default_factory=list)
     created_at: datetime
@@ -201,3 +203,140 @@ class CandidateReviewResult(BaseModel):
     created_node_ids: list[str] = Field(default_factory=list)
     created_relation_ids: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+
+
+class FinalLinkRelationType(str, Enum):
+    ATTACHED_TO = "ATTACHED_TO"
+    RELATED_TO = "RELATED_TO"
+
+
+class CompleteInitialReviewCommand(BaseModel):
+    """Body contract; actor identity comes from the authenticated context."""
+
+    model_config = ConfigDict(extra="forbid")
+    candidateId: UUID
+    expectedVersion: int = Field(ge=1)
+
+
+class UnattachedEvidenceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    segmentId: str = Field(min_length=1)
+    quote: str = Field(min_length=10)
+    sourceMeetingId: str | None = Field(default=None, min_length=1)
+
+
+class EditUnattachedNodeCommand(BaseModel):
+    """All editable fields affect Retrieval and therefore invalidate analysis."""
+
+    model_config = ConfigDict(extra="forbid")
+    nodeId: UUID
+    expectedVersion: int = Field(ge=1)
+    nodeType: NodeType | None = None
+    category: str | None = None
+    title: str | None = None
+    content: str | None = None
+    evidence: list[UnattachedEvidenceInput] | None = Field(
+        default=None,
+        min_length=1,
+    )
+
+    @model_validator(mode="after")
+    def require_change(self):
+        if all(
+            value is None
+            for value in (
+                self.nodeType,
+                self.category,
+                self.title,
+                self.content,
+                self.evidence,
+            )
+        ):
+            raise ValueError("at least one editable field is required")
+        return self
+
+
+class UnattachedNodeView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    node_id: str
+    project_id: str
+    node_type: NodeType
+    category: str
+    title: str
+    content: str
+    graph_state: GraphState
+    analysis_status: AnalysisStatus
+    analysis_input_hash: str | None = None
+    current_analysis_run_id: str | None = None
+    version: int
+    evidence: list[CandidateEvidenceView] = Field(default_factory=list)
+
+
+class UnattachedNodeEditResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    node: UnattachedNodeView
+    analysis_invalidated: bool
+
+
+class ReanalyzeUnattachedNodeCommand(BaseModel):
+    """Request a run for the current immutable Node version."""
+
+    model_config = ConfigDict(extra="forbid")
+    nodeId: UUID
+    expectedVersion: int = Field(ge=1)
+
+
+class AnalysisRunView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    analysis_run_id: str
+    source_node_id: str
+    source_node_version: int
+    analysis_input_hash: str
+    analysis_input_hash_version: str
+    retrieval_config_version: str
+    embedding_model: str | None = None
+    embedding_version: str | None = None
+    attempt: int
+    status: AnalysisRunStatus
+    requested_by: str
+    failure_code: str | None = None
+    failure_message: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    created_at: datetime
+
+
+class ReanalyzeUnattachedNodeResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    run: AnalysisRunView
+    node_analysis_status: AnalysisStatus
+    created: bool
+
+
+class ApproveCreateNewCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sourceNodeId: UUID
+    sourceExpectedVersion: int = Field(ge=1)
+    analysisRunId: UUID
+
+
+class ApproveLinkExistingCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sourceNodeId: UUID
+    targetNodeId: UUID
+    relationType: FinalLinkRelationType
+    sourceExpectedVersion: int = Field(ge=1)
+    targetExpectedVersion: int = Field(ge=1)
+    analysisRunId: UUID
+
+
+class ApproveMergeExistingCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sourceNodeId: UUID
+    targetNodeId: UUID
+    mergedTitle: str
+    mergedContent: str
+    sourceExpectedVersion: int = Field(ge=1)
+    targetExpectedVersion: int = Field(ge=1)
+    analysisRunId: UUID
+    confirmUnattachedTarget: bool = False

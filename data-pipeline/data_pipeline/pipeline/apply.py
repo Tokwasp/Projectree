@@ -31,7 +31,8 @@ from data_pipeline.contracts import (
 )
 from data_pipeline.contracts.change_plan import CREATE_OPS
 from data_pipeline.contracts.enums import GraphState
-from data_pipeline.storage.models import GraphChangeEvent, Node, NodeEvidence, OutboxEvent
+from data_pipeline.storage.models import GraphChangeEvent, Node, OutboxEvent
+from data_pipeline.storage.evidence import upsert_node_evidence
 from data_pipeline.validation.normalize import normalize_quote
 
 from .errors import ApplyError, StaleVersionError
@@ -167,11 +168,16 @@ def apply_change_plan(session: Session, plan: ChangePlan, category_set: Category
             session.add(node)
             session.flush()
             for ev in cmd.evidence:
-                session.add(NodeEvidence(
-                    node_id=node.id, segment_id=ev.segmentId, quote=ev.quote,
-                    quote_start=ev.quoteStart, quote_end=ev.quoteEnd,
-                    evidence_type="MEETING", source_meeting_id=meeting_id,
-                ))
+                upsert_node_evidence(
+                    session,
+                    node_id=node.id,
+                    segment_id=ev.segmentId,
+                    quote=ev.quote,
+                    quote_start=ev.quoteStart,
+                    quote_end=ev.quoteEnd,
+                    evidence_type="MEETING",
+                    source_meeting_id=meeting_id,
+                )
             item_node[cmd.itemId] = (str(node.id), ntype)
             created.append(CreatedNode(
                 itemId=cmd.itemId, nodeId=str(node.id), nodeType=NodeType(ntype),

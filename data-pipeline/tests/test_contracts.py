@@ -2,20 +2,31 @@
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from pydantic import ValidationError
 
 from data_pipeline.contracts import (
     ChangePlan,
     Command,
+    CompleteInitialReviewCommand,
+    EditUnattachedNodeCommand,
+    ReanalyzeUnattachedNodeCommand,
+    ApproveCreateNewCommand,
+    ApproveLinkExistingCommand,
+    ApproveMergeExistingCommand,
     Lineage,
     NodeType,
     ParentRef,
     PlanOp,
+    RelationType,
     SortKey,
     default_lifecycle_status,
     parent_rule_violation,
     transition_allowed,
+    analysis_run_status_transition_allowed,
+    analysis_status_transition_allowed,
 )
 
 
@@ -41,12 +52,31 @@ def test_parent_rules():
     # UNATTACHED 는 부모 없어야.
     assert parent_rule_violation("ACTION", None, "UNATTACHED") is None
     assert parent_rule_violation("ACTION", "DECISION", "UNATTACHED") is not None
+    assert RelationType.RELATED_TO.value == "RELATED_TO"
 
 
 def test_default_lifecycle_status():
     assert default_lifecycle_status("DECISION") == "ACTIVE"
     assert default_lifecycle_status("ACTION") == "TODO"
     assert default_lifecycle_status("ISSUE") == "OPEN"
+
+
+def test_analysis_status_contracts():
+    assert analysis_status_transition_allowed("PENDING", "ANALYZING")
+    assert analysis_status_transition_allowed("ANALYZING", "ANALYZED")
+    assert analysis_status_transition_allowed("ANALYZED", "STALE")
+    assert analysis_status_transition_allowed("STALE", "PENDING")
+    assert analysis_status_transition_allowed("FAILED", "PENDING")
+    assert not analysis_status_transition_allowed("ANALYZED", "PENDING")
+
+    assert analysis_run_status_transition_allowed("PENDING", "RUNNING")
+    assert analysis_run_status_transition_allowed("RUNNING", "COMPLETED")
+    assert analysis_run_status_transition_allowed("RUNNING", "FAILED")
+    assert analysis_run_status_transition_allowed(
+        "COMPLETED",
+        "SUPERSEDED",
+    )
+    assert not analysis_run_status_transition_allowed("FAILED", "RUNNING")
 
 
 def test_parent_ref_exclusive():
@@ -78,3 +108,73 @@ def test_change_plan_sorts_by_sort_key():
                       lineage=lineage, commands=[c_late, c_early])
     order = [c.itemId for c in plan.sorted_commands()]
     assert order == ["mA", "mB"]  # LLM 배열 순서(mB,mA) 가 아니라 evidence 시각 순서
+
+
+def test_initial_and_final_review_command_contracts_use_uuid_and_versions():
+    source_id = uuid.uuid4()
+    target_id = uuid.uuid4()
+    analysis_id = uuid.uuid4()
+
+    initial = CompleteInitialReviewCommand(
+        candidateId=source_id,
+        expectedVersion=2,
+    )
+    assert initial.candidateId == source_id
+
+    create = ApproveCreateNewCommand(
+        sourceNodeId=source_id,
+        sourceExpectedVersion=3,
+        analysisRunId=analysis_id,
+    )
+    assert create.analysisRunId == analysis_id
+
+    link = ApproveLinkExistingCommand(
+        sourceNodeId=source_id,
+        targetNodeId=target_id,
+        relationType="RELATED_TO",
+        sourceExpectedVersion=3,
+        targetExpectedVersion=7,
+        analysisRunId=analysis_id,
+    )
+    assert link.relationType.value == "RELATED_TO"
+
+    merge = ApproveMergeExistingCommand(
+        sourceNodeId=source_id,
+        targetNodeId=target_id,
+        mergedTitle="최종 제목",
+        mergedContent="최종 본문",
+        sourceExpectedVersion=3,
+        targetExpectedVersion=7,
+        analysisRunId=analysis_id,
+        confirmUnattachedTarget=True,
+    )
+    assert merge.confirmUnattachedTarget is True
+
+    with pytest.raises(ValidationError):
+        CompleteInitialReviewCommand(
+            candidateId="not-a-uuid",
+            expectedVersion=1,
+        )
+    with pytest.raises(ValidationError):
+        ApproveCreateNewCommand(
+            sourceNodeId=source_id,
+            sourceExpectedVersion=0,
+            analysisRunId=analysis_id,
+        )
+
+    edit = EditUnattachedNodeCommand(
+        nodeId=source_id,
+        expectedVersion=2,
+        title="수정된 제목",
+    )
+    assert edit.title == "수정된 제목"
+    reanalyze = ReanalyzeUnattachedNodeCommand(
+        nodeId=source_id,
+        expectedVersion=2,
+    )
+    assert reanalyze.nodeId == source_id
+    with pytest.raises(ValidationError, match="at least one"):
+        EditUnattachedNodeCommand(
+            nodeId=source_id,
+            expectedVersion=2,
+        )

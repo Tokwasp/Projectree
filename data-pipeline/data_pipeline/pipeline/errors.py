@@ -42,3 +42,38 @@ class CandidateStateError(CandidateReviewError):
 
 class CandidateValidationError(CandidateReviewError):
     pass
+
+
+class NodeReviewError(RuntimeError):
+    """Base error for editing and finalizing materialized review Nodes."""
+
+
+class NodeNotFoundError(NodeReviewError):
+    pass
+
+
+class NodeVersionConflict(NodeReviewError):
+    def __init__(self, node_id: str, expected: int, actual: int) -> None:
+        self.node_id = node_id
+        self.expected = expected
+        self.actual = actual
+        super().__init__(
+            f"node version conflict: node={node_id}, "
+            f"expected={expected}, actual={actual}"
+        )
+
+
+class NodeStateError(NodeReviewError):
+    pass
+
+
+class NodeValidationError(NodeReviewError):
+    pass
+
+
+class AnalysisRunNotFoundError(NodeReviewError):
+    pass
+
+
+class AnalysisRunStateError(NodeReviewError):
+    pass

@@ -10,7 +10,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
 
 from data_pipeline.config import load_settings
@@ -20,6 +20,7 @@ from data_pipeline.storage import (
     Request,
     active_category_values,
 )
+from data_pipeline.storage.evidence import build_evidence_key
 from data_pipeline.storage.db import make_engine
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +29,7 @@ EXPECTED_TABLES = {
     "meeting", "request", "node", "node_embedding", "transcript_segment",
     "node_evidence", "node_candidate", "node_candidate_evidence",
     "candidate_review_event", "relation", "graph_change_event", "outbox_event", "category",
+    "node_analysis_run", "retrieval_result",
     "alembic_version",
 }
 
@@ -104,7 +106,8 @@ def test_candidate_schema_and_request_metadata_constraints(session_factory):
     assert {
         "request_id", "raw_item", "raw_judgment", "suggested_disposition",
         "suggested_parent_candidate_id", "suggested_parent_node_id",
-        "reviewed_parent_mode", "review_status", "confirmed_node_id", "version",
+        "reviewed_parent_mode", "review_status", "confirmed_node_id",
+        "initial_review_node_id", "version",
     } <= candidate_columns
 
     unique_names = {constraint["name"] for constraint in insp.get_unique_constraints("node_candidate")}
@@ -125,6 +128,10 @@ def test_candidate_schema_and_request_metadata_constraints(session_factory):
         "fk_candidate_suggested_parent_node",
     } <= fk_names
     assert "uq_candidate_confirmed_node" in unique_names
+    candidate_indexes = {
+        index["name"]: index for index in insp.get_indexes("node_candidate")
+    }
+    assert candidate_indexes["uq_candidate_initial_review_node"]["unique"] == 1
 
     evidence_fks = insp.get_foreign_keys("node_candidate_evidence")
     candidate_fk = next(fk for fk in evidence_fks if fk["name"] == "fk_candidate_evidence_candidate")
@@ -148,6 +155,68 @@ def test_candidate_schema_and_request_metadata_constraints(session_factory):
         for constraint in insp.get_check_constraints("candidate_review_event")
     }
     assert "ck_candidate_review_event_action" in review_checks
+
+
+def test_transcript_segment_keeps_raw_and_normalized_text(session_factory):
+    insp = inspect(_engine(session_factory))
+    segment_columns = {
+        column["name"]
+        for column in insp.get_columns("transcript_segment")
+    }
+
+    assert {
+        "text",
+        "text_hash",
+        "raw_text",
+        "raw_text_hash",
+        "normalized_text",
+        "normalization_metadata",
+    } <= segment_columns
+
+
+def test_node_has_initial_review_and_analysis_boundary_columns(session_factory):
+    node_columns = {
+        column["name"]
+        for column in inspect(_engine(session_factory)).get_columns("node")
+    }
+
+    assert {
+        "merged_into_node_id",
+        "analysis_status",
+        "analysis_input_hash",
+        "current_analysis_run_id",
+        "initial_reviewed_by",
+        "initial_reviewed_at",
+        "confirmed_by",
+        "confirmed_at",
+    } <= node_columns
+
+
+def test_node_evidence_key_and_merge_lookup_indexes(session_factory):
+    insp = inspect(_engine(session_factory))
+    evidence_columns = {
+        column["name"]: column
+        for column in insp.get_columns("node_evidence")
+    }
+    evidence_indexes = {
+        index["name"]: index
+        for index in insp.get_indexes("node_evidence")
+    }
+    node_indexes = {
+        index["name"]: index
+        for index in insp.get_indexes("node")
+    }
+
+    assert evidence_columns["evidence_key"]["nullable"] is False
+    assert evidence_indexes["uq_node_evidence_node_key"]["unique"] == 1
+    assert evidence_indexes["uq_node_evidence_node_key"]["column_names"] == [
+        "node_id",
+        "evidence_key",
+    ]
+    assert node_indexes["ix_node_merged_into_node_id"]["unique"] == 0
+    assert node_indexes["ix_node_merged_into_node_id"]["column_names"] == [
+        "merged_into_node_id"
+    ]
 
 
 def _request() -> Request:
@@ -217,6 +286,58 @@ def _alembic_config() -> Config:
     return config
 
 
+def _insert_legacy_evidence(
+    database_url: str,
+    *,
+    duplicate: bool = False,
+) -> tuple[str, str]:
+    engine = make_engine(database_url)
+    node_id = uuid.uuid4().hex
+    quote = "Redis를 캐시 저장소로 사용하기로 결정했습니다."
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO node ("
+                "id, project_id, source_meeting_id, source_item_id, "
+                "node_type, category, title, content, graph_state, "
+                "lifecycle_status, version"
+                ") VALUES ("
+                ":id, 'proj', 'meeting', 'item', 'DECISION', 'BACKEND', "
+                "'결정', '본문', 'UNATTACHED', 'ACTIVE', 1"
+                ")"
+            ),
+            {"id": node_id},
+        )
+        evidence_rows = [
+            {
+                "id": uuid.uuid4().hex,
+                "node_id": node_id,
+                "quote": quote,
+            }
+        ]
+        if duplicate:
+            evidence_rows.append(
+                {
+                    "id": uuid.uuid4().hex,
+                    "node_id": node_id,
+                    "quote": quote,
+                }
+            )
+        connection.execute(
+            text(
+                "INSERT INTO node_evidence ("
+                "id, node_id, segment_id, quote, quote_start, quote_end, "
+                "evidence_type, source_meeting_id"
+                ") VALUES ("
+                ":id, :node_id, 's1', :quote, 0, 24, 'MEETING', 'meeting'"
+                ")"
+            ),
+            evidence_rows,
+        )
+    engine.dispose()
+    return node_id, quote
+
+
 def _set_database_url(monkeypatch, database_url: str) -> None:
     monkeypatch.setenv("DATABASE_URL", database_url)
     load_settings.cache_clear()
@@ -241,7 +362,131 @@ def test_clean_alembic_baseline_round_trip(tmp_path, monkeypatch):
     engine = make_engine(database_url)
     assert EXPECTED_TABLES <= set(inspect(engine).get_table_names())
     engine.dispose()
-    assert ScriptDirectory.from_config(config).get_current_head() == "0002_seed_categories"
+    assert (
+        ScriptDirectory.from_config(config).get_current_head()
+        == "0003_review_analysis"
+    )
+
+
+def test_analysis_execution_schema(session_factory):
+    insp = inspect(_engine(session_factory))
+    node_checks = {
+        constraint["name"]
+        for constraint in insp.get_check_constraints("node")
+    }
+    run_columns = {
+        column["name"] for column in insp.get_columns("node_analysis_run")
+    }
+    result_columns = {
+        column["name"] for column in insp.get_columns("retrieval_result")
+    }
+    run_checks = {
+        constraint["name"]
+        for constraint in insp.get_check_constraints("node_analysis_run")
+    }
+    run_unique = {
+        constraint["name"]
+        for constraint in insp.get_unique_constraints("node_analysis_run")
+    }
+    result_unique = {
+        constraint["name"]
+        for constraint in insp.get_unique_constraints("retrieval_result")
+    }
+
+    assert {
+        "source_node_id",
+        "source_node_version",
+        "analysis_input_hash",
+        "analysis_input_hash_version",
+        "retrieval_config_version",
+        "embedding_model",
+        "embedding_version",
+        "attempt",
+        "status",
+        "requested_by",
+        "failure_code",
+        "failure_message",
+        "started_at",
+        "completed_at",
+    } <= run_columns
+    assert {
+        "analysis_run_id",
+        "target_node_id",
+        "target_node_version",
+        "rank",
+        "similarity",
+    } <= result_columns
+    assert {
+        "ck_analysis_run_status",
+        "ck_analysis_run_node_version_positive",
+        "ck_analysis_run_attempt_positive",
+    } <= run_checks
+    assert "uq_analysis_run_node_version_hash_attempt" in run_unique
+    run_indexes = {
+        index["name"]: index
+        for index in insp.get_indexes("node_analysis_run")
+    }
+    assert run_indexes["uq_analysis_run_active_node_hash"]["unique"] == 1
+    assert {
+        "uq_retrieval_result_run_rank",
+        "uq_retrieval_result_run_target",
+    } <= result_unique
+    result_checks = {
+        constraint["name"]
+        for constraint in insp.get_check_constraints("retrieval_result")
+    }
+    assert "ck_retrieval_result_target_version_positive" in result_checks
+    if insp.bind.dialect.name != "sqlite":
+        assert "ck_node_analysis_status" in node_checks
+        assert "uq_analysis_run_source_node_id" in run_unique
+        current_fk = next(
+            foreign_key
+            for foreign_key in insp.get_foreign_keys("node")
+            if foreign_key["name"] == "fk_node_current_analysis_run"
+        )
+        assert current_fk["constrained_columns"] == [
+            "id",
+            "current_analysis_run_id",
+        ]
+        assert current_fk["referred_columns"] == ["source_node_id", "id"]
+    else:
+        assert "uq_analysis_run_source_node_id" in run_unique
+
+
+def test_0003_backfills_existing_evidence_key(tmp_path, monkeypatch):
+    database_url = f"sqlite:///{tmp_path / 'evidence-backfill.db'}"
+    _set_database_url(monkeypatch, database_url)
+    config = _alembic_config()
+    command.upgrade(config, "0002_seed_categories")
+    _, quote = _insert_legacy_evidence(database_url)
+
+    command.upgrade(config, "head")
+
+    engine = make_engine(database_url)
+    with engine.connect() as connection:
+        stored_key = connection.execute(
+            text("SELECT evidence_key FROM node_evidence")
+        ).scalar_one()
+    engine.dispose()
+    assert stored_key == build_evidence_key(
+        segment_id="s1",
+        quote=quote,
+        quote_start=0,
+        quote_end=24,
+        evidence_type="MEETING",
+        source_meeting_id="meeting",
+    )
+
+
+def test_0003_rejects_existing_duplicate_evidence(tmp_path, monkeypatch):
+    database_url = f"sqlite:///{tmp_path / 'evidence-duplicate.db'}"
+    _set_database_url(monkeypatch, database_url)
+    config = _alembic_config()
+    command.upgrade(config, "0002_seed_categories")
+    _insert_legacy_evidence(database_url, duplicate=True)
+
+    with pytest.raises(RuntimeError, match="duplicate row"):
+        command.upgrade(config, "head")
 
 
 def test_revision_files_do_not_use_live_orm_metadata():
@@ -254,6 +499,13 @@ def test_revision_files_do_not_use_live_orm_metadata():
     assert ".create_all(" not in source
     assert ".drop_all(" not in source
     assert not (revisions / "0003_proposed_candidates.py").exists()
+    assert {
+        path.name for path in revisions.glob("*.py")
+    } == {
+        "0001_initial.py",
+        "0002_seed_categories.py",
+        "0003_review_analysis.py",
+    }
 
 
 @pytest.mark.skipif(

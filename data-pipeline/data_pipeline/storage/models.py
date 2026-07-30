@@ -15,11 +15,14 @@ from datetime import datetime, timezone
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
+    Float,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     String,
     Text,
+    text,
     UniqueConstraint,
     Uuid,
 )
@@ -100,6 +103,22 @@ class Node(Base):
     __table_args__ = (
         UniqueConstraint("source_candidate_id", name="uq_node_source_candidate"),
         CheckConstraint("version >= 1", name="ck_node_version_positive"),
+        CheckConstraint(
+            "analysis_status IN "
+            "('PENDING', 'ANALYZING', 'ANALYZED', 'STALE', 'FAILED')",
+            name="ck_node_analysis_status",
+        ),
+        ForeignKeyConstraint(
+            ["id", "current_analysis_run_id"],
+            [
+                "node_analysis_run.source_node_id",
+                "node_analysis_run.id",
+            ],
+            name="fk_node_current_analysis_run",
+            use_alter=True,
+        ),
+        Index("ix_node_merged_into_node_id", "merged_into_node_id"),
+        Index("ix_node_current_analysis_run_id", "current_analysis_run_id"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
     source_candidate_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -124,9 +143,40 @@ class Node(Base):
         Uuid, ForeignKey("node.id", name="fk_node_parent"), nullable=True
     )
     graph_state: Mapped[str] = mapped_column(String(16), nullable=False, default="ACTIVE")
+    merged_into_node_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("node.id", name="fk_node_merged_into"),
+        nullable=True,
+    )
+    analysis_status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="PENDING",
+    )
+    analysis_input_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+    current_analysis_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        nullable=True,
+    )
     lifecycle_status: Mapped[str] = mapped_column(String(16), nullable=False)
     due_date: Mapped[str | None] = mapped_column(String(32), nullable=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    initial_reviewed_by: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+    )
+    initial_reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    confirmed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now, nullable=False)
 
@@ -153,7 +203,7 @@ class NodeEmbedding(Base):
 
 
 class TranscriptSegment(Base):
-    """D1″: 하드 게이트(evidence 대조)의 전제. sequence_no 로 회의 내 순서를 고정한다."""
+    """D1″: raw STT and normalized evidence text with stable sequence."""
 
     __tablename__ = "transcript_segment"
     __table_args__ = (
@@ -176,16 +226,32 @@ class TranscriptSegment(Base):
     speaker_label: Mapped[str | None] = mapped_column(String(64), nullable=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     text_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_text_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    normalized_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    normalization_metadata: Mapped[dict | None] = mapped_column(
+        JSONB_or_JSON,
+        nullable=True,
+    )
 
 
 class NodeEvidence(Base):
     """D1″: quote_start/quote_end 는 서버가 세그먼트 원문에서 역산한 char 오프셋(규칙 4)."""
 
     __tablename__ = "node_evidence"
+    __table_args__ = (
+        Index(
+            "uq_node_evidence_node_key",
+            "node_id",
+            "evidence_key",
+            unique=True,
+        ),
+    )
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
     node_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("node.id", name="fk_evidence_node", ondelete="CASCADE"), nullable=False
     )
+    evidence_key: Mapped[str] = mapped_column(String(64), nullable=False)
     segment_id: Mapped[str] = mapped_column(String(64), nullable=False)
     quote: Mapped[str] = mapped_column(Text, nullable=False)
     quote_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -196,6 +262,159 @@ class NodeEvidence(Base):
     node: Mapped[Node] = relationship(back_populates="evidence")
 
 
+class NodeAnalysisRun(Base):
+    """One durable attempt to analyze one immutable Node input version."""
+
+    __tablename__ = "node_analysis_run"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_node_id",
+            "source_node_version",
+            "analysis_input_hash",
+            "attempt",
+            name="uq_analysis_run_node_version_hash_attempt",
+        ),
+        UniqueConstraint(
+            "source_node_id",
+            "id",
+            name="uq_analysis_run_source_node_id",
+        ),
+        CheckConstraint(
+            "status IN "
+            "('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'SUPERSEDED')",
+            name="ck_analysis_run_status",
+        ),
+        CheckConstraint(
+            "source_node_version >= 1",
+            name="ck_analysis_run_node_version_positive",
+        ),
+        CheckConstraint("attempt >= 1", name="ck_analysis_run_attempt_positive"),
+        Index(
+            "ix_analysis_run_node_hash_status",
+            "source_node_id",
+            "analysis_input_hash",
+            "status",
+        ),
+        Index(
+            "uq_analysis_run_active_node_hash",
+            "source_node_id",
+            "analysis_input_hash",
+            unique=True,
+            postgresql_where=text(
+                "status IN ('PENDING', 'RUNNING')"
+            ),
+            sqlite_where=text(
+                "status IN ('PENDING', 'RUNNING')"
+            ),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    source_node_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey(
+            "node.id",
+            name="fk_analysis_run_source_node",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    source_node_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    analysis_input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    analysis_input_hash_version: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+    )
+    retrieval_config_version: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+    )
+    embedding_model: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+    embedding_version: Mapped[str | None] = mapped_column(
+        String(32),
+        nullable=True,
+    )
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="PENDING",
+    )
+    requested_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    failure_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    failure_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_now,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_now,
+        onupdate=_now,
+        nullable=False,
+    )
+
+
+class RetrievalResult(Base):
+    """Ranked Retrieval output persisted by a future worker."""
+
+    __tablename__ = "retrieval_result"
+    __table_args__ = (
+        UniqueConstraint(
+            "analysis_run_id",
+            "rank",
+            name="uq_retrieval_result_run_rank",
+        ),
+        UniqueConstraint(
+            "analysis_run_id",
+            "target_node_id",
+            name="uq_retrieval_result_run_target",
+        ),
+        CheckConstraint("rank >= 1", name="ck_retrieval_result_rank_positive"),
+        CheckConstraint(
+            "target_node_version >= 1",
+            name="ck_retrieval_result_target_version_positive",
+        ),
+        Index("ix_retrieval_result_target_node", "target_node_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    analysis_run_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey(
+            "node_analysis_run.id",
+            name="fk_retrieval_result_analysis_run",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    target_node_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("node.id", name="fk_retrieval_result_target_node"),
+        nullable=False,
+    )
+    target_node_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+    similarity: Mapped[float] = mapped_column(Float, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_now,
+        nullable=False,
+    )
+
+
 class NodeCandidate(Base):
     """LLM generation 결과를 사용자 승인 전까지 보존하는 PROPOSED 후보."""
 
@@ -203,6 +422,10 @@ class NodeCandidate(Base):
     __table_args__ = (
         UniqueConstraint("request_id", "source_item_id", name="uq_candidate_request_item"),
         UniqueConstraint("confirmed_node_id", name="uq_candidate_confirmed_node"),
+        UniqueConstraint(
+            "initial_review_node_id",
+            name="uq_candidate_initial_review_node",
+        ),
         CheckConstraint("version >= 1", name="ck_candidate_version_positive"),
         CheckConstraint(
             "NOT (suggested_parent_candidate_id IS NOT NULL "
@@ -285,6 +508,15 @@ class NodeCandidate(Base):
     review_status: Mapped[str] = mapped_column(String(16), nullable=False, default="PENDING")
     confirmed_node_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("node.id", name="fk_candidate_confirmed_node"), nullable=True
+    )
+    initial_review_node_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey(
+            "node.id",
+            name="fk_candidate_initial_review_node",
+            use_alter=True,
+        ),
+        nullable=True,
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)

@@ -26,6 +26,92 @@ class GraphState(str, Enum):
     ARCHIVED = "ARCHIVED"      # 사용자 보관
 
 
+class AnalysisStatus(str, Enum):
+    """Node가 가리키는 최신 분석의 요약 상태."""
+
+    PENDING = "PENDING"
+    ANALYZING = "ANALYZING"
+    ANALYZED = "ANALYZED"
+    STALE = "STALE"
+    FAILED = "FAILED"
+
+
+class AnalysisRunStatus(str, Enum):
+    """불변에 가까운 개별 분석 실행의 수명주기."""
+
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    SUPERSEDED = "SUPERSEDED"
+
+
+ANALYSIS_STATUS_TRANSITIONS: dict[str, frozenset[str]] = {
+    AnalysisStatus.PENDING.value: frozenset(
+        {
+            AnalysisStatus.ANALYZING.value,
+            AnalysisStatus.FAILED.value,
+            AnalysisStatus.STALE.value,
+        }
+    ),
+    AnalysisStatus.ANALYZING.value: frozenset(
+        {
+            AnalysisStatus.ANALYZED.value,
+            AnalysisStatus.FAILED.value,
+            AnalysisStatus.STALE.value,
+        }
+    ),
+    AnalysisStatus.ANALYZED.value: frozenset({AnalysisStatus.STALE.value}),
+    AnalysisStatus.STALE.value: frozenset({AnalysisStatus.PENDING.value}),
+    AnalysisStatus.FAILED.value: frozenset(
+        {AnalysisStatus.PENDING.value, AnalysisStatus.STALE.value}
+    ),
+}
+
+ANALYSIS_RUN_STATUS_TRANSITIONS: dict[str, frozenset[str]] = {
+    AnalysisRunStatus.PENDING.value: frozenset(
+        {
+            AnalysisRunStatus.RUNNING.value,
+            AnalysisRunStatus.FAILED.value,
+            AnalysisRunStatus.SUPERSEDED.value,
+        }
+    ),
+    AnalysisRunStatus.RUNNING.value: frozenset(
+        {
+            AnalysisRunStatus.COMPLETED.value,
+            AnalysisRunStatus.FAILED.value,
+            AnalysisRunStatus.SUPERSEDED.value,
+        }
+    ),
+    AnalysisRunStatus.COMPLETED.value: frozenset(
+        {AnalysisRunStatus.SUPERSEDED.value}
+    ),
+    AnalysisRunStatus.FAILED.value: frozenset(),
+    AnalysisRunStatus.SUPERSEDED.value: frozenset(),
+}
+
+
+def analysis_status_transition_allowed(from_status: str, to_status: str) -> bool:
+    if from_status == to_status:
+        return from_status in {value.value for value in AnalysisStatus}
+    return to_status in ANALYSIS_STATUS_TRANSITIONS.get(
+        from_status,
+        frozenset(),
+    )
+
+
+def analysis_run_status_transition_allowed(
+    from_status: str,
+    to_status: str,
+) -> bool:
+    if from_status == to_status:
+        return from_status in {value.value for value in AnalysisRunStatus}
+    return to_status in ANALYSIS_RUN_STATUS_TRANSITIONS.get(
+        from_status,
+        frozenset(),
+    )
+
+
 # --- 타입별 lifecycle_status ---------------------------------------------------
 class DecisionStatus(str, Enum):
     ACTIVE = "ACTIVE"
@@ -47,6 +133,7 @@ class IssueStatus(str, Enum):
 # --- 관계 (AI 추론 아님 — 사용자/후속 파이프라인이 생성) -----------------------
 class RelationType(str, Enum):
     ATTACHED_TO = "ATTACHED_TO"  # confirmed child -> confirmed parent
+    RELATED_TO = "RELATED_TO"    # undirected semantic relation; not a structural parent
     SAME = "SAME"              # 중복 후보도 이 타입 + status=PROPOSED 로 표현 (별도 타입 금지)
     REVERSES = "REVERSES"
     FOLLOWS = "FOLLOWS"

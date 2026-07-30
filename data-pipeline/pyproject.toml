@@ -24,7 +24,7 @@ where = ["."]
 include = ["data_pipeline*"]
 
 [tool.setuptools.package-data]
-data_pipeline = ["config/*.json"]
+data_pipeline = ["config/*.json", "normalization/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

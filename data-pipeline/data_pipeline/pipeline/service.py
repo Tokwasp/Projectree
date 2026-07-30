@@ -47,7 +47,7 @@ from .repository import (
 
 _DEFAULT_RUN_TYPE = "NODE_GENERATION"
 _PROPOSAL_RUN_TYPE = "CANDIDATE_GENERATION"
-GENERATION_INPUT_HASH_VERSION = "generation-input-v1"
+GENERATION_INPUT_HASH_VERSION = "generation-input-v2"
 
 
 def payload_hash(payload: dict) -> str:

@@ -16,6 +16,9 @@ class Segment(BaseModel):
     model_config = ConfigDict(extra="ignore")
     segmentId: str
     text: str
+    rawText: str | None = None
+    normalizedText: str | None = None
+    normalization: dict | None = None
     startMs: int | None = None
     endMs: int | None = None
     speakerLabel: str | None = None

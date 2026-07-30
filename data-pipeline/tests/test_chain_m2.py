@@ -11,7 +11,7 @@ import uuid
 
 from data_pipeline.llm import LLMResponse
 from data_pipeline.pipeline import run_meeting
-from data_pipeline.storage import Node, NodeCandidate
+from data_pipeline.storage import Node, NodeCandidate, TranscriptSegment
 
 from .support import count
 
@@ -27,8 +27,10 @@ class FakeClient:
     def __init__(self, responses: list[dict]):
         self._responses = [json.dumps(r, ensure_ascii=False) for r in responses]
         self.calls = 0
+        self.messages: list = []
 
     def complete(self, messages):
+        self.messages.append(messages)
         raw = self._responses[self.calls]
         self.calls += 1
         # 대략적 토큰 수(테스트용) — 크레딧 계산 경로도 함께 탄다.
@@ -48,10 +50,10 @@ EXTRACTION_OUT = {
     "items": [
         {"id": "m1", "type": "DECISION", "predictedCategory": "BACKEND",
          "title": "소음 전처리 파이프라인 도입", "content": "STT 앞단 전처리.",
-         "evidence": [{"segmentId": "seg-1", "quote": "소음 전처리는 클로바 STT 전에 넣는 걸로 결정합시다."}]},
+         "evidence": [{"segmentId": "seg-1", "quote": "소음 전처리는 CLOVA STT 전에 넣는 걸로 결정합시다."}]},
         {"id": "m2", "type": "ISSUE", "predictedCategory": "BACKEND",
          "title": "레디스 캐시 도입 여부 미확정", "content": "도입 여부 보류.",
-         "evidence": [{"segmentId": "seg-2", "quote": "레디스 캐시 도입은 나중에 다시 논의해 봐야 할 것 같아요."}]},
+         "evidence": [{"segmentId": "seg-2", "quote": "Redis 캐시 도입은 나중에 다시 논의해 봐야 할 것 같아요."}]},
     ],
 }
 
@@ -70,6 +72,12 @@ def test_chain_persists_all_items_as_review_pending_candidates(session_factory, 
     res = run_meeting(session_factory, meeting_input=meeting_input, client=client, output_dir=tmp_path)
 
     assert client.calls == 2  # ①, ②
+    extraction_request = json.dumps(
+        client.messages[0],
+        ensure_ascii=False,
+    )
+    assert "소음 전처리는 CLOVA STT 전에 넣는 걸로 결정합시다." in extraction_request
+    assert "소음 전처리는 클로바 STT 전에 넣는 걸로 결정합시다." not in extraction_request
     assert res.proposal_result.status == "REVIEW_PENDING"
     assert res.proposal_result.candidateCount == 2
     assert count(session_factory, Node) == 0
@@ -80,11 +88,38 @@ def test_chain_persists_all_items_as_review_pending_candidates(session_factory, 
         assert by_item["m2"].suggested_disposition == "UNATTACHED"
         assert all(row.review_status == "PENDING" for row in by_item.values())
 
+        segments = {
+            row.segment_id: row
+            for row in s.query(TranscriptSegment).all()
+        }
+        assert segments["seg-1"].raw_text == SEGMENTS[0]["text"]
+        assert (
+            segments["seg-1"].normalized_text
+            == "소음 전처리는 CLOVA STT 전에 넣는 걸로 결정합시다."
+        )
+        assert segments["seg-1"].text == segments["seg-1"].normalized_text
+        assert (
+            segments["seg-1"].normalization_metadata[
+                "dictionary_version"
+            ]
+            == "2026-07-30.3"
+        )
+        assert len(
+            segments["seg-1"].normalization_metadata[
+                "dictionary_sha256"
+            ]
+        ) == 64
+
     # lineage 에 프롬프트 sha 기록 + 아티팩트 파일 생성.
     assert res.lineage["extractionPromptSha256"] and res.lineage["judgmentPromptSha256"]
     assert res.lineage["extractionPromptName"] == "extraction-poc-v3-lts"
     assert res.lineage["judgmentPromptName"] == "judgment-poc-v4-lts"
     assert res.lineage["judgmentContractAdapterVersion"] == "poc-v4-to-server-v1"
+    assert (
+        res.lineage["extra"]["sttDictionaryVersion"]
+        == "2026-07-30.3"
+    )
+    assert len(res.lineage["extra"]["sttDictionarySha256"]) == 64
     assert (res.output_dir / "extraction.json").is_file()
     assert (res.output_dir / "judgment.json").is_file()
     assert res.credits > 0

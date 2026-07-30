@@ -15,6 +15,7 @@ from data_pipeline.pipeline import (
     CandidateVersionConflict,
     approve_candidate,
     bulk_approve_candidates,
+    complete_initial_review,
     edit_candidate,
     get_candidate,
     list_candidates,
@@ -28,6 +29,7 @@ from data_pipeline.storage import (
     GraphChangeEvent,
     Node,
     NodeCandidate,
+    NodeCandidateEvidence,
     NodeEvidence,
     Relation,
     Request,
@@ -320,6 +322,209 @@ def test_new_decision_approval_copies_effective_values_evidence_and_is_idempoten
             candidate.candidate_id,
             actor_id="reviewer",
         )
+
+
+def test_complete_initial_review_creates_only_unattached_node_and_is_idempotent(
+    session_factory,
+):
+    candidate = _persist(
+        session_factory,
+        meeting_id="M-INITIAL-REVIEW",
+        rows=[_decision()],
+    )[0]
+    edited = edit_candidate(
+        session_factory,
+        candidate.candidate_id,
+        actor_id="reviewer",
+        expected_version=1,
+        title="1차 검토 제목",
+        content="1차 검토 본문",
+    ).candidates[0]
+
+    result = complete_initial_review(
+        session_factory,
+        candidate.candidate_id,
+        actor_id="reviewer",
+        expected_version=edited.version,
+    )
+    view = result.candidates[0]
+
+    assert view.review_status == "APPROVED"
+    assert view.initial_review_node_id
+    assert view.confirmed_node_id is None
+    assert result.created_node_ids == [view.initial_review_node_id]
+    assert result.created_relation_ids == []
+
+    with session_factory() as session:
+        node = session.get(Node, uuid.UUID(view.initial_review_node_id))
+        assert node.graph_state == "UNATTACHED"
+        assert node.analysis_status == "PENDING"
+        assert node.parent_id is None
+        assert node.title == "1차 검토 제목"
+        assert node.content == "1차 검토 본문"
+        assert node.initial_reviewed_by == "reviewer"
+        assert node.confirmed_by is None
+        assert session.query(NodeEvidence).filter_by(node_id=node.id).count() == 1
+        event = session.query(GraphChangeEvent).one()
+        assert event.change_type == "CREATE"
+        assert event.detail["stage"] == "INITIAL_REVIEW"
+
+    replayed = complete_initial_review(
+        session_factory,
+        candidate.candidate_id,
+        actor_id="other-reviewer",
+        expected_version=edited.version,
+    )
+    assert replayed.created_node_ids == []
+    assert (
+        replayed.candidates[0].initial_review_node_id
+        == view.initial_review_node_id
+    )
+    assert count(session_factory, Node) == 1
+    assert count(session_factory, NodeEvidence) == 1
+    assert count(session_factory, Relation) == 0
+    assert count(session_factory, GraphChangeEvent) == 1
+    assert count(session_factory, CandidateReviewEvent) == 2
+
+    legacy_replay = approve_candidate(
+        session_factory,
+        candidate.candidate_id,
+        actor_id="legacy-caller",
+    )
+    assert legacy_replay.created_node_ids == []
+    assert legacy_replay.created_relation_ids == []
+    with session_factory() as session:
+        node = session.get(Node, uuid.UUID(view.initial_review_node_id))
+        assert node.graph_state == "UNATTACHED"
+        assert node.parent_id is None
+
+
+def test_complete_initial_review_does_not_apply_suggested_parent_relation(
+    session_factory,
+):
+    candidates = _by_source(
+        _persist(
+            session_factory,
+            meeting_id="M-INITIAL-NO-RELATION",
+            rows=[_decision(), _action(parent="d1")],
+        )
+    )
+
+    result = complete_initial_review(
+        session_factory,
+        candidates["a1"].candidate_id,
+        actor_id="reviewer",
+        expected_version=1,
+    )
+
+    with session_factory() as session:
+        node = session.get(Node, uuid.UUID(result.created_node_ids[0]))
+        assert node.node_type == "ACTION"
+        assert node.graph_state == "UNATTACHED"
+        assert node.parent_id is None
+        assert session.query(Relation).count() == 0
+        assert session.query(Node).count() == 1
+
+
+def test_complete_initial_review_upserts_duplicate_evidence_by_stable_key(
+    session_factory,
+):
+    candidate = _persist(
+        session_factory,
+        meeting_id="M-INITIAL-EVIDENCE-UPSERT",
+        rows=[_decision()],
+    )[0]
+    with session_factory() as session:
+        existing = session.query(NodeCandidateEvidence).filter_by(
+            candidate_id=uuid.UUID(candidate.candidate_id)
+        ).one()
+        session.add(
+            NodeCandidateEvidence(
+                candidate_id=existing.candidate_id,
+                segment_id=existing.segment_id,
+                quote=existing.quote,
+                quote_start=existing.quote_start,
+                quote_end=existing.quote_end,
+                evidence_type=existing.evidence_type,
+                source_meeting_id=existing.source_meeting_id,
+            )
+        )
+        session.commit()
+
+    result = complete_initial_review(
+        session_factory,
+        candidate.candidate_id,
+        actor_id="reviewer",
+        expected_version=1,
+    )
+
+    with session_factory() as session:
+        assert session.query(NodeEvidence).filter_by(
+            node_id=uuid.UUID(result.created_node_ids[0])
+        ).count() == 1
+
+
+def test_complete_initial_review_minutes_only_does_not_create_node(
+    session_factory,
+):
+    candidate = _persist(
+        session_factory,
+        meeting_id="M-INITIAL-MINUTES",
+        rows=[_minutes()],
+    )[0]
+
+    result = complete_initial_review(
+        session_factory,
+        candidate.candidate_id,
+        actor_id="reviewer",
+        expected_version=1,
+    )
+
+    assert result.created_node_ids == []
+    assert result.candidates[0].review_status == "APPROVED"
+    assert result.candidates[0].initial_review_node_id is None
+    assert count(session_factory, Node) == 0
+    assert count(session_factory, NodeEvidence) == 0
+    assert count(session_factory, Relation) == 0
+    assert count(session_factory, GraphChangeEvent) == 0
+
+
+def test_complete_initial_review_rejects_stale_or_rejected_candidate(
+    session_factory,
+):
+    stale = _persist(
+        session_factory,
+        meeting_id="M-INITIAL-STALE",
+        rows=[_decision("stale")],
+    )[0]
+    with pytest.raises(CandidateVersionConflict):
+        complete_initial_review(
+            session_factory,
+            stale.candidate_id,
+            actor_id="reviewer",
+            expected_version=99,
+        )
+
+    rejected = _persist(
+        session_factory,
+        meeting_id="M-INITIAL-REJECTED",
+        rows=[_decision("rejected")],
+    )[0]
+    reject_candidate(
+        session_factory,
+        rejected.candidate_id,
+        actor_id="reviewer",
+        expected_version=1,
+    )
+    with pytest.raises(CandidateStateError):
+        complete_initial_review(
+            session_factory,
+            rejected.candidate_id,
+            actor_id="reviewer",
+        )
+
+    assert count(session_factory, Node) == 0
+    assert count(session_factory, Relation) == 0
 
 
 def test_bulk_attach_is_topological_and_creates_confirmed_relation(session_factory):

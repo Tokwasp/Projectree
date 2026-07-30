@@ -3,6 +3,14 @@
 from __future__ import annotations
 
 from .apply import apply_change_plan
+from .analysis import (
+    ANALYSIS_INPUT_HASH_VERSION,
+    build_analysis_input_hash,
+    mark_analysis_run_completed,
+    mark_analysis_run_failed,
+    mark_analysis_run_running,
+    reanalyze_unattached_node,
+)
 from .chain import (
     M2_PIPELINE_VERSION,
     NODE_GENERATION_PIPELINE_VERSION,
@@ -11,17 +19,25 @@ from .chain import (
     MeetingRunResult,
     estimate_credits,
     generation_input_hash,
+    normalize_transcript_segments,
     run_generation_only,
     run_judgment_only,
     run_meeting,
 )
 from .errors import (
     ApplyError,
+    AnalysisRunNotFoundError,
+    AnalysisRunStateError,
     CandidateNotFoundError,
     CandidateReviewError,
     CandidateStateError,
     CandidateValidationError,
     CandidateVersionConflict,
+    NodeNotFoundError,
+    NodeReviewError,
+    NodeStateError,
+    NodeValidationError,
+    NodeVersionConflict,
     StaleVersionError,
 )
 from .repository import (
@@ -47,11 +63,13 @@ from .service import (
 from .review import (
     approve_candidate,
     bulk_approve_candidates,
+    complete_initial_review,
     edit_candidate,
     get_candidate,
     list_candidates,
     reject_candidate,
 )
+from .unattached import edit_unattached_node
 
 __all__ = [
     "process_request",
@@ -63,6 +81,14 @@ __all__ = [
     "get_candidate",
     "edit_candidate",
     "reject_candidate",
+    "complete_initial_review",
+    "edit_unattached_node",
+    "reanalyze_unattached_node",
+    "mark_analysis_run_running",
+    "mark_analysis_run_completed",
+    "mark_analysis_run_failed",
+    "build_analysis_input_hash",
+    "ANALYSIS_INPUT_HASH_VERSION",
     "approve_candidate",
     "bulk_approve_candidates",
     "payload_hash",
@@ -75,15 +101,23 @@ __all__ = [
     "JudgmentOnlyRunResult",
     "estimate_credits",
     "generation_input_hash",
+    "normalize_transcript_segments",
     "NODE_GENERATION_PIPELINE_VERSION",
     "M2_PIPELINE_VERSION",
     "ApplyError",
+    "AnalysisRunNotFoundError",
+    "AnalysisRunStateError",
     "StaleVersionError",
     "CandidateReviewError",
     "CandidateNotFoundError",
     "CandidateVersionConflict",
     "CandidateStateError",
     "CandidateValidationError",
+    "NodeReviewError",
+    "NodeNotFoundError",
+    "NodeVersionConflict",
+    "NodeStateError",
+    "NodeValidationError",
     "get_node",
     "seed_node",
     "upsert_meeting",

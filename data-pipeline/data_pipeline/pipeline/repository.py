@@ -17,10 +17,10 @@ from data_pipeline.storage.models import (
     Node,
     NodeCandidate,
     NodeCandidateEvidence,
-    NodeEvidence,
     Request,
     TranscriptSegment,
 )
+from data_pipeline.storage.evidence import upsert_node_evidence
 from data_pipeline.validation import SegmentInfo, resolve_item_evidence
 from data_pipeline.validation.plan import title_evidence_signature
 
@@ -113,7 +113,10 @@ def upsert_segments(session: Session, project_id: str, external_meeting_id: str,
         sid = seg.get("segmentId")
         if not sid or sid in have:
             continue
-        text = seg.get("text", "")
+        raw_text = str(seg.get("rawText", seg.get("text", "")))
+        normalized_text = str(
+            seg.get("normalizedText", seg.get("text", raw_text))
+        )
         session.add(TranscriptSegment(
             project_id=project_id,
             external_meeting_id=external_meeting_id,
@@ -122,8 +125,16 @@ def upsert_segments(session: Session, project_id: str, external_meeting_id: str,
             start_ms=seg.get("startMs"),
             end_ms=seg.get("endMs"),
             speaker_label=seg.get("speakerLabel"),
-            text=text,
-            text_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
+            text=normalized_text,
+            text_hash=hashlib.sha256(
+                normalized_text.encode("utf-8")
+            ).hexdigest(),
+            raw_text=raw_text,
+            raw_text_hash=hashlib.sha256(
+                raw_text.encode("utf-8")
+            ).hexdigest(),
+            normalized_text=normalized_text,
+            normalization_metadata=seg.get("normalization"),
         ))
         have.add(sid)
         inserted += 1
@@ -366,11 +377,15 @@ def seed_node(
     session.add(node)
     session.flush()
     for ev in evidence or []:
-        session.add(NodeEvidence(
-            node_id=node.id, segment_id=ev.get("segmentId"),
-            quote=ev.get("quote", ""), quote_start=ev.get("quoteStart"),
-            quote_end=ev.get("quoteEnd"), evidence_type="MEETING",
+        upsert_node_evidence(
+            session,
+            node_id=node.id,
+            segment_id=ev.get("segmentId"),
+            quote=ev.get("quote", ""),
+            quote_start=ev.get("quoteStart"),
+            quote_end=ev.get("quoteEnd"),
+            evidence_type="MEETING",
             source_meeting_id=source_meeting_id,
-        ))
+        )
     session.flush()
     return node

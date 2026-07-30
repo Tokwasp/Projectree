@@ -20,8 +20,10 @@ class RetrievalSettings:
     meeting_max_candidates: int = 5
     embedded_action_top_k: int = 5
     embedding_model: str = "text-embedding-3-small"
+    embedding_version: str = "v1"
     embedding_dim: int = 1536
     text_extension: str = "pg_bigm"
+    config_version: str = "retrieval-v1"
 
 
 @dataclass(frozen=True)
@@ -61,8 +63,10 @@ def load_settings() -> Settings:
         meeting_max_candidates=int(_env("RETRIEVAL_MEETING_MAX_CANDIDATES", "5")),
         embedded_action_top_k=int(_env("RETRIEVAL_EMBEDDED_ACTION_TOP_K", "5")),
         embedding_model=_env("RETRIEVAL_EMBEDDING_MODEL", "text-embedding-3-small"),
+        embedding_version=_env("RETRIEVAL_EMBEDDING_VERSION", "v1"),
         embedding_dim=int(_env("RETRIEVAL_EMBEDDING_DIM", "1536")),
         text_extension=_env("RETRIEVAL_TEXT_EXTENSION", "pg_bigm"),
+        config_version=_env("RETRIEVAL_CONFIG_VERSION", "retrieval-v1"),
     )
     return Settings(
         database_url=_env("DATABASE_URL", "postgresql+psycopg://pipeline:pipeline@localhost:5432/pipeline"),
