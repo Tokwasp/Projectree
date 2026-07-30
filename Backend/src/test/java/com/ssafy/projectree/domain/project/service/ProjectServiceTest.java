@@ -4,6 +4,7 @@ import com.ssafy.projectree.IntegrationTestSupport;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
+import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectCategory;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
@@ -23,6 +24,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 class ProjectServiceTest extends IntegrationTestSupport {
 
@@ -451,6 +453,127 @@ class ProjectServiceTest extends IntegrationTestSupport {
         // then
         assertThat(projectRepository.findById(target)).isEmpty();
         assertThat(projectRepository.findById(other)).isPresent();
+    }
+
+    @DisplayName("프로젝트 참여자가 팀원 목록을 조회하면 참여자 전원이 회원 정보와 함께 반환된다.")
+    @Test
+    void getProjectMembers() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        // when
+        List<ProjectMemberResponse> result =
+                projectService.getProjectMembers(projectId, member.getId());
+
+        // then
+        assertThat(result)
+                .extracting("memberId", "name", "email", "role")
+                .containsExactly(
+                        tuple(owner.getId(), "김오너", "owner@gmail.com", ProjectRole.OWNER),
+                        tuple(member.getId(), "이멤버", "member@gmail.com", ProjectRole.MEMBER)
+                );
+    }
+
+    @DisplayName("OWNER 도 자기 프로젝트의 팀원 목록을 조회할 수 있다.")
+    @Test
+    void getProjectMembers_byOwner() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when
+        List<ProjectMemberResponse> result =
+                projectService.getProjectMembers(projectId, owner.getId());
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getRole()).isEqualTo(ProjectRole.OWNER);
+    }
+
+    @DisplayName("참여하지 않은 회원이 팀원 목록을 조회하면 예외가 발생한다.")
+    @Test
+    void getProjectMembers_notParticipant() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member outsider = memberRepository.save(createMember("outsider@gmail.com", "남"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when // then
+        assertThatThrownBy(() -> projectService.getProjectMembers(projectId, outsider.getId()))
+                .isInstanceOf(CustomException.class)
+                .hasMessage(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND.getMessage());
+    }
+
+    @DisplayName("존재하지 않는 프로젝트의 팀원 목록을 조회하면 예외가 발생한다.")
+    @Test
+    void getProjectMembers_projectNotFound() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+
+        // when // then
+        assertThatThrownBy(() -> projectService.getProjectMembers(999_999, member.getId()))
+                .isInstanceOf(CustomException.class)
+                .hasMessage(ProjectErrorCode.PROJECT_NOT_FOUND.getMessage());
+    }
+
+    @DisplayName("프로젝트 존재 검증이 참여자 검증보다 먼저 수행된다.")
+    @Test
+    void getProjectMembers_validatesProjectBeforeParticipant() {
+        // given
+        // 프로젝트도 없고 참여자도 아닌 상황에서 어떤 예외가 나오는지로 검증 순서를 확인한다
+        Member outsider = memberRepository.save(createMember("outsider@gmail.com", "남"));
+
+        // when // then
+        assertThatThrownBy(() -> projectService.getProjectMembers(999_999, outsider.getId()))
+                .isInstanceOf(CustomException.class)
+                .hasMessage(ProjectErrorCode.PROJECT_NOT_FOUND.getMessage());
+    }
+
+    @DisplayName("다른 프로젝트의 팀원은 목록에 포함되지 않는다.")
+    @Test
+    void getProjectMembers_excludesOtherProjectMembers() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member outsider = memberRepository.save(createMember("outsider@gmail.com", "남"));
+        int target = createProjectOwnedBy(owner);
+        int other = projectService.createProject(
+                createRequest("스터디 관리 앱", null), outsider.getId());
+        flushAndClear();
+
+        // when
+        List<ProjectMemberResponse> result =
+                projectService.getProjectMembers(target, owner.getId());
+
+        // then
+        assertThat(other).isNotEqualTo(target);
+        assertThat(result)
+                .extracting("name")
+                .containsExactly("김오너");
+    }
+
+    @DisplayName("탈퇴한 회원은 팀원 목록에서 빠진다.")
+    @Test
+    void getProjectMembers_afterLeave() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        projectService.leaveProject(projectId, member.getId());
+        flushAndClear();
+
+        // when
+        List<ProjectMemberResponse> result =
+                projectService.getProjectMembers(projectId, owner.getId());
+
+        // then
+        assertThat(result)
+                .extracting("name")
+                .containsExactly("김오너");
     }
 
     private int createProjectOwnedBy(Member owner) {
