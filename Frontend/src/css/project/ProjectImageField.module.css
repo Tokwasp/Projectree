@@ -4,8 +4,7 @@
   gap: var(--space-3);
 }
 
-.label,
-.promptLabel {
+.label {
   color: var(--color-text);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
@@ -45,9 +44,7 @@
 }
 
 .selectButton,
-.generateToggleButton,
-.removeButton,
-.generateButton {
+.removeButton {
   height: var(--space-10);
   padding: 0 var(--space-4);
   border-radius: var(--radius-md);
@@ -65,18 +62,6 @@
 
 .selectButton:hover {
   background: var(--color-gray-50);
-}
-
-.generateToggleButton,
-.generateButton {
-  color: var(--color-white);
-  background: var(--color-primary);
-  border: 1px solid var(--color-primary);
-}
-
-.generateToggleButton:hover,
-.generateButton:hover:not(:disabled) {
-  filter: brightness(0.95);
 }
 
 .removeButton {
@@ -125,62 +110,9 @@
   object-fit: cover;
 }
 
-.promptArea {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-}
-
-.promptControls {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.promptInput {
-  flex: 1;
-  min-width: 0;
-  height: var(--space-10);
-  padding: 0 var(--space-3);
-  color: var(--color-text);
-  background: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font: inherit;
-  font-size: var(--text-sm);
-  outline: none;
-}
-
-.promptInput::placeholder {
-  color: var(--color-secondary);
-}
-
-.promptInput:focus {
-  border-color: var(--color-primary);
-}
-
-.generateButton {
-  min-width: 72px;
-}
-
-.generateButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
 @media (max-width: 768px) {
   .preview {
     min-height: 120px;
     aspect-ratio: 16 / 8;
-  }
-
-  .promptControls {
-    flex-direction: column;
-  }
-
-  .generateButton {
-    width: 100%;
   }
 }

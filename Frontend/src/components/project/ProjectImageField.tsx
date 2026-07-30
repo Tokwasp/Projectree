@@ -20,8 +20,6 @@ export default function ProjectImageField({
   onImageChange,
 }: ProjectImageFieldProps) {
   const [isImageOptionsOpen, setIsImageOptionsOpen] = useState(false);
-  const [isPromptOpen, setIsPromptOpen] = useState(false);
-  const [imagePrompt, setImagePrompt] = useState("");
 
   const handleImageSelect = (selectedImageUrl: string) => {
     onImageChange(selectedImageUrl);
@@ -56,15 +54,6 @@ export default function ProjectImageField({
           }
         >
           기본 이미지 선택
-        </button>
-
-        <button
-          className={style.generateToggleButton}
-          type="button"
-          aria-expanded={isPromptOpen}
-          onClick={() => setIsPromptOpen((isOpen) => !isOpen)}
-        >
-          AI 이미지 생성
         </button>
 
         {imageUrl && (
@@ -103,39 +92,6 @@ export default function ProjectImageField({
               />
             </button>
           ))}
-        </div>
-      )}
-
-      {isPromptOpen && (
-        <div className={style.promptArea}>
-          <label
-            className={style.promptLabel}
-            htmlFor="project-image-prompt"
-          >
-            생성할 이미지 설명
-          </label>
-
-          <div className={style.promptControls}>
-            <input
-              className={style.promptInput}
-              id="project-image-prompt"
-              type="text"
-              value={imagePrompt}
-              placeholder="예: 보라색 계열의 협업 프로젝트 이미지"
-              maxLength={300}
-              onChange={(event) =>
-                setImagePrompt(event.target.value)
-              }
-            />
-
-            <button
-              className={style.generateButton}
-              type="button"
-              disabled={!imagePrompt.trim()}
-            >
-              생성
-            </button>
-          </div>
         </div>
       )}
     </div>
