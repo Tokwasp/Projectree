@@ -48,4 +48,11 @@ public class ProjectMember extends BaseEntity {
         this.project = project;
     }
 
+    public boolean hasMemberId(int memberId) {
+        return this.memberId == memberId;
+    }
+
+    public boolean isOwner() {
+        return this.role == ProjectRole.OWNER;
+    }
 }
