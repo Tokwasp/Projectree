@@ -30,6 +30,8 @@ spring:
 
 # CORS
 app:
+  invitation:
+    base-url: https://projectree.site
   cors:
     allowed-origins: http://localhost:5173
   session:
