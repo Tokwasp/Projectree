@@ -7,10 +7,8 @@ deploy_to_vercel:
   stage: deploy
   only:
     - Develop_FE
-  tags:
-    - ssafy  # SSAFY GitLab Shared Runner 태그 추가
   script:
-    - cd Frontend  # (모노레포인 경우 Frontend 폴더로 이동, 단일 프로젝트면 생략 가능)
+    - cd Frontend  # 프론트엔드 폴더 위치로 이동 (단일 프로젝트 루트면 이 줄 제거)
     - npm install -g vercel
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
     - vercel build --prod --token=$VERCEL_TOKEN
