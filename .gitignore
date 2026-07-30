@@ -1,0 +1,91 @@
+### Env (Frontend / Backend 공통 - 하위 모든 디렉터리에 적용) ###
+.env
+.env.*
+*.env
+# 예시/템플릿 파일은 추적
+!.env.example
+!.env.*.example
+!.env.sample
+!.env.template
+
+### Secrets ###
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+application-local.yml
+application-local.yaml
+application-local.properties
+
+### IDE - IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### IDE - Eclipse / STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IDE - VS Code ###
+.vscode/
+
+### IDE - NetBeans ###
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+
+### Backend - Gradle / Java ###
+.gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+!gradle/wrapper/gradle-wrapper.jar
+HELP.md
+*.log
+logs/
+
+### Frontend - Node ###
+node_modules/
+dist/
+dist-ssr/
+.next/
+.nuxt/
+.svelte-kit/
+.turbo/
+coverage/
+*.tsbuildinfo
+.eslintcache
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+### Deploy - Vercel ###
+.vercel
+
+### AI tooling ###
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.cursor/
+.aider*
+
+### OS ###
+.DS_Store
+Thumbs.db
+desktop.ini

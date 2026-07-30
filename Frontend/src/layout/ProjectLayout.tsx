@@ -1,4 +1,4 @@
-import ProjectSidebar from "../components/project/ProjectSidebar";
+import ProjectSidebar from "../components/ProjectSidebar/ProjectSidebar";
 import AppLayout from "./AppLayout";
 
 export default function ProjectLayout() {

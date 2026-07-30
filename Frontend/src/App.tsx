@@ -5,14 +5,14 @@ import Layout from "./layout/Layout";
 import AppLayout from "./layout/AppLayout";
 import ProjectLayout from "./layout/ProjectLayout";
 
-import OAuthCallback from "./components/auth/OAuthCallback";
-import HomePage from "./pages/HomePage";
-import Landing from "./pages/landing";
-import ProjectCreatePage from "./pages/ProjectCreatePage";
-import ProjectHomePage from "./pages/ProjectHomePage";
-import MyPage from "./pages/MyPage";
-import ProjectPage from "./pages/ProjectPage";
-import ProjectMemberPage from "./pages/ProjectMemberPage";
+import OAuthCallback from "./page/Auth/OAuthCallback/OAuthCallback";
+import Landing from "./page/Landing/ui/Landing";
+import Home from "./page/Home/ui/Home";
+import MyPage from "./page/MyPage/ui/MyPage";
+import ProjectList from "./page/Project/List/ui/ProjectList";
+import ProjectCreate from "./page/Project/Create/ui/ProjectCreate";
+import ProjectHome from "./page/Project/Home/ui/ProjectHome";
+import ProjectMember from "./page/Project/Member/ui/ProjectMember";
 
 function App() {
   useEffect(() => {
@@ -27,15 +27,15 @@ function App() {
       </Route>
 
       <Route element={<AppLayout />}>
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/projects/create" element={<ProjectCreatePage />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/projects/create" element={<ProjectCreate />} />
         <Route path="/mypage" element={<MyPage />} />
-        <Route path="/projects" element={<ProjectPage />} />
+        <Route path="/projects" element={<ProjectList />} />
       </Route>
 
       <Route path="/projects/:projectId" element={<ProjectLayout />}>
-        <Route index element={<ProjectHomePage />} />
-        <Route path="members" element={<ProjectMemberPage />} />
+        <Route index element={<ProjectHome />} />
+        <Route path="members" element={<ProjectMember />} />
       </Route>
     </Routes>
   );
