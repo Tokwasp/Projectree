@@ -1,9 +1,13 @@
 package com.ssafy.projectree.domain.project.service;
 
+import com.ssafy.projectree.domain.mail.entity.InvitationMail;
+import com.ssafy.projectree.domain.mail.entity.MailSendStatus;
+import com.ssafy.projectree.domain.mail.repository.InvitationMailRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.project.entity.ProjectInvitation;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
+import com.ssafy.projectree.domain.project.entity.InvitationStatus;
 import com.ssafy.projectree.domain.project.exception.ProjectErrorCode;
 import com.ssafy.projectree.domain.project.exception.InvitationErrorCode;
 import com.ssafy.projectree.domain.project.repository.ProjectInvitationRepository;
@@ -13,6 +17,7 @@ import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.service.result.InviteResult;
 import com.ssafy.projectree.domain.project.service.result.MemberInviteResult;
 import com.ssafy.projectree.domain.project.service.result.InvitationLanding;
+import com.ssafy.projectree.domain.project.service.result.PendingInvitation;
 import com.ssafy.projectree.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -32,6 +42,7 @@ public class ProjectInvitationService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectInvitationRepository projectInvitationRepository;
+    private final InvitationMailRepository invitationMailRepository;
     private final MemberRepository memberRepository;
     private final InvitationTokenGenerator invitationTokenGenerator;
     private final ProjectInvitationProcessor projectInvitationProcessor;
@@ -102,6 +113,55 @@ public class ProjectInvitationService {
         invitation.reject(now);
     }
 
+    @Transactional
+    public void cancelInvitation(int projectId, int invitationId, int loginMemberId) {
+        LocalDateTime now = LocalDateTime.now();
+        validateProjectAndOwner(projectId, loginMemberId);
+
+        ProjectInvitation invitation = projectInvitationRepository.findWithLockById(invitationId)
+                .orElseThrow(() -> new CustomException(InvitationErrorCode.INVITATION_NOT_FOUND));
+        if (invitation.getProject().getId() != projectId) {
+            // 다른 프로젝트의 초대 존재 여부를 노출하지 않기 위해 권한 오류 대신 404로 응답한다.
+            throw new CustomException(InvitationErrorCode.INVITATION_NOT_FOUND);
+        }
+
+        invitation.cancel(now);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PendingInvitation> getPendingInvitations(int projectId, int loginMemberId) {
+        LocalDateTime now = LocalDateTime.now();
+        validateProjectAndOwner(projectId, loginMemberId);
+
+        List<ProjectInvitation> invitations = projectInvitationRepository
+                .findAllByProjectIdAndStatus(projectId, InvitationStatus.PENDING);
+        if (invitations.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Integer, Member> membersById = memberRepository.findAllById(
+                        invitations.stream().map(ProjectInvitation::getInviteeMemberId).toList()
+                ).stream()
+                .collect(Collectors.toMap(Member::getId, Function.identity()));
+        Map<Integer, InvitationMail> latestMailsByInvitationId = invitationMailRepository
+                .findAllByInvitationIdIn(invitations.stream().map(ProjectInvitation::getId).toList())
+                .stream()
+                .collect(Collectors.toMap(
+                        InvitationMail::getInvitationId,
+                        Function.identity(),
+                        BinaryOperator.maxBy(Comparator.comparingLong(InvitationMail::getId))
+                ));
+
+        return invitations.stream()
+                .map(invitation -> toPendingInvitation(
+                        invitation,
+                        membersById.get(invitation.getInviteeMemberId()),
+                        getLatestMailStatus(latestMailsByInvitationId.get(invitation.getId())),
+                        now
+                ))
+                .toList();
+    }
+
     private void validateProjectAndOwner(int projectId, int inviterMemberId) {
         if (!projectRepository.existsById(projectId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND);
@@ -141,5 +201,27 @@ public class ProjectInvitationService {
         if (!invitation.isInviteeOf(loginMemberId)) {
             throw new CustomException(InvitationErrorCode.INVITATION_INVITEE_MISMATCH);
         }
+    }
+
+    private MailSendStatus getLatestMailStatus(InvitationMail latestMail) {
+        return latestMail == null ? MailSendStatus.NOT_REQUESTED : latestMail.getSendStatus();
+    }
+
+    private PendingInvitation toPendingInvitation(
+            ProjectInvitation invitation,
+            Member invitee,
+            MailSendStatus mailSendStatus,
+            LocalDateTime now
+    ) {
+        return new PendingInvitation(
+                invitation.getId(),
+                invitation.getInviteeMemberId(),
+                invitee.getName(),
+                invitee.getEmail(),
+                invitation.getLastInvitedAt(),
+                invitation.getExpiresAt(),
+                invitation.isExpired(now),
+                mailSendStatus
+        );
     }
 }

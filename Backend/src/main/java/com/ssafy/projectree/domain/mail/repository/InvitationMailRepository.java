@@ -13,4 +13,6 @@ public interface InvitationMailRepository extends JpaRepository<InvitationMail, 
     List<InvitationMail> findAllBySendStatusOrderByIdAsc(MailSendStatus sendStatus, Pageable pageable);
 
     List<InvitationMail> findAllBySendStatusAndUpdatedAtBefore(MailSendStatus sendStatus, LocalDateTime cutoff);
+
+    List<InvitationMail> findAllByInvitationIdIn(List<Integer> invitationIds);
 }

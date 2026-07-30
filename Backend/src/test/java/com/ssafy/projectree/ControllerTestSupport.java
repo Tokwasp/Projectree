@@ -7,6 +7,9 @@ import com.ssafy.projectree.domain.member.service.MemberService;
 import com.ssafy.projectree.domain.nodeCategory.controller.NodeCategoryController;
 import com.ssafy.projectree.domain.nodeCategory.service.NodeCategoryService;
 import com.ssafy.projectree.domain.project.controller.ProjectController;
+import com.ssafy.projectree.domain.project.controller.InvitationController;
+import com.ssafy.projectree.domain.project.controller.ProjectInvitationController;
+import com.ssafy.projectree.domain.project.service.ProjectInvitationService;
 import com.ssafy.projectree.domain.project.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -18,6 +21,8 @@ import tools.jackson.databind.ObjectMapper;
         AuthController.class,
         MemberController.class,
         ProjectController.class,
+        ProjectInvitationController.class,
+        InvitationController.class,
         NodeCategoryController.class
 })
 public abstract class ControllerTestSupport {
@@ -36,6 +41,9 @@ public abstract class ControllerTestSupport {
 
     @MockitoBean
     protected ProjectService projectService;
+
+    @MockitoBean
+    protected ProjectInvitationService projectInvitationService;
 
     @MockitoBean
     protected NodeCategoryService nodeCategoryService;

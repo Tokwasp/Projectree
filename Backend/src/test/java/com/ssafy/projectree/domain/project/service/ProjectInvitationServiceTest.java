@@ -19,6 +19,7 @@ import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.domain.project.service.result.InviteResult;
 import com.ssafy.projectree.domain.project.service.result.InvitationLanding;
 import com.ssafy.projectree.domain.project.service.result.MemberInviteResult;
+import com.ssafy.projectree.domain.project.service.result.PendingInvitation;
 import com.ssafy.projectree.global.exception.CustomException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -296,6 +297,178 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(InvitationErrorCode.INVITATION_INVITEE_MISMATCH);
+    }
+
+    @DisplayName("프로젝트 소유자는 대기 중인 초대를 취소할 수 있다.")
+    @Test
+    void cancelInvitation_cancelsPendingInvitation() {
+        Member owner = saveMember("owner@example.com", "소유자");
+        Member invitee = saveMember("invitee@example.com", "초대 대상");
+        Project project = saveProjectWithMembers(owner.getId());
+        ProjectInvitation invitation = saveInvitationForToken(
+                project, owner.getId(), invitee.getId(), "cancel-token", LocalDateTime.now()
+        );
+
+        projectInvitationService.cancelInvitation(project.getId(), invitation.getId(), owner.getId());
+
+        ProjectInvitation found = projectInvitationRepository.findById(invitation.getId()).orElseThrow();
+        assertThat(found.getStatus()).isEqualTo(InvitationStatus.CANCELED);
+        assertThat(found.getCanceledAt()).isNotNull();
+    }
+
+    @DisplayName("만료된 대기 초대도 프로젝트 소유자가 취소할 수 있다.")
+    @Test
+    void cancelInvitation_expiredPendingInvitation_cancels() {
+        Member owner = saveMember("owner@example.com", "소유자");
+        Member invitee = saveMember("invitee@example.com", "초대 대상");
+        Project project = saveProjectWithMembers(owner.getId());
+        ProjectInvitation invitation = saveInvitationForToken(
+                project, owner.getId(), invitee.getId(), "expired-cancel-token", LocalDateTime.now().minusHours(25)
+        );
+
+        projectInvitationService.cancelInvitation(project.getId(), invitation.getId(), owner.getId());
+
+        assertThat(projectInvitationRepository.findById(invitation.getId()).orElseThrow().getStatus())
+                .isEqualTo(InvitationStatus.CANCELED);
+    }
+
+    @DisplayName("다른 프로젝트의 초대 ID는 취소할 수 없고 존재하지 않는 초대로 처리된다.")
+    @Test
+    void cancelInvitation_invitationFromAnotherProject_throwsNotFound() {
+        Member owner = saveMember("owner@example.com", "소유자");
+        Member invitee = saveMember("invitee@example.com", "초대 대상");
+        Project firstProject = saveProjectWithMembers(owner.getId());
+        Project secondProject = saveProjectWithMembers(owner.getId());
+        ProjectInvitation invitation = saveInvitationForToken(
+                secondProject, owner.getId(), invitee.getId(), "other-project-token", LocalDateTime.now()
+        );
+
+        assertThatThrownBy(() -> projectInvitationService.cancelInvitation(
+                firstProject.getId(), invitation.getId(), owner.getId()
+        )).isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(InvitationErrorCode.INVITATION_NOT_FOUND);
+    }
+
+    @DisplayName("이미 처리된 초대는 취소할 수 없다.")
+    @Test
+    void cancelInvitation_processedInvitation_throwsException() {
+        Member owner = saveMember("owner@example.com", "소유자");
+        Member invitee = saveMember("invitee@example.com", "초대 대상");
+        Project project = saveProjectWithMembers(owner.getId());
+        ProjectInvitation invitation = saveInvitationForToken(
+                project, owner.getId(), invitee.getId(), "processed-cancel-token", LocalDateTime.now()
+        );
+        invitation.reject(LocalDateTime.now());
+        projectInvitationRepository.saveAndFlush(invitation);
+
+        assertThatThrownBy(() -> projectInvitationService.cancelInvitation(
+                project.getId(), invitation.getId(), owner.getId()
+        )).isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(InvitationErrorCode.INVITATION_NOT_PENDING);
+    }
+
+    @DisplayName("프로젝트 소유자가 아닌 회원은 초대를 취소할 수 없다.")
+    @Test
+    void cancelInvitation_notOwner_throwsException() {
+        Member owner = saveMember("owner@example.com", "소유자");
+        Member invitee = saveMember("invitee@example.com", "초대 대상");
+        Member outsider = saveMember("outsider@example.com", "외부 회원");
+        Project project = saveProjectWithMembers(owner.getId());
+        ProjectInvitation invitation = saveInvitationForToken(
+                project, owner.getId(), invitee.getId(), "not-owner-cancel-token", LocalDateTime.now()
+        );
+
+        assertThatThrownBy(() -> projectInvitationService.cancelInvitation(
+                project.getId(), invitation.getId(), outsider.getId()
+        )).isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.NOT_PROJECT_OWNER);
+    }
+
+    @DisplayName("대기 목록은 요청한 프로젝트의 PENDING 초대만 반환한다.")
+    @Test
+    void getPendingInvitations_returnsOnlyPendingInvitationsOfProject() {
+        Member owner = saveMember("owner@example.com", "소유자");
+        Member pendingInvitee = saveMember("pending@example.com", "대기 회원");
+        Member acceptedInvitee = saveMember("accepted@example.com", "수락 회원");
+        Member rejectedInvitee = saveMember("rejected@example.com", "거절 회원");
+        Member canceledInvitee = saveMember("canceled@example.com", "취소 회원");
+        Member otherProjectInvitee = saveMember("other@example.com", "다른 프로젝트 회원");
+        Project project = saveProjectWithMembers(owner.getId());
+        Project otherProject = saveProjectWithMembers(owner.getId());
+        ProjectInvitation pending = saveInvitationForToken(
+                project, owner.getId(), pendingInvitee.getId(), "pending-token", LocalDateTime.now()
+        );
+        ProjectInvitation accepted = saveInvitationForToken(
+                project, owner.getId(), acceptedInvitee.getId(), "accepted-token", LocalDateTime.now()
+        );
+        ProjectInvitation rejected = saveInvitationForToken(
+                project, owner.getId(), rejectedInvitee.getId(), "rejected-token", LocalDateTime.now()
+        );
+        ProjectInvitation canceled = saveInvitationForToken(
+                project, owner.getId(), canceledInvitee.getId(), "canceled-token", LocalDateTime.now()
+        );
+        saveInvitationForToken(
+                otherProject, owner.getId(), otherProjectInvitee.getId(), "other-project-pending-token", LocalDateTime.now()
+        );
+        accepted.accept(LocalDateTime.now());
+        rejected.reject(LocalDateTime.now());
+        canceled.cancel(LocalDateTime.now());
+        projectInvitationRepository.saveAllAndFlush(List.of(accepted, rejected, canceled));
+
+        List<PendingInvitation> invitations = projectInvitationService.getPendingInvitations(
+                project.getId(), owner.getId()
+        );
+
+        assertThat(invitations).extracting(PendingInvitation::invitationId).containsExactly(pending.getId());
+    }
+
+    @DisplayName("대기 목록은 만료 여부와 초대 대상 회원 정보를 함께 반환한다.")
+    @Test
+    void getPendingInvitations_returnsExpiredAndInviteeInformation() {
+        Member owner = saveMember("owner@example.com", "소유자");
+        Member invitee = saveMember("invitee@example.com", "초대 대상");
+        Project project = saveProjectWithMembers(owner.getId());
+        ProjectInvitation invitation = saveInvitationForToken(
+                project, owner.getId(), invitee.getId(), "expired-pending-token", LocalDateTime.now().minusHours(25)
+        );
+
+        PendingInvitation pendingInvitation = projectInvitationService.getPendingInvitations(
+                project.getId(), owner.getId()
+        ).getFirst();
+
+        assertThat(pendingInvitation.invitationId()).isEqualTo(invitation.getId());
+        assertThat(pendingInvitation.inviteeMemberId()).isEqualTo(invitee.getId());
+        assertThat(pendingInvitation.inviteeName()).isEqualTo(invitee.getName());
+        assertThat(pendingInvitation.inviteeEmail()).isEqualTo(invitee.getEmail());
+        assertThat(pendingInvitation.expired()).isTrue();
+        assertThat(pendingInvitation.mailSendStatus()).isEqualTo(MailSendStatus.NOT_REQUESTED);
+    }
+
+    @DisplayName("대기 목록은 초대 메일 중 가장 최근에 생성된 행의 발송 상태를 반환한다.")
+    @Test
+    void getPendingInvitations_returnsLatestMailSendStatus() {
+        Member owner = saveMember("owner@example.com", "소유자");
+        Member invitee = saveMember("invitee@example.com", "초대 대상");
+        Project project = saveProjectWithMembers(owner.getId());
+        ProjectInvitation invitation = saveInvitationForToken(
+                project, owner.getId(), invitee.getId(), "mail-status-token", LocalDateTime.now()
+        );
+        InvitationMail olderMail = InvitationMail.queue(invitation.getId(), invitee.getEmail(), "https://example.com/old");
+        olderMail.beginAttempt(LocalDateTime.now());
+        invitationMailRepository.saveAndFlush(olderMail);
+        InvitationMail latestMail = InvitationMail.queue(invitation.getId(), invitee.getEmail(), "https://example.com/latest");
+        latestMail.beginAttempt(LocalDateTime.now());
+        latestMail.succeed();
+        invitationMailRepository.saveAndFlush(latestMail);
+
+        PendingInvitation pendingInvitation = projectInvitationService.getPendingInvitations(
+                project.getId(), owner.getId()
+        ).getFirst();
+
+        assertThat(pendingInvitation.mailSendStatus()).isEqualTo(MailSendStatus.SENT);
     }
 
     @DisplayName("신규 초대 시 초대와 발송 대기 메일이 함께 저장된다.")
