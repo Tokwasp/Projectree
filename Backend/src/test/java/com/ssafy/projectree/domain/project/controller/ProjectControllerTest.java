@@ -493,6 +493,87 @@ class ProjectControllerTest extends ControllerTestSupport {
         then(projectService).should(never()).deleteProject(anyInt(), anyInt());
     }
 
+    @DisplayName("프로젝트에서 탈퇴하면 200과 성공 메시지를 응답한다.")
+    @Test
+    void leaveProject() throws Exception {
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", 1)
+                        .session(loginSession(10)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("성공"))
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @DisplayName("탈퇴 요청의 경로 projectId와 세션의 로그인 회원 id가 서비스로 그대로 전달된다.")
+    @Test
+    void leaveProject_passesProjectIdAndLoginMemberId() throws Exception {
+        // when
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", 7)
+                        .session(loginSession(10)))
+                .andExpect(status().isOk());
+
+        // then
+        then(projectService).should().leaveProject(eq(7), eq(10));
+    }
+
+    @DisplayName("세션이 아예 없으면 탈퇴 요청에 401을 응답하고 서비스를 호출하지 않는다.")
+    @Test
+    void leaveProject_withoutSession() throws Exception {
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", 1))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.errorMessage").value("로그인이 필요합니다."));
+
+        then(projectService).should(never()).leaveProject(anyInt(), anyInt());
+    }
+
+    @DisplayName("OWNER가 탈퇴하려 하면 403과 탈퇴 권한 오류 메시지를 응답한다.")
+    @Test
+    void leaveProject_forbidden() throws Exception {
+        // given
+        willThrow(new CustomException(ProjectErrorCode.PROJECT_LEAVE_FORBIDDEN))
+                .given(projectService).leaveProject(anyInt(), anyInt());
+
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", 1)
+                        .session(loginSession(10)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.errorCode").value("PROJECT_LEAVE_FORBIDDEN"))
+                .andExpect(jsonPath("$.errorMessage").value("프로젝트 탈퇴 권한이 없습니다."));
+    }
+
+    @DisplayName("참여하지 않은 프로젝트에서 탈퇴하려 하면 404를 응답한다.")
+    @Test
+    void leaveProject_participantNotFound() throws Exception {
+        // given
+        willThrow(new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND))
+                .given(projectService).leaveProject(anyInt(), anyInt());
+
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", 1)
+                        .session(loginSession(10)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.errorCode").value("PROJECT_PARTICIPANT_NOT_FOUND"))
+                .andExpect(jsonPath("$.errorMessage").value("프로젝트에 참여 중인 회원이 아닙니다."));
+    }
+
+    @DisplayName("탈퇴 요청의 projectId가 정수가 아니면 500이 아니라 400을 응답하고 서비스를 호출하지 않는다.")
+    @Test
+    void leaveProject_withNonIntegerProjectId() throws Exception {
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", "abc")
+                        .session(loginSession(10)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+
+        then(projectService).should(never()).leaveProject(anyInt(), anyInt());
+    }
+
     @DisplayName("존재하지 않는 경로로 요청하면 500이 아니라 404를 응답한다.")
     @Test
     void requestToUnknownEndpoint() throws Exception {

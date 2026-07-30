@@ -223,6 +223,40 @@ class ProjectTest {
         assertThat(project.isOwner(3)).isFalse();
     }
 
+    @DisplayName("isParticipant는 role이 OWNER여도 참여 중이면 true를 반환한다.")
+    @Test
+    void isParticipant_withOwnerRole() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        addMember(project, 1, ProjectRole.OWNER);
+
+        // when // then
+        assertThat(project.isParticipant(1)).isTrue();
+    }
+
+    @DisplayName("isParticipant는 role이 MEMBER여도 참여 중이면 true를 반환한다.")
+    @Test
+    void isParticipant_withMemberRole() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        addMember(project, 1, ProjectRole.MEMBER);
+
+        // when // then
+        assertThat(project.isParticipant(1)).isTrue();
+    }
+
+    @DisplayName("isParticipant는 참여하지 않은 memberId면 false를 반환한다.")
+    @Test
+    void isParticipant_notParticipating() {
+        // given
+        Project project = createProject("포트폴리오 사이트");
+        addMember(project, 1, ProjectRole.OWNER);
+        addMember(project, 2, ProjectRole.MEMBER);
+
+        // when // then
+        assertThat(project.isParticipant(999)).isFalse();
+    }
+
     private Project createProject(String title) {
         return Project.builder()
                 .title(title)
