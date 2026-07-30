@@ -2,17 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import projectPlaceholder from "../../../../assets/project-placeholder.svg";
 import style from "../css/ProjectCreate.module.css";
-
-const ROOT_CATEGORIES = [
-  "Frontend",
-  "Backend",
-  "Design",
-  "Planning",
-  "AI",
-  "Infrastructure",
-] as const;
-
-type RootCategory = (typeof ROOT_CATEGORIES)[number];
+import useCategories from "../hooks/useCategories";
 
 const DEFAULT_PROJECT_IMAGES = [
   {
@@ -27,25 +17,24 @@ export default function ProjectCreate() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [rootCategories, setRootCategories] = useState<RootCategory[]>([]);
+  const { categories, isLoading, error } = useCategories();
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [isImageOptionsOpen, setIsImageOptionsOpen] = useState(false);
   const [isPromptOpen, setIsPromptOpen] = useState(false);
   const [imagePrompt, setImagePrompt] = useState("");
 
-  const isSubmittable = Boolean(title.trim()) && rootCategories.length > 0;
+  const isSubmittable =
+    Boolean(title.trim()) && selectedCategoryIds.length > 0;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // 생성 API 연동 전이라 아직 제출 처리가 없다
   };
 
-  const handleCategoryChange = (category: RootCategory) => {
-    setRootCategories((selectedCategories) =>
-      selectedCategories.includes(category)
-        ? selectedCategories.filter(
-            (selectedCategory) => selectedCategory !== category,
-          )
-        : [...selectedCategories, category],
+  const handleCategoryChange = (categoryId: number) => {
+    setSelectedCategoryIds((selectedIds) =>
+      selectedIds.includes(categoryId)
+        ? selectedIds.filter((selectedId) => selectedId !== categoryId)
+        : [...selectedIds, categoryId],
     );
   };
 
@@ -207,19 +196,36 @@ export default function ProjectCreate() {
               <legend className={style.label}>루트 노드</legend>
 
               <div className={style.categoryGrid}>
-                {ROOT_CATEGORIES.map((category) => (
-                  <label className={style.categoryOption} key={category}>
-                    <input
-                      type="checkbox"
-                      name="root-categories"
-                      value={category}
-                      checked={rootCategories.includes(category)}
-                      onChange={() => handleCategoryChange(category)}
-                    />
+                {isLoading && (
+                  <p className={style.categoryMessage}>
+                    카테고리를 불러오는 중입니다.
+                  </p>
+                )}
 
-                    <span>{category}</span>
-                  </label>
-                ))}
+                {error && (
+                  <p className={style.categoryError} role="alert">
+                    {error}
+                  </p>
+                )}
+
+                {!isLoading &&
+                  !error &&
+                  categories.map((category) => (
+                    <label
+                      className={style.categoryOption}
+                      key={category.id}
+                    >
+                      <input
+                        type="checkbox"
+                        name="root-categories"
+                        value={category.id}
+                        checked={selectedCategoryIds.includes(category.id)}
+                        onChange={() => handleCategoryChange(category.id)}
+                      />
+
+                      <span>{category.category}</span>
+                    </label>
+                  ))}
               </div>
             </fieldset>
           </div>

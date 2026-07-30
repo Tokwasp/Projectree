@@ -275,6 +275,21 @@
   cursor: pointer;
 }
 
+.categoryMessage,
+.categoryError {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.categoryMessage {
+  color: var(--color-secondary);
+}
+
+.categoryError {
+  color: var(--color-error);
+}
+
 .guideArea {
   display: flex;
   align-items: center;
