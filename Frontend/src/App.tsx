@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
+import { getCategories } from "./api/categories";
 import Layout from "./layout/Layout";
 import AppLayout from "./layout/AppLayout";
 import ProjectLayout from "./layout/ProjectLayout";
@@ -13,6 +15,10 @@ import ProjectPage from "./pages/ProjectPage";
 import ProjectMemberPage from "./pages/ProjectMemberPage";
 
 function App() {
+  useEffect(() => {
+    getCategories().catch(() => undefined);
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
