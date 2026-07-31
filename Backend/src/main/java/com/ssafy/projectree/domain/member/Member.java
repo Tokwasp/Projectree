@@ -32,4 +32,15 @@ public class Member extends BaseEntity {
         this.email = email;
         this.name = name;
     }
+
+    /**
+     * 프로필 이미지를 등록하지 않은 회원과 스토리지 연동 전 회원은 모두 URL이 없는 것으로 취급한다.
+     * 호출자는 uploadFile의 null 여부를 알 필요 없이 회원을 통해 접근한다.
+     */
+    public String getProfileImageUrl() {
+        if (uploadFile == null) {
+            return null;
+        }
+        return uploadFile.getUrl();
+    }
 }
