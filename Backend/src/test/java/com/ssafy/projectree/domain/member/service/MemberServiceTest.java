@@ -68,6 +68,16 @@ class MemberServiceTest extends IntegrationTestSupport {
                 .isEqualTo(CommonErrorCode.MEMBER_NOT_FOUND);
     }
 
+    @DisplayName("프로필 이미지를 등록하지 않은 회원은 이미지 URL을 null로 조회한다.")
+    @Test
+    void findProfile_withoutUploadFile_returnsNullImageUrl() {
+        Member member = memberRepository.save(createMember("owner@example.com", "프로필 주인"));
+
+        MemberProfileResponse response = memberService.findProfile(member.getId());
+
+        assertThat(response.getProfileImageUrl()).isNull();
+    }
+
     private Member createMember(String email, String name) {
         return Member.builder()
                 .email(email)

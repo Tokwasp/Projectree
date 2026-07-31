@@ -95,6 +95,31 @@ class MemberControllerTest extends ControllerTestSupport {
                 .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
     }
 
+    @DisplayName("프로필 이미지가 있는 회원은 이미지 URL을 함께 응답한다.")
+    @Test
+    void findMyProfile_withProfileImage_returnsUrl() throws Exception {
+        given(memberService.findProfile(1))
+                .willReturn(MemberProfileResponse.of(
+                        1, "초대자", "inviter@example.com", "https://cdn.example.com/profile/1.png"
+                ));
+
+        mockMvc.perform(get("/api/members/me").session(loginSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.profileImageUrl")
+                        .value("https://cdn.example.com/profile/1.png"));
+    }
+
+    @DisplayName("프로필 이미지를 등록하지 않은 회원은 이미지 URL을 null로 응답한다.")
+    @Test
+    void findMyProfile_withoutProfileImage_returnsNullUrl() throws Exception {
+        given(memberService.findProfile(1))
+                .willReturn(MemberProfileResponse.of(1, "초대자", "inviter@example.com"));
+
+        mockMvc.perform(get("/api/members/me").session(loginSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.profileImageUrl").isEmpty());
+    }
+
     private MemberSearchResponse createResponse() {
         return MemberSearchResponse.of(2, "초대 대상", "invitee@example.com");
     }
