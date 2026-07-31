@@ -26,7 +26,6 @@ export const useMeetingPrejoin = (projectId: number) => {
   const [camBusy, setCamBusy] = useState(false);
   const [micBusy, setMicBusy] = useState(false);
 
-  // ref로 element를 들고 있으면 effect가 element 등장 시점을 놓칠 수 있다 — state로 받는다
   const [previewEl, setPreviewEl] = useState<HTMLVideoElement | null>(null);
   const previewRef = useCallback((element: HTMLVideoElement | null) => {
     setPreviewEl(element);
@@ -34,7 +33,6 @@ export const useMeetingPrejoin = (projectId: number) => {
 
   const tracksRef = useRef<LocalTrack[]>([]);
   const handedOffRef = useRef(false);
-  // state는 비동기라 연타를 막지 못한다 — 동기 가드는 ref로 둔다
   const camPendingRef = useRef(false);
   const micPendingRef = useRef(false);
 
@@ -44,19 +42,16 @@ export const useMeetingPrejoin = (projectId: number) => {
   const startConnecting = useMeetingStore((state) => state.startConnecting);
   const reset = useMeetingStore((state) => state.reset);
 
-  // 두 번째 인자를 false로 넘겨야 권한 요청 없이 조회만 한다 (기본값은 요청함)
   const loadDevices = async () => {
     setMicrophones(await Room.getLocalDevices("audioinput", false));
     setCameras(await Room.getLocalDevices("videoinput", false));
   };
 
-  // 마운트 시에는 카메라·마이크를 잡지 않는다 — 사용자가 켤 때만 잡는다
   useEffect(() => {
     Room.getLocalDevices("audioinput", false).then(setMicrophones);
     Room.getLocalDevices("videoinput", false).then(setCameras);
 
     return () => {
-      // 참여하면 트랙 소유권이 Room으로 넘어가므로 그때는 정리하지 않는다
       if (!handedOffRef.current) {
         tracksRef.current.forEach((track) => {
           track.detach();
@@ -67,7 +62,6 @@ export const useMeetingPrejoin = (projectId: number) => {
     };
   }, []);
 
-  // camOn까지 의존해야 mute(트랙 stop) → unmute(기기 재획득) 후 다시 attach된다
   useEffect(() => {
     if (!camTrack || !previewEl || !camOn) return;
 
@@ -77,15 +71,12 @@ export const useMeetingPrejoin = (projectId: number) => {
     };
   }, [camTrack, previewEl, camOn]);
 
-  // 기기 획득은 권한 프롬프트까지 끼면 수 초가 걸린다 — 그 사이 연타하면 같은 기기에
-  // getUserMedia가 두 번 나가고, 앞 트랙이 고아가 되어 카메라를 계속 점유한다
   const toggleMic = async () => {
     if (micPendingRef.current) return;
     micPendingRef.current = true;
     setMicBusy(true);
 
     try {
-      // 이미 잡아둔 트랙이 있으면 mute로만 껐다 켠다 (기기를 새로 잡지 않는다)
       if (micTrack) {
         const next = !micOn;
         if (next) await micTrack.unmute();
@@ -104,7 +95,6 @@ export const useMeetingPrejoin = (projectId: number) => {
       setMicrophoneId(track.mediaStreamTrack.getSettings().deviceId ?? "");
       setMicOn(true);
       setError("");
-      // 권한을 받은 뒤에 다시 조회해야 기기 이름(label)이 채워진다
       await loadDevices();
     } catch {
       setError("마이크 권한을 허용해 주세요.");
@@ -147,10 +137,6 @@ export const useMeetingPrejoin = (projectId: number) => {
     }
   };
 
-  // restartTrack은 트랙이 꺼져 있어도 즉시 기기를 다시 잡아 카메라·마이크를 켜버린다.
-  // setDeviceId는 muted면 pendingDeviceChange로 미뤄뒀다가 unmute 때 반영하므로
-  // "꺼둔 채 기기만 바꾸기"가 정상 동작한다.
-  // deviceId를 문자열로 넘기면 ideal 제약이라 브라우저가 다른 기기를 줄 수 있어 exact로 넘긴다.
   const changeMicrophone = async (deviceId: string) => {
     const previous = microphoneId;
     setMicrophoneId(deviceId);
@@ -187,23 +173,15 @@ export const useMeetingPrejoin = (projectId: number) => {
     setJoining(true);
     setError("");
 
-    // 언마운트 정리가 tracksRef를 비우므로 미리 붙잡아 둔다
     const acquired = tracksRef.current;
 
     try {
-      // 토큰을 먼저 받는다 — 실패해도 모달이 살아 있어야 에러를 보여줄 수 있다
-      // 테스트용: projectId/memberId/memberName은 meetingApi에 하드코딩되어 있다
-      // const info = await join(projectId);
-      const info = await join();
+      const info = await join(projectId);
+      // const info = await join();
 
-      // startConnecting이 phase를 "connecting"으로 바꾸는 순간 ProjectMeeting이
-      // 이 모달을 언마운트한다. 그 전에 인계 표시를 해두지 않으면 언마운트 정리가
-      // 트랙을 stop해버려, 이미 끝난(ended) 트랙이 회의에 올라가고 화면이 검게 나온다
       handedOffRef.current = true;
       startConnecting(projectId);
 
-      // 끈 상태로 들어가는 트랙은 넘기지 않고 정리한다
-      // (회의 중 버튼을 누르면 Room이 선택된 기기로 새로 잡는다)
       if (!micOn && micTrack) micTrack.stop();
       if (!camOn && camTrack) camTrack.stop();
 
@@ -215,7 +193,6 @@ export const useMeetingPrejoin = (projectId: number) => {
         camDeviceId: cameraId,
       });
     } catch (caught) {
-      // 인계 표시 후 실패했다면 이미 언마운트라 정리가 돌지 않는다 — 여기서 직접 끈다
       if (handedOffRef.current) {
         acquired.forEach((track) => {
           track.detach();

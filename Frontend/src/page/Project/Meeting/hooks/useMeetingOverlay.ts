@@ -12,8 +12,6 @@ import {
 } from "../../../../utils/meetingSession";
 
 const MINI_WIDTH = 320;
-// 미니는 영상을 숨기고 헤더 + 컨트롤 두 줄만 남으므로 높이가 auto다.
-// 화면 밖으로 나가지 않게 가두는 계산용이라 실제 렌더 높이와 맞춰 둔다
 const MINI_HEIGHT = 100;
 const MINI_MARGIN = 24;
 const DRAG_THRESHOLD = 4;
@@ -71,7 +69,6 @@ export const useMeetingOverlay = () => {
     return () => clearInterval(timer);
   }, [phase, startedAt]);
 
-  // 처음 미니 모드로 내려갈 때 우하단에 놓는다
   useEffect(() => {
     if (isImmersive || miniPos) return;
 
@@ -83,7 +80,6 @@ export const useMeetingOverlay = () => {
     );
   }, [isImmersive, miniPos, setMiniPos]);
 
-  // 창을 줄이면 화면 밖으로 나갈 수 있어 다시 가둔다
   useEffect(() => {
     const handleResize = () => {
       const current = useMeetingStore.getState().miniPos;
@@ -94,7 +90,6 @@ export const useMeetingOverlay = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, [setMiniPos]);
 
-  // 새로고침하면 세션을 복구할 수 없어 경고한다
   useEffect(() => {
     if (phase === "idle") return;
 
@@ -143,7 +138,6 @@ export const useMeetingOverlay = () => {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
-    // 움직이지 않았으면 클릭으로 보고 몰입 모드로 되돌린다
     if (!drag.moved) navigate(meetingPath);
   };
 
@@ -155,8 +149,6 @@ export const useMeetingOverlay = () => {
   };
 
   const finish = async () => {
-    // 방 삭제에 실패했는데 그냥 나가면, 남은 사람은 회의 중인데 종료했다고 착각하게 된다.
-    // 실패하면 나가지 않고 알린다 — 나가려면 "나가기"를 쓰면 된다
     if (roomName) {
       try {
         await endMeeting(roomName);

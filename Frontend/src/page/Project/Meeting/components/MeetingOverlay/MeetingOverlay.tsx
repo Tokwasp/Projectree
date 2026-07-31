@@ -22,11 +22,9 @@ import {
   useMeetingOverlay,
 } from "../../hooks/useMeetingOverlay";
 
-// 스크롤을 만들지 않으려면 칸을 무한정 늘릴 수 없다 — 넘치면 마지막 칸에 "+N"을 쓴다
 const MAX_GRID_CELLS = 12;
 const MAX_FILMSTRIP_CELLS = 5;
 
-// 열·행을 인원수로 정해야 타일 높이가 남은 공간에서 계산된다
 const gridShape = (count: number) => {
   if (count <= 1) return { cols: 1, rows: 1 };
   if (count === 2) return { cols: 2, rows: 1 };
@@ -40,7 +38,6 @@ interface Cell {
   key: string;
   tile?: MeetingVideoTile;
   participant?: MeetingParticipant;
-  // 크게 보고 있지 않은 다른 사람의 화면공유 — 누르면 스포트라이트와 교체된다
   screen?: boolean;
 }
 
@@ -71,14 +68,8 @@ export default function MeetingOverlay() {
     activateSound,
   } = useMeetingOverlay();
 
-  // 크게 볼 공유를 사용자가 고른 값. null이면 가장 최근에 시작된 공유를 쓴다
   const [pinnedScreenId, setPinnedScreenId] = useState<string | null>(null);
 
-  // 타일이 스포트라이트↔그리드로 옮겨 다니면 video 요소가 새로 만들어진다.
-  // querySelector로 찾는 effect는 그 시점을 놓치므로 마운트될 때 ref로 붙인다.
-  // id는 data-tile에서 읽는다 — 콜백 자체는 하나로 고정해야 리렌더마다 재실행되지 않는다.
-  // 이미 붙어 있으면 건너뛴다 — attach는 매번 element.play()를 다시 걸어서,
-  // 리렌더마다 호출하면 재생이 끊긴다
   const attachVideo = useCallback((element: HTMLVideoElement | null) => {
     if (!element || element.srcObject) return;
 
@@ -92,19 +83,14 @@ export default function MeetingOverlay() {
   const screenTiles = videoTiles.filter((tile) => tile.kind === "screen");
   const cameraTiles = videoTiles.filter((tile) => tile.kind !== "screen");
 
-  // 고른 공유가 끝나면 find가 비므로 자동으로 최근 공유로 되돌아간다
   const screenTile =
     screenTiles.find((tile) => tile.id === pinnedScreenId) ??
     screenTiles[screenTiles.length - 1];
 
-  // 동시에 여러 명이 공유할 수 있다 — 크게 보지 않는 공유는 썸네일로 남겨야 사라지지 않는다.
-  // 사람보다 앞에 둬야 칸이 모자랄 때 잘리지 않는다
   const cells: Cell[] = screenTiles
     .filter((tile) => tile.id !== screenTile?.id)
     .map((tile) => ({ key: tile.id, tile, screen: true }));
 
-  // 영상을 켠 사람은 영상으로, 끈 사람은 아바타로 — 같은 그리드에 함께 놓는다.
-  // camOn을 봐야 한다: 카메라를 끄면 트랙은 남고 mute만 되므로 타일 존재만으로는 알 수 없다
   participants.forEach((participant) =>
     cells.push({
       key: participant.identity,
@@ -115,7 +101,6 @@ export default function MeetingOverlay() {
     }),
   );
 
-  // 참가자 목록보다 트랙이 먼저 도착하는 순간이 있어 남는 타일도 실어 준다
   cameraTiles
     .filter(
       (tile) =>
@@ -146,7 +131,6 @@ export default function MeetingOverlay() {
         } as CSSProperties)
       : undefined;
 
-  // 칸 하나가 16:9가 되도록 그리드 전체가 가져야 할 가로세로비
   const gridStyle = {
     "--cols": String(cols),
     "--rows": String(rows),
@@ -244,7 +228,6 @@ export default function MeetingOverlay() {
       <div className={screenTile ? style.stageSpotlight : style.stage}>
         {screenTile && (
           <div className={style.spotlight}>
-            {/* 공유 화면은 16:9가 아니므로 cover로 자르면 안 된다 */}
             <video
               key={screenTile.id}
               data-tile={screenTile.id}

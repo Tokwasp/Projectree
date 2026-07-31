@@ -2,7 +2,6 @@ import style from "./MeetingParticipantTile.module.css";
 import { MicOffIcon } from "../MeetingIcons";
 import type { MeetingParticipant } from "../../../../../store/meetingStore";
 
-// 색은 토큰만 사용한다
 const AVATAR_COLORS = [
   "var(--color-primary)",
   "var(--color-info)",

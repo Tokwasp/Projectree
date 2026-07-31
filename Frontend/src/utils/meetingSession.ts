@@ -23,10 +23,8 @@ interface ConnectOptions {
   camDeviceId?: string;
 }
 
-// 라우트가 바뀌어도 세션이 살아 있어야 하므로 컴포넌트 밖에 둔다
 let room: Room | null = null;
 
-// 트랙은 스토어에 넣지 않는다(리렌더 유발) — id로만 꺼낸다
 const videoTracks = new Map<string, Track>();
 
 const store = () => useMeetingStore.getState();
@@ -81,8 +79,6 @@ const syncParticipants = (current: Room) => {
   ]);
 };
 
-// 원격 오디오는 DOM에 붙여야 실제로 소리가 난다. 구독이 오버레이 마운트보다
-// 먼저 일어날 수 있어, 항상 존재하는 document.body에 숨겨서 붙인다
 const attachRemoteAudio = (track: RemoteTrack, id: string) => {
   if (document.querySelector(`audio[data-meeting-audio="${id}"]`)) return;
 
@@ -117,7 +113,6 @@ const wireEvents = (current: Room) => {
         const name = participant.name || participant.identity;
 
         if (track.kind === Track.Kind.Video) {
-          // source를 봐야 상대의 화면공유를 스포트라이트로 띄울 수 있다
           const isScreen = publication.source === Track.Source.ScreenShare;
 
           addTile(id, isScreen ? `${name}의 화면` : name, track, {
@@ -144,7 +139,6 @@ const wireEvents = (current: Room) => {
     .on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) =>
       store().setSpeakers(speakers.map((participant) => participant.identity)),
     )
-    // 브라우저 기본 UI의 "공유 중지"로 끝나는 경우도 상태를 맞춰야 한다
     .on(
       RoomEvent.LocalTrackUnpublished,
       (publication: LocalTrackPublication) => {
@@ -159,11 +153,9 @@ const wireEvents = (current: Room) => {
     .on(RoomEvent.TrackUnmuted, resync)
     .on(RoomEvent.ParticipantConnected, resync)
     .on(RoomEvent.ParticipantDisconnected, resync)
-    // 자동재생이 막히면 canPlaybackAudio가 false가 된다 → 배너로 클릭 유도
     .on(RoomEvent.AudioPlaybackStatusChanged, () =>
       store().setNeedSound(!current.canPlaybackAudio),
     )
-    // 서버가 방을 닫거나 네트워크가 끊긴 경우
     .on(RoomEvent.Disconnected, () => {
       if (room === current) teardown();
     });
@@ -176,9 +168,6 @@ export const connectMeeting = async ({
   micDeviceId,
   camDeviceId,
 }: ConnectOptions) => {
-  // adaptiveStream/dynacast는 "보이는 요소만 구독·송출"이라, 소규모 회의에서
-  // 늦게 들어온 참가자가 상대 카메라를 못 보는 문제를 만든다 → 끈다
-  // 기기 기본값은 회의 중 토글로 새로 잡을 때 쓰인다
   const current = new Room({
     adaptiveStream: false,
     dynacast: false,
@@ -190,8 +179,6 @@ export const connectMeeting = async ({
   wireEvents(current);
   await current.connect(info.livekitUrl, info.token);
 
-  // 프리조인에서 켜둔 트랙만 그대로 송출한다
-  // (setMicrophoneEnabled를 쓰면 기기를 새로 잡아 이중 점유가 된다)
   if (micTrack) await current.localParticipant.publishTrack(micTrack);
 
   if (camTrack) {
@@ -203,7 +190,6 @@ export const connectMeeting = async ({
     });
   }
 
-  // connect의 await 때문에 사용자 활성화가 만료될 수 있다 → 실패하면 배너로 유도
   await current.startAudio().catch(() => undefined);
   store().setNeedSound(!current.canPlaybackAudio);
 
@@ -241,8 +227,6 @@ export const toggleCamera = async () => {
   await current.localParticipant.setCameraEnabled(next);
   store().setDevices({ camOn: next });
 
-  // 첫 켜기는 publish라 TrackMuted/Unmuted가 뜨지 않는다 —
-  // 여기서 직접 맞추지 않으면 participants의 camOn이 false로 남아 내 타일이 안 보인다
   syncParticipants(current);
 
   if (!next) {
@@ -287,7 +271,6 @@ export const toggleScreenShare = async () => {
   }
 };
 
-// 반드시 사용자 클릭 핸들러 안에서 호출해야 자동재생 차단이 풀린다
 export const enableSound = async () => {
   const current = room;
   if (!current) return;

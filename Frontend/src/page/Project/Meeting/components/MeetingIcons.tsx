@@ -1,5 +1,3 @@
-/* 아이콘 라이브러리 없이 쓰는 인라인 SVG — 색은 버튼의 color를 그대로 따른다 */
-/* prejoin 모달과 회의 오버레이가 같은 아이콘을 쓰므로 한곳에 모아 둔다 */
 const iconProps = {
   width: 20,
   height: 20,
