@@ -3,7 +3,10 @@ package com.ssafy.projectree.domain.member.controller;
 import com.ssafy.projectree.ControllerTestSupport;
 import com.ssafy.projectree.domain.member.LoginMember;
 import com.ssafy.projectree.domain.member.controller.response.MemberSearchResponse;
+import com.ssafy.projectree.domain.member.controller.response.MemberProfileResponse;
 import com.ssafy.projectree.global.config.session.SessionConst;
+import com.ssafy.projectree.global.exception.CommonErrorCode;
+import com.ssafy.projectree.global.exception.CustomException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
@@ -14,6 +17,47 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class MemberControllerTest extends ControllerTestSupport {
+
+    @DisplayName("로그인한 회원은 자신의 프로필을 조회할 수 있다.")
+    @Test
+    void findMyProfile() throws Exception {
+        given(memberService.findProfile(1))
+                .willReturn(MemberProfileResponse.of(1, "초대자", "inviter@example.com"));
+
+        mockMvc.perform(get("/api/members/me").session(loginSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.memberId").value(1))
+                .andExpect(jsonPath("$.data.name").value("초대자"))
+                .andExpect(jsonPath("$.data.email").value("inviter@example.com"));
+    }
+
+    @DisplayName("로그인하지 않고 프로필을 조회하면 401을 응답한다.")
+    @Test
+    void findMyProfile_withoutLogin_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/members/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
+    }
+
+    @DisplayName("세션에 로그인 정보가 없으면 프로필 조회 시 401을 응답한다.")
+    @Test
+    void findMyProfile_withSessionButNoLoginMember_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/members/me").session(new MockHttpSession()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
+    }
+
+    @DisplayName("세션은 유효하지만 회원이 없으면 프로필 조회 시 404를 응답한다.")
+    @Test
+    void findMyProfile_whenMemberRemoved_returnsNotFound() throws Exception {
+        given(memberService.findProfile(1))
+                .willThrow(new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        mockMvc.perform(get("/api/members/me").session(loginSession()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("MEMBER_NOT_FOUND"));
+    }
 
     @DisplayName("로그인한 회원은 이메일이 완전히 일치하는 회원을 조회할 수 있다.")
     @Test
