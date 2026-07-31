@@ -36,6 +36,37 @@ class ProjectMemberTest {
         assertThat(projectMember.getProject()).isSameAs(project);
     }
 
+    @DisplayName("hasMemberId는 자신의 memberId와 같으면 true, 다르면 false를 반환한다.")
+    @Test
+    void hasMemberId() {
+        // given
+        ProjectMember projectMember = createMember(1, ProjectRole.MEMBER);
+
+        // when // then
+        assertThat(projectMember.hasMemberId(1)).isTrue();
+        assertThat(projectMember.hasMemberId(999)).isFalse();
+    }
+
+    @DisplayName("isOwner는 role이 OWNER면 true를 반환한다.")
+    @Test
+    void isOwner() {
+        // given
+        ProjectMember projectMember = createMember(1, ProjectRole.OWNER);
+
+        // when // then
+        assertThat(projectMember.isOwner()).isTrue();
+    }
+
+    @DisplayName("isOwner는 role이 OWNER가 아니면 false를 반환한다.")
+    @Test
+    void isOwner_withMemberRole() {
+        // given
+        ProjectMember projectMember = createMember(1, ProjectRole.MEMBER);
+
+        // when // then
+        assertThat(projectMember.isOwner()).isFalse();
+    }
+
     private ProjectMember createMember(int memberId, ProjectRole role) {
         return ProjectMember.builder()
                 .memberId(memberId)

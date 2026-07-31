@@ -46,7 +46,7 @@ class NodeCategoryServiceTest {
 
         // then
         assertThat(categories)
-                .extracting(NodeCategoryResponseDto::getId, NodeCategoryResponseDto::getName)
+                .extracting(NodeCategoryResponseDto::getId, NodeCategoryResponseDto::getCategory)
                 .containsExactly(
                         tuple(1, "Frontend"),
                         tuple(2, "Backend")
@@ -83,7 +83,7 @@ class NodeCategoryServiceTest {
 
         // then
         assertThat(categories)
-                .extracting(NodeCategoryResponseDto::getName)
+                .extracting(NodeCategoryResponseDto::getCategory)
                 .containsExactly("AI", "Frontend", "Backend");
     }
 
@@ -117,7 +117,7 @@ class NodeCategoryServiceTest {
                 .map(Category::name)
                 .toArray(String[]::new);
         assertThat(categories)
-                .extracting(NodeCategoryResponseDto::getName)
+                .extracting(NodeCategoryResponseDto::getCategory)
                 .containsExactly(expected);
     }
 

@@ -11,6 +11,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @Slf4j
 @RestControllerAdvice
@@ -44,6 +45,15 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException e
     ) {
         log.warn("unreadable request body: {}", e.getMessage());
+
+        return errorResponse(CommonErrorCode.INVALID_REQUEST);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException e
+    ) {
+        log.warn("type mismatch: {} = {}", e.getName(), e.getValue());
 
         return errorResponse(CommonErrorCode.INVALID_REQUEST);
     }

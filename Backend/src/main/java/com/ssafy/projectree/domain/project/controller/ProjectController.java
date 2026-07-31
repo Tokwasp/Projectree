@@ -32,4 +32,26 @@ public class ProjectController {
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(projectId));
     }
+
+    @DeleteMapping("/{projectId}")
+    public ResponseEntity<ApiResponse<Void>> deleteProject(
+            @PathVariable int projectId,
+            @Login LoginMember loginMember
+    ) {
+
+        projectService.deleteProject(projectId, loginMember.getId());
+
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @DeleteMapping("/{projectId}/members/me")
+    public ResponseEntity<ApiResponse<Void>> leaveProject(
+            @PathVariable int projectId,
+            @Login LoginMember loginMember
+    ) {
+
+        projectService.leaveProject(projectId, loginMember.getId());
+
+        return ResponseEntity.ok(ApiResponse.success());
+    }
 }

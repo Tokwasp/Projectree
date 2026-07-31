@@ -8,8 +8,16 @@ public enum Category {
     Backend("백엔드"),
     AI("AI"),
     Infra("Infra"),
-    Design("디자인"),
-    Planning("기획");
+    Planning("기획"),
+    Design("디자인");
 
     private final String description;
+
+    public static boolean isValidId(int id) {
+        return id >= 1 && id <= values().length;
+    }
+
+    public static boolean isNotValid(int id) {
+        return !isValidId(id);
+    }
 }
