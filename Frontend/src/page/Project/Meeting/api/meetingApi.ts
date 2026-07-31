@@ -49,7 +49,6 @@ const TEST_API_BASE = "https://i15d205.p.ssafy.io/api";
 const TEST_PROJECT_ID = 12;
 const TEST_MEMBER_ID = 1;
 const TEST_MEMBER_NAME = "안현석";
-const TEST_ROOM_NAME = "5";
 
 // 한 대에서 2인 회의를 테스트하려고 창마다 다른 사용자로 붙을 때 쓴다.
 // 쿼리가 없으면 위 하드코딩 값을 그대로 쓰므로 평소 동작은 바뀌지 않는다.
@@ -102,8 +101,9 @@ export const join = async (): Promise<JoinResponse> => {
 };
 
 // 회의 종료(방장) — roomName으로 deleteRoom. Redis는 room_finished 웹훅이 닫는다.
-export const endMeeting = async (): Promise<void> => {
-  const roomName = testParam("roomName", TEST_ROOM_NAME);
+// roomName은 join 응답에서 받은 실제 값을 그대로 써야 한다.
+// 하드코딩하면 없는 방을 지우게 되어, 진짜 방은 살아있고 남은 사람도 안 나간다
+export const endMeeting = async (roomName: string): Promise<void> => {
   const response = await fetch(`${TEST_API_BASE}/meetings/${roomName}`, {
     method: "DELETE",
     credentials: "include",

@@ -155,13 +155,17 @@ export const useMeetingOverlay = () => {
   };
 
   const finish = async () => {
+    // 방 삭제에 실패했는데 그냥 나가면, 남은 사람은 회의 중인데 종료했다고 착각하게 된다.
+    // 실패하면 나가지 않고 알린다 — 나가려면 "나가기"를 쓰면 된다
     if (roomName) {
       try {
-        // 테스트용: roomName은 meetingApi에 하드코딩되어 있다
-        // await endMeeting(roomName);
-        await endMeeting();
+        await endMeeting(roomName);
       } catch (caught) {
         console.error("회의 종료 요청 실패:", caught);
+        window.alert(
+          "회의를 종료하지 못했습니다. 다른 참가자는 아직 회의 중입니다.",
+        );
+        return;
       }
     }
 
