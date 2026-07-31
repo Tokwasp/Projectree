@@ -24,7 +24,6 @@ public class ProjectMember extends BaseEntity {
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    // member는 다른 도메인이므로 엔티티가 아닌 id로 참조한다.
     @Column(name = "member_id", nullable = false)
     private int memberId;
 
@@ -49,4 +48,11 @@ public class ProjectMember extends BaseEntity {
         this.project = project;
     }
 
+    public boolean hasMemberId(int memberId) {
+        return this.memberId == memberId;
+    }
+
+    public boolean isOwner() {
+        return this.role == ProjectRole.OWNER;
+    }
 }

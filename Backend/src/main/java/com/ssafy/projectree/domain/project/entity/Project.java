@@ -29,6 +29,9 @@ public class Project extends BaseEntity {
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectMember> projectMembers = new ArrayList<>();
 
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectCategory> projectCategories = new ArrayList<>();
+
     @Builder
     private Project(String title, String content, String photoUrl) {
         this.title = title;
@@ -41,9 +44,31 @@ public class Project extends BaseEntity {
         pm.assignProject(this);
     }
 
-    public void removeMember(int memberId) {
-        this.projectMembers.removeIf(pm -> pm.getMemberId() == memberId);
+    public void addCategory(ProjectCategory pc) {
+        this.projectCategories.add(pc);
+        pc.assignProject(this);
     }
 
+    public void removeMember(int memberId) {
+        this.projectMembers.removeIf(pm -> pm.hasMemberId(memberId));
+    }
 
+    public boolean isOwner(int memberId) {
+        return projectMembers.stream()
+                .filter(pm -> pm.hasMemberId(memberId))
+                .anyMatch(ProjectMember::isOwner);
+    }
+
+    public boolean isNotOwner(int memberId) {
+        return !isOwner(memberId);
+    }
+
+    public boolean isParticipant(int memberId) {
+        return projectMembers.stream()
+                .anyMatch(pm -> pm.hasMemberId(memberId));
+    }
+
+    public boolean isNotParticipant(int memberId) {
+        return !isParticipant(memberId);
+    }
 }
