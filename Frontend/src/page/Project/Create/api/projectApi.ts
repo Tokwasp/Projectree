@@ -7,7 +7,7 @@ export interface ProjectCreateRequest {
   categoryIds: number[];
 }
 
-export const createProject = async (
+export const createProject = (
   request: ProjectCreateRequest,
 ): Promise<number> =>
   apiRequest<number>("/projects", {
