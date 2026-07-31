@@ -4,6 +4,8 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useParams } from "react-router-dom";
+import type { MemberSearchResponse } from "../api/projectInvitationApi";
+import useProjectInvitation from "../hooks/useProjectInvitation";
 import useProjectMembers from "../hooks/useProjectMembers";
 import style from "../css/ProjectMember.module.css";
 
@@ -20,6 +22,21 @@ function formatDate(date: string) {
   }).format(new Date(date));
 }
 
+function getInviteResultMessage(result: string) {
+  switch (result) {
+    case "MEMBER_NOT_FOUND":
+      return "존재하지 않는 회원입니다.";
+    case "ALREADY_MEMBER":
+      return "이미 프로젝트에 참여 중인 회원입니다.";
+    case "SELF_INVITE":
+      return "자기 자신은 초대할 수 없습니다.";
+    case "COOLDOWN":
+      return "잠시 후 다시 초대해주세요.";
+    default:
+      return "팀원 초대에 실패했습니다.";
+  }
+}
+
 export default function ProjectMember() {
   const { projectId } = useParams<{ projectId: string }>();
   const parsedProjectId = Number(projectId);
@@ -30,12 +47,22 @@ export default function ProjectMember() {
 
   const { members, isLoading, error } =
     useProjectMembers(validProjectId);
+  const {
+    searchMember,
+    inviteMembers,
+    isSearching,
+    isInviting,
+    error: invitationError,
+    clearError: clearInvitationError,
+  } = useProjectInvitation();
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
   const [email, setEmail] = useState("");
-  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<
+    MemberSearchResponse[]
+  >([]);
   const [errorMessage, setErrorMessage] = useState("");
 
   const normalizedKeyword = searchKeyword.trim().toLowerCase();
@@ -56,11 +83,12 @@ export default function ProjectMember() {
   const closeInvite = () => {
     setIsInviteOpen(false);
     setEmail("");
-    setSelectedEmails([]);
+    setSelectedMembers([]);
     setErrorMessage("");
+    clearInvitationError();
   };
 
-  const handleEmailAdd = () => {
+  const handleEmailAdd = async () => {
     if (!trimmedEmail) {
       return;
     }
@@ -70,46 +98,110 @@ export default function ProjectMember() {
       return;
     }
 
-    if (selectedEmails.includes(trimmedEmail)) {
+    if (
+      selectedMembers.some(
+        (member) => member.email.toLowerCase() === trimmedEmail,
+      )
+    ) {
       setErrorMessage("이미 추가한 이메일입니다.");
       return;
     }
 
-    if (selectedEmails.length >= MAX_INVITE_COUNT) {
+    if (selectedMembers.length >= MAX_INVITE_COUNT) {
       setErrorMessage(
         `한 번에 최대 ${MAX_INVITE_COUNT}명까지 초대할 수 있습니다.`,
       );
       return;
     }
 
-    setSelectedEmails((emails) => [...emails, trimmedEmail]);
+    const foundMember = await searchMember(trimmedEmail);
+
+    if (!foundMember) {
+      return;
+    }
+
+    if (
+      members.some(
+        (member) => member.memberId === foundMember.memberId,
+      )
+    ) {
+      setErrorMessage("이미 프로젝트에 참여 중인 회원입니다.");
+      return;
+    }
+
+    setSelectedMembers((selectedMembers) => [
+      ...selectedMembers,
+      foundMember,
+    ]);
     setEmail("");
     setErrorMessage("");
   };
 
-  const handleEmailRemove = (emailToRemove: string) => {
-    setSelectedEmails((emails) =>
-      emails.filter((selectedEmail) => selectedEmail !== emailToRemove),
+  const handleMemberRemove = (memberId: number) => {
+    setSelectedMembers((selectedMembers) =>
+      selectedMembers.filter(
+        (selectedMember) => selectedMember.memberId !== memberId,
+      ),
     );
     setErrorMessage("");
+    clearInvitationError();
   };
 
-  // Enter·쉼표로도 이메일을 추가할 수 있게 한다
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter" || event.key === ",") {
       event.preventDefault();
-      handleEmailAdd();
+      void handleEmailAdd();
     }
   };
 
-  const handleInviteSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleInviteSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
-    if (selectedEmails.length === 0) {
+    if (validProjectId === null || selectedMembers.length === 0) {
       return;
     }
 
-    closeInvite();
+    const response = await inviteMembers(
+      validProjectId,
+      selectedMembers.map((member) => member.memberId),
+    );
+
+    if (!response) {
+      return;
+    }
+
+    const failedResults = response.results.filter(
+      ({ result }) => result !== "INVITED" && result !== "RESENT",
+    );
+
+    if (failedResults.length === 0) {
+      closeInvite();
+      return;
+    }
+
+    const failedMemberIds = new Set(
+      failedResults.map(({ inviteeMemberId }) => inviteeMemberId),
+    );
+
+    setSelectedMembers((selectedMembers) =>
+      selectedMembers.filter((member) =>
+        failedMemberIds.has(member.memberId),
+      ),
+    );
+
+    setErrorMessage(
+      failedResults
+        .map(({ inviteeMemberId, result }) => {
+          const member = selectedMembers.find(
+            ({ memberId }) => memberId === inviteeMemberId,
+          );
+
+          return `${member?.email ?? "초대 대상"}: ${getInviteResultMessage(result)}`;
+        })
+        .join(" "),
+    );
   };
 
   return (
@@ -175,20 +267,25 @@ export default function ProjectMember() {
                   이메일
                 </label>
 
-                {selectedEmails.length > 0 && (
+                {selectedMembers.length > 0 && (
                   <div
                     className={style.emailList}
-                    aria-label="초대 대상 이메일"
+                    aria-label="초대 대상 회원"
                   >
-                    {selectedEmails.map((selectedEmail) => (
-                      <span className={style.emailChip} key={selectedEmail}>
-                        <span>{selectedEmail}</span>
+                    {selectedMembers.map((selectedMember) => (
+                      <span
+                        className={style.emailChip}
+                        key={selectedMember.memberId}
+                      >
+                        <span>{selectedMember.email}</span>
 
                         <button
                           className={style.emailRemoveButton}
                           type="button"
-                          aria-label={`${selectedEmail} 선택 해제`}
-                          onClick={() => handleEmailRemove(selectedEmail)}
+                          aria-label={`${selectedMember.email} 선택 해제`}
+                          onClick={() =>
+                            handleMemberRemove(selectedMember.memberId)
+                          }
                         >
                           ×
                         </button>
@@ -209,6 +306,7 @@ export default function ProjectMember() {
                     onChange={(event) => {
                       setEmail(event.target.value);
                       setErrorMessage("");
+                      clearInvitationError();
                     }}
                     onKeyDown={handleKeyDown}
                   />
@@ -216,10 +314,10 @@ export default function ProjectMember() {
                   <button
                     className={style.addButton}
                     type="button"
-                    disabled={!trimmedEmail}
-                    onClick={handleEmailAdd}
+                    disabled={!trimmedEmail || isSearching}
+                    onClick={() => void handleEmailAdd()}
                   >
-                    추가
+                    {isSearching ? "검색 중..." : "추가"}
                   </button>
                 </div>
 
@@ -227,18 +325,26 @@ export default function ProjectMember() {
                   Enter 키로 이메일을 빠르게 추가할 수 있어요.
                 </p>
 
-                {errorMessage && (
-                  <p className={style.errorMessage}>{errorMessage}</p>
+                {(errorMessage || invitationError) && (
+                  <p className={style.errorMessage} role="alert">
+                    {errorMessage || invitationError}
+                  </p>
                 )}
 
                 <button
                   className={style.submitButton}
                   type="submit"
-                  disabled={selectedEmails.length === 0}
+                  disabled={
+                    selectedMembers.length === 0 ||
+                    isSearching ||
+                    isInviting
+                  }
                 >
-                  {selectedEmails.length > 0
-                    ? `${selectedEmails.length}명 초대하기`
-                    : "초대하기"}
+                  {isInviting
+                    ? "초대 중..."
+                    : selectedMembers.length > 0
+                      ? `${selectedMembers.length}명 초대하기`
+                      : "초대하기"}
                 </button>
               </form>
             </div>
