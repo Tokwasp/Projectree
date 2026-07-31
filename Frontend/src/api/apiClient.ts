@@ -40,6 +40,10 @@ export const apiRequest = async <T>(
     },
   });
 
+  if (response.status === 204 && response.ok) {
+    return undefined as T;
+  }
+
   const body: unknown = await response.json().catch(() => null);
 
   if (!response.ok || !body) {
