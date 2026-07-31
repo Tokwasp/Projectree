@@ -3,12 +3,12 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { mockProjectMembers } from "../../../../mocks/ProjectMemberMocks";
+import { useParams } from "react-router-dom";
+import useProjectMembers from "../hooks/useProjectMembers";
 import style from "../css/ProjectMember.module.css";
 
 type RoleFilter = "ALL" | "OWNER" | "MEMBER";
 
-const PROJECT_OWNER_USER_ID = 1;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_INVITE_COUNT = 10;
 
@@ -21,6 +21,16 @@ function formatDate(date: string) {
 }
 
 export default function ProjectMember() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const parsedProjectId = Number(projectId);
+  const validProjectId =
+    Number.isInteger(parsedProjectId) && parsedProjectId > 0
+      ? parsedProjectId
+      : null;
+
+  const { members, isLoading, error } =
+    useProjectMembers(validProjectId);
+
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
@@ -28,21 +38,15 @@ export default function ProjectMember() {
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const activeMembers = mockProjectMembers.filter(
-    (member) => member.status === "ACTIVE" && !member.leftAt,
-  );
-
   const normalizedKeyword = searchKeyword.trim().toLowerCase();
 
-  const filteredMembers = activeMembers.filter((member) => {
+  const filteredMembers = members.filter((member) => {
     const matchesKeyword =
       member.name.toLowerCase().includes(normalizedKeyword) ||
       member.email.toLowerCase().includes(normalizedKeyword);
 
-    const memberRole =
-      member.userId === PROJECT_OWNER_USER_ID ? "OWNER" : "MEMBER";
-
-    const matchesRole = roleFilter === "ALL" || roleFilter === memberRole;
+    const matchesRole =
+      roleFilter === "ALL" || roleFilter === member.role;
 
     return matchesKeyword && matchesRole;
   });
@@ -114,7 +118,7 @@ export default function ProjectMember() {
         <div>
           <h1 className={style.title}>팀 멤버</h1>
           <p className={style.description}>
-            총 {activeMembers.length}명의 팀원이 참여 중입니다.
+            총 {members.length}명의 팀원이 참여 중입니다.
           </p>
         </div>
 
@@ -264,7 +268,15 @@ export default function ProjectMember() {
         </select>
       </div>
 
-      {filteredMembers.length === 0 ? (
+      {isLoading ? (
+        <div className={style.empty}>
+          팀원 목록을 불러오는 중입니다.
+        </div>
+      ) : error ? (
+        <div className={style.empty} role="alert">
+          {error}
+        </div>
+      ) : filteredMembers.length === 0 ? (
         <div className={style.empty}>조건에 맞는 팀원이 없습니다.</div>
       ) : (
         <div className={style.tableContainer}>
@@ -280,21 +292,14 @@ export default function ProjectMember() {
 
             <tbody>
               {filteredMembers.map((member) => {
-                const isOwner = member.userId === PROJECT_OWNER_USER_ID;
+                const isOwner = member.role === "OWNER";
 
                 return (
-                  <tr key={member.projectMemberId}>
+                  <tr key={member.memberId}>
                     <td>
                       <div className={style.member}>
                         <div className={style.avatar}>
-                          {member.profileImageUrl ? (
-                            <img
-                              src={member.profileImageUrl}
-                              alt={`${member.name} 프로필`}
-                            />
-                          ) : (
-                            <span>{member.name.slice(0, 1)}</span>
-                          )}
+                          <span>{member.name.slice(0, 1)}</span>
                         </div>
 
                         <strong className={style.name}>{member.name}</strong>
