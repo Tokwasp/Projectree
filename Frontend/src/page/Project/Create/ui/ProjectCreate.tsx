@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import projectPlaceholder from "../../../../assets/project-placeholder.svg";
 import style from "../css/ProjectCreate.module.css";
 import useCategories from "../hooks/useCategories";
+import useCreateProject from "../hooks/useCreateProject";
 
 const DEFAULT_PROJECT_IMAGES = [
   {
@@ -18,16 +19,37 @@ export default function ProjectCreate() {
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const { categories, isLoading, error } = useCategories();
+  const {
+    createProject,
+    isCreating,
+    error: createError,
+  } = useCreateProject();
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [isImageOptionsOpen, setIsImageOptionsOpen] = useState(false);
-  const [isPromptOpen, setIsPromptOpen] = useState(false);
-  const [imagePrompt, setImagePrompt] = useState("");
 
   const isSubmittable =
-    Boolean(title.trim()) && selectedCategoryIds.length > 0;
+    Boolean(title.trim()) &&
+    Boolean(description.trim()) &&
+    selectedCategoryIds.length > 0 &&
+    !isCreating;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!isSubmittable) {
+      return;
+    }
+
+    const projectId = await createProject({
+      title: title.trim(),
+      content: description.trim(),
+      photoUrl: imageUrl || null,
+      categoryIds: selectedCategoryIds,
+    });
+
+    if (projectId !== null) {
+      navigate(`/projects/${projectId}`);
+    }
   };
 
   const handleCategoryChange = (categoryId: number) => {
@@ -82,7 +104,8 @@ export default function ProjectCreate() {
                 id="project-description"
                 value={description}
                 placeholder="프로젝트에 대한 간단한 소개를 입력하세요"
-                maxLength={500}
+                maxLength={200}
+                required
                 onChange={(event) => setDescription(event.target.value)}
               />
             </div>
@@ -112,15 +135,6 @@ export default function ProjectCreate() {
                   onClick={() => setIsImageOptionsOpen((isOpen) => !isOpen)}
                 >
                   기본 이미지 선택
-                </button>
-
-                <button
-                  className={style.generateToggleButton}
-                  type="button"
-                  aria-expanded={isPromptOpen}
-                  onClick={() => setIsPromptOpen((isOpen) => !isOpen)}
-                >
-                  AI 이미지 생성
                 </button>
 
                 {imageUrl && (
@@ -157,37 +171,6 @@ export default function ProjectCreate() {
                       />
                     </button>
                   ))}
-                </div>
-              )}
-
-              {isPromptOpen && (
-                <div className={style.promptArea}>
-                  <label
-                    className={style.label}
-                    htmlFor="project-image-prompt"
-                  >
-                    생성할 이미지 설명
-                  </label>
-
-                  <div className={style.promptControls}>
-                    <input
-                      className={style.promptInput}
-                      id="project-image-prompt"
-                      type="text"
-                      value={imagePrompt}
-                      placeholder="예: 보라색 계열의 협업 프로젝트 이미지"
-                      maxLength={300}
-                      onChange={(event) => setImagePrompt(event.target.value)}
-                    />
-
-                    <button
-                      className={style.generateButton}
-                      type="button"
-                      disabled={!imagePrompt.trim()}
-                    >
-                      생성
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
@@ -239,6 +222,12 @@ export default function ProjectCreate() {
         </div>
 
         <div className={style.footer}>
+          {createError && (
+            <p className={style.submitError} role="alert">
+              {createError}
+            </p>
+          )}
+
           <button
             className={style.cancelButton}
             type="button"
@@ -252,7 +241,7 @@ export default function ProjectCreate() {
             type="submit"
             disabled={!isSubmittable}
           >
-            만들기
+            {isCreating ? "생성 중..." : "만들기"}
           </button>
         </div>
       </form>
