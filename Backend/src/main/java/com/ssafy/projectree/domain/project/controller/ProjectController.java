@@ -2,6 +2,8 @@ package com.ssafy.projectree.domain.project.controller;
 
 import com.ssafy.projectree.domain.member.LoginMember;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
+import com.ssafy.projectree.domain.project.dto.response.ProjectMemberListResponse;
+import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.service.ProjectService;
 import com.ssafy.projectree.global.annotation.Login;
 import com.ssafy.projectree.global.response.ApiResponse;
@@ -10,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -53,5 +57,16 @@ public class ProjectController {
         projectService.leaveProject(projectId, loginMember.getId());
 
         return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @GetMapping("/{projectId}/members")
+    public ResponseEntity<ApiResponse<ProjectMemberListResponse>> getProjectMembers(
+            @PathVariable int projectId,
+            @Login LoginMember loginMember
+    ) {
+
+        List<ProjectMemberResponse> members = projectService.getProjectMembers(projectId, loginMember.getId());
+
+        return ResponseEntity.ok(ApiResponse.success(new ProjectMemberListResponse(members)));
     }
 }
