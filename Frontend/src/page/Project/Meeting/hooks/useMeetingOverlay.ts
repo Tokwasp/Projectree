@@ -12,7 +12,9 @@ import {
 } from "../../../../utils/meetingSession";
 
 const MINI_WIDTH = 320;
-const MINI_HEIGHT = 240;
+// 미니는 영상을 숨기고 헤더 + 컨트롤 두 줄만 남으므로 높이가 auto다.
+// 화면 밖으로 나가지 않게 가두는 계산용이라 실제 렌더 높이와 맞춰 둔다
+const MINI_HEIGHT = 100;
 const MINI_MARGIN = 24;
 const DRAG_THRESHOLD = 4;
 
@@ -155,7 +157,9 @@ export const useMeetingOverlay = () => {
   const finish = async () => {
     if (roomName) {
       try {
-        await endMeeting(roomName);
+        // 테스트용: roomName은 meetingApi에 하드코딩되어 있다
+        // await endMeeting(roomName);
+        await endMeeting();
       } catch (caught) {
         console.error("회의 종료 요청 실패:", caught);
       }

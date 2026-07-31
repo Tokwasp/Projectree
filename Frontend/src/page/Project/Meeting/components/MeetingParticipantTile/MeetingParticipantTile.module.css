@@ -1,11 +1,18 @@
+/* 영상 타일과 같은 그리드 칸에 놓이므로 칸을 꽉 채운다 */
 .tile,
 .tileSpeaking {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
+  min-width: 0;
+  min-height: 0;
   padding: var(--space-3);
-  background: var(--color-gray-800);
+  overflow: hidden;
+  /* 아바타가 칸 크기를 따라가도록 이 타일을 기준 컨테이너로 삼는다 */
+  container-type: size;
+  background: var(--color-meeting-panel);
   border: 2px solid transparent;
   border-radius: var(--radius-md);
 }
@@ -14,31 +21,39 @@
   border-color: var(--color-success);
 }
 
+/* 칸이 커졌으므로 아바타도 칸에 비례해 키운다 — 너무 커지지 않게 상한을 둔다 */
 .avatar {
-  position: relative;
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
-  width: var(--space-12);
-  height: var(--space-12);
+  width: clamp(var(--space-10), 22cqmin, calc(var(--space-16) * 1.5));
+  aspect-ratio: 1;
   color: var(--color-white);
-  font-size: var(--text-md);
+  font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   border-radius: var(--radius-full);
 }
 
+/* 아바타 위에 겹치면 이니셜을 가린다 — 이름 옆 아이콘으로 뺀다 */
 .muted {
-  position: absolute;
-  right: calc(-1 * var(--space-1));
-  bottom: calc(-1 * var(--space-1));
-  padding: 0 var(--space-1);
-  color: var(--color-white);
-  font-size: 10px;
-  background: var(--color-gray-600);
-  border-radius: var(--radius-sm);
+  display: inline-flex;
+  color: var(--color-error);
+}
+
+.muted svg {
+  width: var(--space-4);
+  height: var(--space-4);
 }
 
 .name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  overflow: hidden;
   color: var(--color-gray-200);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

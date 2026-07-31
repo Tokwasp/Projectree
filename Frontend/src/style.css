@@ -38,6 +38,12 @@ body,
   --color-gray-800: #1f2937;
   --color-gray-900: #1b1c1e;
 
+  /* Meeting — 사이드바(--color-background #1b1c1e)와 같은 색이면 경계가 사라진다.
+     한 단계씩 밝게 올려 사이드바 < 회의 배경 < 타일 순으로 명도 계층을 만든다 */
+  --color-meeting-bg: #232427;
+  --color-meeting-panel: #2c2d31;
+  --color-meeting-border: #3a3b40;
+
   /* Status */
   --color-success: #22c55e;
   --color-warning: #f59e0b;

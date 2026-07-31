@@ -5,20 +5,24 @@
   flex-direction: column;
   overflow: hidden;
   color: var(--color-white);
-  background: var(--color-gray-900);
+  background: var(--color-meeting-bg);
 }
 
-/* Outlet 영역에 정확히 겹친다 — 헤더 아래, 사이드바 오른쪽 */
+/* 사이드바만 남기고 앱 헤더까지 덮는다 — 회의 중에는 흰 헤더가 보이면 안 된다.
+   왼쪽 경계선이 없으면 사이드바와 붙어 보인다 */
 .immersive {
-  inset: var(--app-header-height) 0 0 var(--app-sidebar-width);
+  inset: 0 0 0 var(--app-sidebar-width);
+  border-left: 1px solid var(--color-meeting-border);
 }
 
 /* top/left를 0으로 두고 transform으로만 옮긴다 — 리페인트가 싸다 */
+/* 미니에서는 영상을 숨기므로 높이를 고정하면 그만큼이 빈 채로 아래 콘텐츠를 가린다 */
 .mini {
   top: 0;
   left: 0;
   width: 320px;
-  height: 240px;
+  height: auto;
+  border: 1px solid var(--color-meeting-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   transform: translate3d(var(--mini-x, 0), var(--mini-y, 0), 0);
@@ -30,43 +34,62 @@
 
 .header {
   display: flex;
+  flex: none;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-5);
   font-size: var(--text-sm);
-  border-bottom: 1px solid var(--color-gray-800);
+  border-bottom: 1px solid var(--color-meeting-border);
 }
 
+/* 드래그 손잡이 겸 펼치기 자리 — 미니에서는 최대한 얇게 */
 .mini .header {
+  padding: var(--space-2) var(--space-3);
   cursor: grab;
   touch-action: none;
 }
 
+.mini .controls {
+  padding: var(--space-2) var(--space-3);
+}
+
 .recording {
-  color: var(--color-error);
-  font-weight: var(--font-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-gray-300);
+  font-weight: var(--font-medium);
+}
+
+.recording::before {
+  width: var(--space-2);
+  height: var(--space-2);
+  background: var(--color-error);
+  border-radius: var(--radius-full);
+  content: "";
 }
 
 .roomName {
-  color: var(--color-gray-400);
+  color: var(--color-gray-500);
 }
 
 .meta {
   margin-left: auto;
-  color: var(--color-gray-300);
+  color: var(--color-gray-400);
 }
 
 .expand {
   padding: var(--space-1) var(--space-2);
   color: var(--color-white);
   font-size: var(--text-xs);
-  background: var(--color-gray-700);
-  border: none;
+  background: var(--color-meeting-panel);
+  border: 1px solid var(--color-meeting-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .soundBanner {
+  flex: none;
   padding: var(--space-2);
   color: var(--color-gray-900);
   font-size: var(--text-xs);
@@ -75,99 +98,203 @@
   cursor: pointer;
 }
 
-.stage {
+/* min-height:0이 없으면 flex 자식이 콘텐츠 높이만큼 커져 스크롤이 생긴다 */
+.stage,
+.stageSpotlight {
   display: flex;
   flex: 1;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  overflow-y: auto;
-}
-
-.videoGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--space-3);
-}
-
-/* 미니 모드에선 영상을 감춘다 — 언마운트가 아니라 숨기기만 해서 연결을 유지한다 */
-.mini .videoGrid {
-  display: none;
-}
-
-.videoGrid:empty {
-  display: none;
-}
-
-.videoTile {
-  position: relative;
+  min-height: 0;
+  padding: var(--space-4);
   overflow: hidden;
-  background: var(--color-gray-800);
+}
+
+/* 그리드가 100cqh(스테이지 높이)를 참조해 크기를 정할 수 있게 컨테이너로 만든다 */
+.stage {
+  container-type: size;
+}
+
+.mini .stage,
+.mini .stageSpotlight {
+  display: none;
+}
+
+/* 칸 하나가 16:9가 되도록 그리드 블록 전체의 비율(--ratio = cols*16 / rows*9)을 잡는다.
+   칸을 스테이지에 꽉 채우면 2명일 때 칸이 정사각형에 가까워져 영상이 잘린다.
+   폭은 "스테이지 폭"과 "높이에서 역산한 폭" 중 작은 쪽 — 그래서 넘치지 않고 작아진다 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows, 1), minmax(0, 1fr));
+  gap: var(--space-3);
+  width: min(100%, calc(100cqh * var(--ratio, 1.778)));
+  aspect-ratio: var(--ratio, 1.778);
+  margin: auto;
+}
+
+.spotlight {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-gray-900);
+  border-radius: var(--radius-lg);
+}
+
+/* 공유 화면은 비율이 제각각이라 cover로 자르면 내용이 잘린다 */
+.spotlight video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* grid의 1fr은 내용과 무관하게 행 높이를 똑같이 나눈다 —
+   flex(1 1 0)는 아바타 카드처럼 내용이 다른 칸에서 높이가 미세하게 달라질 수 있다.
+   스크롤 없이 담아야 하므로 칸이 늘면 각자 줄어든다 */
+.filmstrip {
+  display: grid;
+  flex: none;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: var(--space-3);
+  width: 220px;
+  min-height: 0;
+}
+
+/* 영상이 contain으로 들어오므로 여백은 타일 배경이 아니라 검정이어야 자연스럽다 */
+.tile {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-gray-900);
   border-radius: var(--radius-md);
 }
 
-.videoTile video {
+/* cover면 칸 비율과 다른 소스(4:3 웹캠 등)가 잘린다 — 잘리느니 여백을 둔다 */
+.tile video {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
+  height: 100%;
+  object-fit: contain;
 }
 
 .mirrored {
   transform: scaleX(-1);
 }
 
-.videoLabel {
+.tileLabel {
   position: absolute;
   bottom: var(--space-2);
   left: var(--space-2);
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-xs);
-  background: var(--color-gray-900);
+  background: rgba(0, 0, 0, 0.55);
   border-radius: var(--radius-sm);
 }
 
-.roster {
+/* 크게 보고 있지 않은 공유 — 누르면 스포트라이트와 교체된다 */
+.screenThumb {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--color-gray-900);
+  border: 1px solid var(--color-meeting-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.screenThumb:hover,
+.screenThumb:focus-visible {
+  border-color: var(--color-primary);
+}
+
+/* 공유는 비율이 제각각이라 잘라내면 안 된다 */
+.screenThumb video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.overflowCell {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+  background: var(--color-meeting-panel);
+  border-radius: var(--radius-md);
 }
 
 .controls {
   display: flex;
+  flex: none;
+  align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding: var(--space-3);
-  border-top: 1px solid var(--color-gray-800);
+  border-top: 1px solid var(--color-meeting-border);
 }
 
+/* 라벨이 아이콘뿐이라 정원형 버튼 */
 .control,
 .controlActive,
-.controlOff,
-.leave,
-.finish {
-  padding: var(--space-2) var(--space-4);
+.controlDanger,
+.leave {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-10);
+  height: var(--space-10);
+  padding: 0;
   color: var(--color-white);
-  font-size: var(--text-xs);
-  background: var(--color-gray-700);
-  border: none;
-  border-radius: var(--radius-md);
+  background: var(--color-meeting-panel);
+  border: 1px solid var(--color-meeting-border);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: background var(--transition-fast);
 }
 
+.control:hover,
+.leave:hover {
+  background: var(--color-gray-700);
+}
+
 .controlActive {
   background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
-.controlOff {
-  background: var(--color-gray-500);
-}
-
-.leave {
-  background: var(--color-gray-600);
-}
-
-.finish {
+/* 꺼진 상태는 회색이 아니라 빨강이어야 한눈에 보인다 */
+.controlDanger {
   background: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.controlDanger:hover,
+.finish:hover {
+  filter: brightness(0.92);
+}
+
+/* 되돌릴 수 없는 동작이라 이것만 글자로 남긴다 */
+.finish {
+  margin-left: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-white);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  background: var(--color-error);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }

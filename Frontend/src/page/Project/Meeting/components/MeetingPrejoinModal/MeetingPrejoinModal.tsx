@@ -6,7 +6,7 @@ import {
   CamOnIcon,
   MicOffIcon,
   MicOnIcon,
-} from "./PrejoinIcons";
+} from "../MeetingIcons";
 
 interface MeetingPrejoinModalProps {
   projectId: number;

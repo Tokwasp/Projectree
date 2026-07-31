@@ -9,7 +9,7 @@ import {
   type RemoteTrack,
 } from "livekit-client";
 import { useMeetingStore } from "../store/meetingStore";
-import type { MeetingParticipant } from "../store/meetingStore";
+import type { MeetingParticipant, MeetingTileKind } from "../store/meetingStore";
 import type { JoinResponse } from "../page/Project/Meeting/api/meetingApi";
 
 export const LOCAL_CAMERA_TILE = "local-camera";
@@ -33,9 +33,20 @@ const store = () => useMeetingStore.getState();
 
 export const getVideoTrack = (id: string) => videoTracks.get(id);
 
-const addTile = (id: string, label: string, track: Track, mirrored = false) => {
+interface TileOptions {
+  kind: MeetingTileKind;
+  identity: string;
+  mirrored?: boolean;
+}
+
+const addTile = (
+  id: string,
+  label: string,
+  track: Track,
+  { kind, identity, mirrored = false }: TileOptions,
+) => {
   videoTracks.set(id, track);
-  store().addVideoTile({ id, label, mirrored });
+  store().addVideoTile({ id, label, mirrored, kind, identity });
 };
 
 const removeTile = (id: string) => {
@@ -50,12 +61,14 @@ const toParticipant = (
   const micPublication = participant.getTrackPublication(
     Track.Source.Microphone,
   );
+  const camPublication = participant.getTrackPublication(Track.Source.Camera);
 
   return {
     identity: participant.identity,
     name: participant.name || participant.identity,
     isLocal,
     micOn: micPublication ? !micPublication.isMuted : false,
+    camOn: camPublication ? !camPublication.isMuted : false,
   };
 };
 
@@ -99,11 +112,18 @@ const wireEvents = (current: Room) => {
   current
     .on(
       RoomEvent.TrackSubscribed,
-      (track: RemoteTrack, _publication, participant: Participant) => {
+      (track: RemoteTrack, publication, participant: Participant) => {
         const id = `${participant.identity}-${track.sid}`;
+        const name = participant.name || participant.identity;
 
         if (track.kind === Track.Kind.Video) {
-          addTile(id, participant.name || participant.identity, track);
+          // source를 봐야 상대의 화면공유를 스포트라이트로 띄울 수 있다
+          const isScreen = publication.source === Track.Source.ScreenShare;
+
+          addTile(id, isScreen ? `${name}의 화면` : name, track, {
+            kind: isScreen ? "screen" : "camera",
+            identity: participant.identity,
+          });
         } else if (track.kind === Track.Kind.Audio) {
           attachRemoteAudio(track, id);
         }
@@ -176,7 +196,11 @@ export const connectMeeting = async ({
 
   if (camTrack) {
     await current.localParticipant.publishTrack(camTrack);
-    addTile(LOCAL_CAMERA_TILE, "나", camTrack, true);
+    addTile(LOCAL_CAMERA_TILE, "나", camTrack, {
+      kind: "camera",
+      identity: current.localParticipant.identity,
+      mirrored: true,
+    });
   }
 
   // connect의 await 때문에 사용자 활성화가 만료될 수 있다 → 실패하면 배너로 유도
@@ -217,6 +241,10 @@ export const toggleCamera = async () => {
   await current.localParticipant.setCameraEnabled(next);
   store().setDevices({ camOn: next });
 
+  // 첫 켜기는 publish라 TrackMuted/Unmuted가 뜨지 않는다 —
+  // 여기서 직접 맞추지 않으면 participants의 camOn이 false로 남아 내 타일이 안 보인다
+  syncParticipants(current);
+
   if (!next) {
     removeTile(LOCAL_CAMERA_TILE);
     return;
@@ -226,7 +254,11 @@ export const toggleCamera = async () => {
     Track.Source.Camera,
   );
   if (publication?.track) {
-    addTile(LOCAL_CAMERA_TILE, "나", publication.track, true);
+    addTile(LOCAL_CAMERA_TILE, "나", publication.track, {
+      kind: "camera",
+      identity: current.localParticipant.identity,
+      mirrored: true,
+    });
   }
 };
 
@@ -237,6 +269,7 @@ export const toggleScreenShare = async () => {
   const next = !store().screenOn;
   await current.localParticipant.setScreenShareEnabled(next);
   store().setDevices({ screenOn: next });
+  syncParticipants(current);
 
   if (!next) {
     removeTile(LOCAL_SCREEN_TILE);
@@ -247,7 +280,10 @@ export const toggleScreenShare = async () => {
     Track.Source.ScreenShare,
   );
   if (publication?.track) {
-    addTile(LOCAL_SCREEN_TILE, "내 화면", publication.track);
+    addTile(LOCAL_SCREEN_TILE, "내 화면", publication.track, {
+      kind: "screen",
+      identity: current.localParticipant.identity,
+    });
   }
 };
 

@@ -7,12 +7,21 @@ export interface MeetingParticipant {
   name: string;
   isLocal: boolean;
   micOn: boolean;
+  // 카메라를 끄면 트랙이 unpublish되지 않고 mute만 된다 —
+  // 이 값을 안 보면 프레임이 오지 않는 검은 영상을 계속 그리게 된다
+  camOn: boolean;
 }
+
+export type MeetingTileKind = "camera" | "screen";
 
 export interface MeetingVideoTile {
   id: string;
   label: string;
   mirrored: boolean;
+  // 화면공유는 스포트라이트로 크게 띄우고, 카메라는 그리드에 넣는다
+  kind: MeetingTileKind;
+  // 어느 참가자의 타일인지 — 영상을 끈 참가자를 같은 그리드에 합칠 때 매칭에 쓴다
+  identity: string;
 }
 
 export interface MeetingMiniPosition {

@@ -186,11 +186,21 @@ export const useMeetingPrejoin = (projectId: number) => {
 
     setJoining(true);
     setError("");
-    startConnecting(projectId);
+
+    // 언마운트 정리가 tracksRef를 비우므로 미리 붙잡아 둔다
+    const acquired = tracksRef.current;
 
     try {
-      const info = await join(projectId);
+      // 토큰을 먼저 받는다 — 실패해도 모달이 살아 있어야 에러를 보여줄 수 있다
+      // 테스트용: projectId/memberId/memberName은 meetingApi에 하드코딩되어 있다
+      // const info = await join(projectId);
+      const info = await join();
+
+      // startConnecting이 phase를 "connecting"으로 바꾸는 순간 ProjectMeeting이
+      // 이 모달을 언마운트한다. 그 전에 인계 표시를 해두지 않으면 언마운트 정리가
+      // 트랙을 stop해버려, 이미 끝난(ended) 트랙이 회의에 올라가고 화면이 검게 나온다
       handedOffRef.current = true;
+      startConnecting(projectId);
 
       // 끈 상태로 들어가는 트랙은 넘기지 않고 정리한다
       // (회의 중 버튼을 누르면 Room이 선택된 기기로 새로 잡는다)
@@ -205,6 +215,14 @@ export const useMeetingPrejoin = (projectId: number) => {
         camDeviceId: cameraId,
       });
     } catch (caught) {
+      // 인계 표시 후 실패했다면 이미 언마운트라 정리가 돌지 않는다 — 여기서 직접 끈다
+      if (handedOffRef.current) {
+        acquired.forEach((track) => {
+          track.detach();
+          track.stop();
+        });
+      }
+
       handedOffRef.current = false;
       reset();
       setError(
