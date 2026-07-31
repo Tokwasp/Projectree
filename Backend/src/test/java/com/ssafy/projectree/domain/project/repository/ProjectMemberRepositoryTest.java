@@ -32,6 +32,62 @@ class ProjectMemberRepositoryTest extends IntegrationTestSupport {
     @PersistenceContext
     private EntityManager entityManager;
 
+
+    @DisplayName("프로젝트 참여 회원 여부를 확인한다.")
+    @Test
+    void existsByProjectIdAndMemberId() {
+        Project project = Project.builder()
+                .title("초대 프로젝트")
+                .content("프로젝트 멤버 Repository 테스트입니다.")
+                .build();
+        project.addMember(ProjectMember.createMember(1, ProjectRole.OWNER));
+        int projectId = projectRepository.saveAndFlush(project).getId();
+
+        assertThat(projectMemberRepository.existsByProjectIdAndMemberId(projectId, 1)).isTrue();
+        assertThat(projectMemberRepository.existsByProjectIdAndMemberId(projectId, 999)).isFalse();
+    }
+
+    @DisplayName("프로젝트 참여 회원의 OWNER 권한 여부를 확인한다.")
+    @Test
+    void existsByProjectIdAndMemberIdAndRole() {
+        Project project = Project.builder()
+                .title("초대 프로젝트")
+                .content("프로젝트 멤버 Repository 테스트입니다.")
+                .build();
+        project.addMember(ProjectMember.createMember(1, ProjectRole.OWNER));
+        project.addMember(ProjectMember.createMember(2, ProjectRole.MEMBER));
+        int projectId = projectRepository.saveAndFlush(project).getId();
+
+        assertThat(projectMemberRepository.existsByProjectIdAndMemberIdAndRole(
+                projectId, 1, ProjectRole.OWNER
+        )).isTrue();
+        assertThat(projectMemberRepository.existsByProjectIdAndMemberIdAndRole(
+                projectId, 2, ProjectRole.OWNER
+        )).isFalse();
+    }
+
+    @DisplayName("다른 프로젝트에 속한 회원은 멤버와 OWNER로 조회되지 않는다.")
+    @Test
+    void existsByProjectIdAndMemberId_differentProject() {
+        Project firstProject = Project.builder()
+                .title("첫 번째 프로젝트")
+                .content("프로젝트 멤버 Repository 테스트입니다.")
+                .build();
+        firstProject.addMember(ProjectMember.createMember(1, ProjectRole.OWNER));
+        projectRepository.saveAndFlush(firstProject);
+
+        Project secondProject = Project.builder()
+                .title("두 번째 프로젝트")
+                .content("프로젝트 멤버 Repository 테스트입니다.")
+                .build();
+        int secondProjectId = projectRepository.saveAndFlush(secondProject).getId();
+
+        assertThat(projectMemberRepository.existsByProjectIdAndMemberId(secondProjectId, 1)).isFalse();
+        assertThat(projectMemberRepository.existsByProjectIdAndMemberIdAndRole(
+                secondProjectId, 1, ProjectRole.OWNER
+        )).isFalse();
+    }
+
     @DisplayName("프로젝트 참여자를 회원 정보와 함께 조회한다.")
     @Test
     void findMemberResponsesByProjectId() {

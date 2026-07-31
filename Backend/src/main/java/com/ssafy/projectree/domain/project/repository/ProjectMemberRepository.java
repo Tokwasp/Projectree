@@ -2,6 +2,7 @@ package com.ssafy.projectree.domain.project.repository;
 
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
+import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,6 +22,10 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, In
                           else 1
                      end,
                      pm.id
-            """)
+    """)
     List<ProjectMemberResponse> findMemberResponsesByProjectId(@Param("projectId") int projectId);
+
+    boolean existsByProjectIdAndMemberId(int projectId, int memberId);
+
+    boolean existsByProjectIdAndMemberIdAndRole(int projectId, int memberId, ProjectRole role);
 }
