@@ -1,0 +1,173 @@
+.container {
+  position: fixed;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--color-white);
+  background: var(--color-gray-900);
+}
+
+/* Outlet 영역에 정확히 겹친다 — 헤더 아래, 사이드바 오른쪽 */
+.immersive {
+  inset: var(--app-header-height) 0 0 var(--app-sidebar-width);
+}
+
+/* top/left를 0으로 두고 transform으로만 옮긴다 — 리페인트가 싸다 */
+.mini {
+  top: 0;
+  left: 0;
+  width: 320px;
+  height: 240px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  transform: translate3d(var(--mini-x, 0), var(--mini-y, 0), 0);
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  border-bottom: 1px solid var(--color-gray-800);
+}
+
+.mini .header {
+  cursor: grab;
+  touch-action: none;
+}
+
+.recording {
+  color: var(--color-error);
+  font-weight: var(--font-semibold);
+}
+
+.roomName {
+  color: var(--color-gray-400);
+}
+
+.meta {
+  margin-left: auto;
+  color: var(--color-gray-300);
+}
+
+.expand {
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-white);
+  font-size: var(--text-xs);
+  background: var(--color-gray-700);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.soundBanner {
+  padding: var(--space-2);
+  color: var(--color-gray-900);
+  font-size: var(--text-xs);
+  background: var(--color-warning);
+  border: none;
+  cursor: pointer;
+}
+
+.stage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+.videoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+/* 미니 모드에선 영상을 감춘다 — 언마운트가 아니라 숨기기만 해서 연결을 유지한다 */
+.mini .videoGrid {
+  display: none;
+}
+
+.videoGrid:empty {
+  display: none;
+}
+
+.videoTile {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-gray-800);
+  border-radius: var(--radius-md);
+}
+
+.videoTile video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.mirrored {
+  transform: scaleX(-1);
+}
+
+.videoLabel {
+  position: absolute;
+  bottom: var(--space-2);
+  left: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  background: var(--color-gray-900);
+  border-radius: var(--radius-sm);
+}
+
+.roster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-gray-800);
+}
+
+.control,
+.controlActive,
+.controlOff,
+.leave,
+.finish {
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-white);
+  font-size: var(--text-xs);
+  background: var(--color-gray-700);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.controlActive {
+  background: var(--color-primary);
+}
+
+.controlOff {
+  background: var(--color-gray-500);
+}
+
+.leave {
+  background: var(--color-gray-600);
+}
+
+.finish {
+  background: var(--color-error);
+}

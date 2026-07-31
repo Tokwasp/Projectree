@@ -11,27 +11,34 @@ import ProjectList from "./page/Project/List/ui/ProjectList";
 import ProjectCreate from "./page/Project/Create/ui/ProjectCreate";
 import ProjectHome from "./page/Project/Home/ui/ProjectHome";
 import ProjectMember from "./page/Project/Member/ui/ProjectMember";
+import ProjectMeeting from "./page/Project/Meeting/ui/ProjectMeeting";
+import MeetingOverlay from "./page/Project/Meeting/components/MeetingOverlay/MeetingOverlay";
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<Landing />} />
-        <Route path="/auth/:provider/callback" element={<OAuthCallback />} />
-      </Route>
+    <>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Landing />} />
+          <Route path="/auth/:provider/callback" element={<OAuthCallback />} />
+        </Route>
 
-      <Route element={<AppLayout />}>
-        <Route path="/home" element={<Home />} />
-        <Route path="/projects/create" element={<ProjectCreate />} />
-        <Route path="/mypage" element={<MyPage />} />
-        <Route path="/projects" element={<ProjectList />} />
-      </Route>
+        <Route element={<AppLayout />}>
+          <Route path="/home" element={<Home />} />
+          <Route path="/projects/create" element={<ProjectCreate />} />
+          <Route path="/mypage" element={<MyPage />} />
+          <Route path="/projects" element={<ProjectList />} />
+        </Route>
 
-      <Route path="/projects/:projectId" element={<ProjectLayout />}>
-        <Route index element={<ProjectHome />} />
-        <Route path="members" element={<ProjectMember />} />
-      </Route>
-    </Routes>
+        <Route path="/projects/:projectId" element={<ProjectLayout />}>
+          <Route index element={<ProjectHome />} />
+          <Route path="members" element={<ProjectMember />} />
+          <Route path="meeting" element={<ProjectMeeting />} />
+        </Route>
+      </Routes>
+
+      <MeetingOverlay />
+    </>
   );
 }
 

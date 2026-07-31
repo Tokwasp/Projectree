@@ -1,0 +1,187 @@
+/* AppLayout .content의 상하 패딩(var(--space-8))까지 빼야 세로 스크롤이 생기지 않는다 */
+/* min-width 아래로는 줄이지 않고 가로 스크롤로 넘긴다 — 사이드바에 가리는 것보다 낫다 */
+.backdrop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 1050px;
+  min-height: calc(100vh - var(--app-header-height) - var(--space-8) * 2);
+  padding: var(--space-6);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 840px;
+  max-width: 100%;
+  padding: var(--space-6);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.contentDiv {
+  display: flex;
+  flex-direction: row;
+}
+
+.leftSection {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.rightSection {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.title {
+  color: var(--color-text);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+}
+
+.description {
+  color: var(--color-gray-500);
+  font-size: var(--text-sm);
+}
+
+.preview {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-gray-900);
+  border-radius: var(--radius-lg);
+}
+
+/* 흐름에서 빼야 스트림이 붙을 때 비디오 고유 크기가 박스를 밀어 올리지 않는다 */
+.previewVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.previewOff {
+  display: none;
+}
+
+.previewNotice {
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+}
+
+.devices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* min-width:0이 없으면 긴 기기 이름의 min-content 너비가 모달을 밀어낸다 */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--color-gray-600);
+  font-size: var(--text-sm);
+}
+
+/* 기기 목록은 비동기로 채워진다 — 옵션이 없을 때도 크기가 같아야 모달이 흔들리지 않는다 */
+.field select {
+  width: 100%;
+  height: var(--space-10);
+  padding: 0 var(--space-3);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.toggles {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.toggleOn,
+.toggleOff {
+  flex: 1;
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.toggleOn {
+  color: var(--color-white);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.toggleOff {
+  color: var(--color-gray-500);
+  background: var(--color-gray-100);
+}
+
+.recordNotice {
+  color: var(--color-error);
+  font-size: var(--text-xs);
+}
+
+/* 에러가 뒤늦게 나타나도 높이가 밀리지 않게 자리를 미리 잡아둔다 */
+.error {
+  min-height: var(--space-5);
+  color: var(--color-error);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.cancel,
+.submit {
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.cancel {
+  color: var(--color-gray-600);
+  background: var(--color-gray-100);
+  border: none;
+}
+
+.submit {
+  color: var(--color-white);
+  background: var(--color-primary);
+  border: none;
+}
+
+.submit:disabled {
+  background: var(--color-gray-300);
+  cursor: not-allowed;
+}
