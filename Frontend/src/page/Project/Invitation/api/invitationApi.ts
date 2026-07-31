@@ -33,3 +33,13 @@ export const acceptInvitation = (
       method: "POST",
     },
   );
+
+export const rejectInvitation = (
+  token: string,
+): Promise<void> =>
+  apiRequest<void>(
+    `/invitations/${encodeURIComponent(token)}/reject`,
+    {
+      method: "POST",
+    },
+  );

@@ -66,6 +66,7 @@
 }
 
 .primaryButton,
+.rejectButton,
 .secondaryButton {
   min-height: var(--space-10);
   padding: 0 var(--space-5);
@@ -93,6 +94,21 @@
   cursor: not-allowed;
 }
 
+.rejectButton {
+  color: var(--color-error);
+  background: var(--color-white);
+  border: 1px solid var(--color-error);
+}
+
+.rejectButton:hover:not(:disabled) {
+  background: var(--color-gray-50);
+}
+
+.rejectButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .secondaryButton {
   color: var(--color-text);
   background: var(--color-white);
@@ -104,6 +120,7 @@
 }
 
 .primaryButton:focus-visible,
+.rejectButton:focus-visible,
 .secondaryButton:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;

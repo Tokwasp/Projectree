@@ -3,6 +3,7 @@ import { ApiError } from "../../../../api/apiClient";
 import {
   acceptInvitation as requestAcceptInvitation,
   getInvitation,
+  rejectInvitation as requestRejectInvitation,
   type InvitationLandingResponse,
 } from "../api/invitationApi";
 
@@ -11,6 +12,7 @@ export default function useInvitationLanding(token: string | null) {
     useState<InvitationLandingResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -77,14 +79,45 @@ export default function useInvitationLanding(token: string | null) {
     }
   };
 
+  const rejectInvitation = async (): Promise<boolean> => {
+    if (token === null) {
+      return false;
+    }
+
+    setIsRejecting(true);
+    setError(null);
+
+    try {
+      await requestRejectInvitation(token);
+      setInvitation((currentInvitation) =>
+        currentInvitation
+          ? { ...currentInvitation, status: "REJECTED" }
+          : currentInvitation,
+      );
+      return true;
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof ApiError
+          ? caughtError.message
+          : "초대를 거절하지 못했습니다.";
+
+      setError(message);
+      return false;
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
   return {
     invitation: token === null ? null : invitation,
     isLoading: token === null ? false : isLoading,
     isAccepting,
+    isRejecting,
     error:
       token === null
         ? "유효하지 않은 초대 링크입니다."
         : error,
     acceptInvitation,
+    rejectInvitation,
   };
 }

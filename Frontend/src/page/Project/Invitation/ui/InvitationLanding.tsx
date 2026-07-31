@@ -31,8 +31,10 @@ export default function InvitationLanding() {
     invitation,
     isLoading,
     isAccepting,
+    isRejecting,
     error,
     acceptInvitation,
+    rejectInvitation,
   } = useInvitationLanding(token ?? null);
 
   const handleAccept = async () => {
@@ -41,6 +43,10 @@ export default function InvitationLanding() {
     if (projectId !== null) {
       navigate(`/projects/${projectId}`);
     }
+  };
+
+  const handleReject = async () => {
+    await rejectInvitation();
   };
 
   if (isLoading) {
@@ -99,10 +105,21 @@ export default function InvitationLanding() {
             <button
               className={style.primaryButton}
               type="button"
-              disabled={isAccepting}
+              disabled={isAccepting || isRejecting}
               onClick={() => void handleAccept()}
             >
               {isAccepting ? "수락 중..." : "초대 수락"}
+            </button>
+          )}
+
+          {canAccept && (
+            <button
+              className={style.rejectButton}
+              type="button"
+              disabled={isAccepting || isRejecting}
+              onClick={() => void handleReject()}
+            >
+              {isRejecting ? "거절 중..." : "초대 거절"}
             </button>
           )}
 
