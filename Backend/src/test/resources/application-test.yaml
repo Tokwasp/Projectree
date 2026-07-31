@@ -20,6 +20,9 @@ spring:
   # Session Mock
   session:
     store-type: none
+  mail:
+    host: localhost
+    port: 2525
   data:
     redis:
       host: localhost
@@ -32,6 +35,9 @@ spring:
 app:
   invitation:
     base-url: https://projectree.site
+  # 통합 테스트 중 백그라운드 스위퍼가 테스트 데이터를 처리하지 않도록 비활성화한다.
+  invitation-mail:
+    scheduling-enabled: false
   cors:
     allowed-origins: http://localhost:5173
   session:

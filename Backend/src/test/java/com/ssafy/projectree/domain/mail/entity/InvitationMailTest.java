@@ -153,4 +153,27 @@ class InvitationMailTest {
         assertThatThrownBy(() -> mail.beginAttempt(REQUESTED_AT.plusMinutes(1)))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @DisplayName("발송할 수 없는 초대의 대기 메일을 폐기하면 시도 횟수 없이 FAILED로 종료된다.")
+    @Test
+    void abandon_marksMailAsFailedWithoutIncreasingAttemptCount() {
+        InvitationMail mail = InvitationMail.queue(1, "invitee@example.com", "https://example.com/invitations/token");
+
+        mail.abandon("취소된 초대입니다.");
+
+        assertThat(mail.getSendStatus()).isEqualTo(MailSendStatus.FAILED);
+        assertThat(mail.getAttemptCount()).isZero();
+        assertThat(mail.getErrorMessage()).isEqualTo("취소된 초대입니다.");
+        assertThat(mail.getInviteLink()).isNull();
+    }
+
+    @DisplayName("발송 대기 상태가 아닌 메일은 폐기할 수 없다.")
+    @Test
+    void abandon_nonNotRequestedMail_throwsException() {
+        InvitationMail mail = InvitationMail.queue(1, "invitee@example.com", "https://example.com/invitations/token");
+        mail.beginAttempt(REQUESTED_AT);
+
+        assertThatThrownBy(() -> mail.abandon("취소된 초대입니다."))
+                .isInstanceOf(IllegalStateException.class);
+    }
 }
