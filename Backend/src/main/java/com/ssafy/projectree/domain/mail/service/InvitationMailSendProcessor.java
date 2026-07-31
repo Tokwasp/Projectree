@@ -28,7 +28,7 @@ public class InvitationMailSendProcessor {
     private final MemberRepository memberRepository;
 
     @Transactional
-    public Optional<InvitationMailContent> claim(long mailId, LocalDateTime now) {
+    public Optional<InvitationMailContent> claim(int mailId, LocalDateTime now) {
         InvitationMail mail = invitationMailRepository.findById(mailId).orElse(null);
         if (mail == null || mail.getSendStatus() != MailSendStatus.NOT_REQUESTED) {
             return Optional.empty();
@@ -60,12 +60,12 @@ public class InvitationMailSendProcessor {
     }
 
     @Transactional
-    public void recordSuccess(long mailId) {
+    public void recordSuccess(int mailId) {
         invitationMailRepository.findById(mailId).orElseThrow().succeed();
     }
 
     @Transactional
-    public void recordFailure(long mailId, String reason) {
+    public void recordFailure(int mailId, String reason) {
         invitationMailRepository.findById(mailId).orElseThrow().fail(reason);
     }
 
@@ -79,7 +79,7 @@ public class InvitationMailSendProcessor {
 }
 
 record InvitationMailContent(
-        long mailId,
+        int mailId,
         String recipientEmail,
         String inviteLink,
         String projectTitle,

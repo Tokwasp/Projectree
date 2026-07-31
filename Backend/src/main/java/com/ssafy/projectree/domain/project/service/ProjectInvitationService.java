@@ -145,7 +145,7 @@ public class ProjectInvitationService {
                 .collect(Collectors.toMap(
                         InvitationMail::getInvitationId,
                         Function.identity(),
-                        BinaryOperator.maxBy(Comparator.comparingLong(InvitationMail::getId))
+                        BinaryOperator.maxBy(Comparator.comparingInt(InvitationMail::getId))
                 ));
 
         return invitations.stream()

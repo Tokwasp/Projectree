@@ -83,7 +83,7 @@ class InvitationMailRepositoryTest extends IntegrationTestSupport {
         return invitationMailRepository.saveAndFlush(mail);
     }
 
-    private void updateUpdatedAt(long id, LocalDateTime updatedAt) {
+    private void updateUpdatedAt(int id, LocalDateTime updatedAt) {
         entityManager.createNativeQuery("update project_invitation_mail set updated_at = :updatedAt where id = :id")
                 .setParameter("updatedAt", updatedAt)
                 .setParameter("id", id)

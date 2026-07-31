@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface InvitationMailRepository extends JpaRepository<InvitationMail, Long> {
+public interface InvitationMailRepository extends JpaRepository<InvitationMail, Integer> {
 
     List<InvitationMail> findAllBySendStatusOrderByIdAsc(MailSendStatus sendStatus, Pageable pageable);
 

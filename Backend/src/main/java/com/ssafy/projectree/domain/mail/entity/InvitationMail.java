@@ -44,7 +44,7 @@ public class InvitationMail extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private int id;
 
     @Column(name = "invitation_id", nullable = false)
     private int invitationId;
