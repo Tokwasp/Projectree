@@ -109,6 +109,20 @@ public class InvitationMail extends BaseEntity {
         transitionToRetryOrFailed();
     }
 
+    /**
+     * NOT_REQUESTED 상태는 항상 재시도 가능한 시도 횟수를 가진다는 불변식을 유지한다.
+     * 발송할 수 없는 초대의 메일은 시도 횟수를 소모하지 않고 즉시 종결한다.
+     */
+    public void abandon(String reason) {
+        if (sendStatus != MailSendStatus.NOT_REQUESTED) {
+            throw new IllegalStateException("발송 대기 상태의 메일만 폐기할 수 있습니다.");
+        }
+
+        errorMessage = truncate(Objects.requireNonNull(reason));
+        sendStatus = MailSendStatus.FAILED;
+        inviteLink = null;
+    }
+
     private void transitionToRetryOrFailed() {
         if (attemptCount >= MAX_ATTEMPT_COUNT) {
             sendStatus = MailSendStatus.FAILED;
