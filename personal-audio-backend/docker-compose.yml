@@ -1,0 +1,15 @@
+# 프로젝트명 고정 — 디렉터리명이 바뀌어도 컨테이너/네트워크 이름이 갈리지 않도록
+name: personal-audio
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: personal-audio-app
+    restart: unless-stopped
+    # DB는 private subnet의 외부 인스턴스를 사용하므로 .env의 DB_HOST를 그대로 쓴다
+    env_file:
+      - .env
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
