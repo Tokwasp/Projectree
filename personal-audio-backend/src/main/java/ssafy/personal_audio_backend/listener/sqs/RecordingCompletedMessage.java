@@ -1,0 +1,18 @@
+package ssafy.personal_audio_backend.listener.sqs;
+
+import java.time.LocalDateTime;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class RecordingCompletedMessage {
+
+    private String roomName;
+    private Long memberId;
+    private String kind;
+    private String objectKey;
+    private String egressId;
+    private LocalDateTime endedAt;
+}
