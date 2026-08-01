@@ -1,12 +1,12 @@
-package ssafy.personal_audio_backend.listener.sqs;
+package ssafy.personal_audio_backend.global.listener.sqs;
 
 import io.awspring.cloud.sqs.annotation.SqsListener;
 import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ssafy.personal_audio_backend.service.RecordingFileService;
-import ssafy.personal_audio_backend.service.SpeechAnalysisService;
+import ssafy.personal_audio_backend.domain.review.service.RecordingFileService;
+import ssafy.personal_audio_backend.domain.review.service.SpeechAnalysisService;
 
 @Slf4j
 @Component

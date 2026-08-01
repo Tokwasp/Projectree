@@ -1,4 +1,4 @@
-package ssafy.personal_audio_backend.service;
+package ssafy.personal_audio_backend.domain.review.service;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import ssafy.personal_audio_backend.global.exception.CustomException;
-import ssafy.personal_audio_backend.service.exception.AudioErrorCode;
+import ssafy.personal_audio_backend.domain.review.service.exception.AudioErrorCode;
 
 @Slf4j
 @Component

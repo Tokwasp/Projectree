@@ -1,4 +1,4 @@
-package ssafy.personal_audio_backend.service;
+package ssafy.personal_audio_backend.domain.review.service;
 
 import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
@@ -6,9 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ssafy.personal_audio_backend.domain.review.MeetingReview;
-import ssafy.personal_audio_backend.domain.speech.SpeechSegments;
-import ssafy.personal_audio_backend.listener.sqs.RecordingCompletedMessage;
-import ssafy.personal_audio_backend.repository.MeetingReviewRepository;
+import ssafy.personal_audio_backend.domain.review.speech.SpeechSegments;
+import ssafy.personal_audio_backend.global.listener.sqs.RecordingCompletedMessage;
+import ssafy.personal_audio_backend.domain.review.repository.MeetingReviewRepository;
 
 @Slf4j
 @Transactional

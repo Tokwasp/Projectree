@@ -13,7 +13,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import ssafy.personal_audio_backend.domain.BaseEntity;
-import ssafy.personal_audio_backend.domain.speech.SpeechSegments;
+import ssafy.personal_audio_backend.domain.review.speech.SpeechSegments;
 
 @Getter
 @Entity

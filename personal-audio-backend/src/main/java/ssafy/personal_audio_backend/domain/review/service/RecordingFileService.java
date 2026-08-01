@@ -1,4 +1,4 @@
-package ssafy.personal_audio_backend.service;
+package ssafy.personal_audio_backend.domain.review.service;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,7 +14,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import ssafy.personal_audio_backend.global.exception.CustomException;
-import ssafy.personal_audio_backend.service.exception.AudioErrorCode;
+import ssafy.personal_audio_backend.domain.review.service.exception.AudioErrorCode;
 
 @Slf4j
 @Service

@@ -1,7 +1,7 @@
-package ssafy.personal_audio_backend.domain.speech;
+package ssafy.personal_audio_backend.domain.review.speech;
 
 import java.util.Objects;
-import ssafy.personal_audio_backend.domain.speech.exception.SpeechErrorCode;
+import ssafy.personal_audio_backend.domain.review.speech.exception.SpeechErrorCode;
 import ssafy.personal_audio_backend.global.exception.CustomException;
 
 public class SpeechSegment {

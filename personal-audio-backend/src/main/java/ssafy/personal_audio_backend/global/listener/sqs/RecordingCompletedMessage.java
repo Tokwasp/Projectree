@@ -1,4 +1,4 @@
-package ssafy.personal_audio_backend.listener.sqs;
+package ssafy.personal_audio_backend.global.listener.sqs;
 
 import java.time.LocalDateTime;
 import lombok.AccessLevel;

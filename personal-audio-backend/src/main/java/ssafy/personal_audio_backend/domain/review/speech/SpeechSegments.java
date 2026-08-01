@@ -1,4 +1,4 @@
-package ssafy.personal_audio_backend.domain.speech;
+package ssafy.personal_audio_backend.domain.review.speech;
 
 import java.util.List;
 

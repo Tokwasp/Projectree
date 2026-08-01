@@ -1,4 +1,4 @@
-package ssafy.personal_audio_backend.service;
+package ssafy.personal_audio_backend.domain.review.service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,10 +6,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ssafy.personal_audio_backend.domain.speech.SpeechSegment;
-import ssafy.personal_audio_backend.domain.speech.SpeechSegments;
+import ssafy.personal_audio_backend.domain.review.speech.SpeechSegment;
+import ssafy.personal_audio_backend.domain.review.speech.SpeechSegments;
 import ssafy.personal_audio_backend.global.exception.CustomException;
-import ssafy.personal_audio_backend.service.exception.AudioErrorCode;
+import ssafy.personal_audio_backend.domain.review.service.exception.AudioErrorCode;
 
 @Slf4j
 @Component

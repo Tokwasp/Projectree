@@ -1,4 +1,4 @@
-package ssafy.personal_audio_backend.service.exception;
+package ssafy.personal_audio_backend.domain.review.service.exception;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package ssafy.personal_audio_backend.repository;
+package ssafy.personal_audio_backend.domain.review.repository;
 
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

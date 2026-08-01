@@ -1,4 +1,4 @@
-package ssafy.personal_audio_backend.listener.sqs;
+package ssafy.personal_audio_backend.global.listener.sqs;
 
 import io.awspring.cloud.sqs.listener.errorhandler.ErrorHandler;
 import java.util.Collection;
