@@ -3,6 +3,8 @@ package com.ssafy.projectree.domain.project.controller;
 import com.ssafy.projectree.ControllerTestSupport;
 import com.ssafy.projectree.domain.member.LoginMember;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
+import com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse;
+import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.global.exception.CustomException;
@@ -10,6 +12,10 @@ import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 
@@ -29,6 +35,7 @@ import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -387,7 +394,7 @@ class ProjectControllerTest extends ControllerTestSupport {
     @Test
     void createProject_withNotAllowedMethod() throws Exception {
         // when // then
-        mockMvc.perform(get("/api/projects").session(loginSession(10)))
+        mockMvc.perform(put("/api/projects").session(loginSession(10)))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.status").value(405))
                 .andExpect(jsonPath("$.errorCode").value("METHOD_NOT_ALLOWED"))
@@ -693,6 +700,158 @@ class ProjectControllerTest extends ControllerTestSupport {
                 .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
 
         then(projectService).should(never()).getProjectMembers(anyInt(), anyInt());
+    }
+
+    @DisplayName("로그인 세션이 있으면 참여 중인 프로젝트 목록과 페이지 정보를 응답한다.")
+    @Test
+    void getProjectList() throws Exception {
+        // given
+        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+                .willReturn(projectListResponse(
+                        List.of(
+                                new ProjectItemResponse(1, "포트폴리오 사이트", "https://projectree.site/1.png", 3),
+                                new ProjectItemResponse(2, "스터디 관리 서비스", null, 1)
+                        ),
+                        PageRequest.of(0, 10),
+                        2
+                ));
+
+        // when // then
+        mockMvc.perform(get("/api/projects").session(loginSession(10)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("성공"))
+                .andExpect(jsonPath("$.data.projects.length()").value(2))
+                .andExpect(jsonPath("$.data.projects[0].projectId").value(1))
+                .andExpect(jsonPath("$.data.projects[0].title").value("포트폴리오 사이트"))
+                .andExpect(jsonPath("$.data.projects[0].photoUrl").value("https://projectree.site/1.png"))
+                .andExpect(jsonPath("$.data.projects[0].memberCnt").value(3))
+                .andExpect(jsonPath("$.data.projects[1].projectId").value(2))
+                .andExpect(jsonPath("$.data.projects[1].photoUrl").isEmpty())
+                .andExpect(jsonPath("$.data.projects[1].memberCnt").value(1))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.totalPages").value(1));
+    }
+
+    @DisplayName("참여 중인 프로젝트가 없으면 빈 목록을 응답한다.")
+    @Test
+    void getProjectList_withNoProject() throws Exception {
+        // given
+        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+                .willReturn(emptyProjectListResponse());
+
+        // when // then
+        mockMvc.perform(get("/api/projects").session(loginSession(10)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.projects").isArray())
+                .andExpect(jsonPath("$.data.projects").isEmpty())
+                .andExpect(jsonPath("$.data.totalElements").value(0))
+                .andExpect(jsonPath("$.data.totalPages").value(0));
+    }
+
+    @DisplayName("페이지 파라미터가 없으면 0페이지, 10개, 최신순 기본값으로 조회한다.")
+    @Test
+    void getProjectList_withDefaultPageable() throws Exception {
+        // given
+        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+                .willReturn(emptyProjectListResponse());
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+
+        // when
+        mockMvc.perform(get("/api/projects").session(loginSession(10)))
+                .andExpect(status().isOk());
+
+        // then
+        then(projectService).should().getProjectList(captor.capture(), anyInt());
+        Pageable pageable = captor.getValue();
+        assertThat(pageable.getPageNumber()).isZero();
+        assertThat(pageable.getPageSize()).isEqualTo(10);
+        assertThat(pageable.getSort()).containsExactly(
+                Sort.Order.desc("createdAt"),
+                Sort.Order.desc("id")
+        );
+    }
+
+    @DisplayName("요청한 page, size가 서비스로 그대로 전달된다.")
+    @Test
+    void getProjectList_passesPageable() throws Exception {
+        // given
+        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+                .willReturn(emptyProjectListResponse());
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+
+        // when
+        mockMvc.perform(
+                        get("/api/projects")
+                                .session(loginSession(10))
+                                .param("page", "2")
+                                .param("size", "5")
+                )
+                .andExpect(status().isOk());
+
+        // then
+        then(projectService).should().getProjectList(captor.capture(), anyInt());
+        assertThat(captor.getValue().getPageNumber()).isEqualTo(2);
+        assertThat(captor.getValue().getPageSize()).isEqualTo(5);
+    }
+
+    @DisplayName("size가 상한을 넘으면 50으로 제한된다.")
+    @Test
+    void getProjectList_withTooLargeSize() throws Exception {
+        // given
+        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+                .willReturn(emptyProjectListResponse());
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+
+        // when
+        mockMvc.perform(
+                        get("/api/projects")
+                                .session(loginSession(10))
+                                .param("size", "1000")
+                )
+                .andExpect(status().isOk());
+
+        // then
+        then(projectService).should().getProjectList(captor.capture(), anyInt());
+        assertThat(captor.getValue().getPageSize()).isEqualTo(50);
+    }
+
+    @DisplayName("프로젝트 목록 조회 시 세션의 로그인 회원 id가 서비스로 그대로 전달된다.")
+    @Test
+    void getProjectList_passesLoginMemberId() throws Exception {
+        // given
+        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+                .willReturn(emptyProjectListResponse());
+
+        // when
+        mockMvc.perform(get("/api/projects").session(loginSession(42)))
+                .andExpect(status().isOk());
+
+        // then
+        then(projectService).should().getProjectList(any(Pageable.class), eq(42));
+    }
+
+    @DisplayName("세션이 없으면 프로젝트 목록을 조회할 수 없다.")
+    @Test
+    void getProjectList_withoutSession() throws Exception {
+        // when // then
+        mockMvc.perform(get("/api/projects"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.errorMessage").value("로그인이 필요합니다."));
+
+        then(projectService).should(never()).getProjectList(any(Pageable.class), anyInt());
+    }
+
+    private ProjectListResponse emptyProjectListResponse() {
+        return projectListResponse(List.of(), PageRequest.of(0, 10), 0);
+    }
+
+    private ProjectListResponse projectListResponse(List<ProjectItemResponse> items, Pageable pageable, long total) {
+        return new ProjectListResponse(new PageImpl<>(items, pageable, total));
     }
 
     private ProjectMemberResponse memberResponse(int memberId, String name, String email, ProjectRole role) {
