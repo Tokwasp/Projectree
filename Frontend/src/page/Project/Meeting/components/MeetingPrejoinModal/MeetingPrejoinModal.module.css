@@ -1,0 +1,289 @@
+/* AppLayout .content의 상하 패딩(var(--space-8))까지 빼야 세로 스크롤이 생기지 않는다 */
+/* min-width 아래로는 줄이지 않고 가로 스크롤로 넘긴다 — 사이드바에 가리는 것보다 낫다 */
+.backdrop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 1050px;
+  min-height: calc(100vh - var(--app-header-height) - var(--space-8) * 2);
+  padding: var(--space-6);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 840px;
+  max-width: 100%;
+  padding: var(--space-6);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.contentDiv {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: var(--space-6);
+}
+
+/* 미리보기가 설정 열보다 넓어야 16:9가 답답해 보이지 않는다 */
+.leftSection {
+  display: flex;
+  flex: 1.4 1 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* 셀렉트가 눌리지 않을 최소 너비를 잡아둔다 */
+.rightSection {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 260px;
+}
+
+/* 녹음 고지는 참여 전에 읽혀야 하므로 제목 줄 오른쪽에 둔다 */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.titleDiv {
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  color: var(--color-text);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+}
+
+.description {
+  color: var(--color-gray-500);
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
+}
+
+.preview {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-gray-900);
+  border-radius: var(--radius-lg);
+}
+
+/* 흐름에서 빼야 스트림이 붙을 때 비디오 고유 크기가 박스를 밀어 올리지 않는다 */
+.previewVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.previewOff {
+  display: none;
+}
+
+.previewNotice {
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+}
+
+/* 켜짐/끄기 컨트롤은 미리보기 위에 올려야 무엇을 제어하는지가 분명하다 */
+.previewControls {
+  position: absolute;
+  bottom: var(--space-3);
+  left: 50%;
+  display: flex;
+  gap: var(--space-3);
+  transform: translateX(-50%);
+}
+
+.devices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* min-width:0이 없으면 긴 기기 이름의 min-content 너비가 모달을 밀어낸다 */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--color-gray-600);
+  font-size: var(--text-sm);
+}
+
+/* 기기 목록은 비동기로 채워진다 — 옵션이 없을 때도 크기가 같아야 모달이 흔들리지 않는다 */
+.field select {
+  width: 100%;
+  height: var(--space-10);
+  padding: 0 var(--space-3);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* 라벨이 아이콘뿐이라 정원형 버튼 — 어두운 미리보기 위에 얹히므로 아이콘은 항상 흰색 */
+.toggleOn,
+.toggleOff {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-10);
+  height: var(--space-10);
+  padding: 0;
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.toggleOn {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.toggleOn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 꺼진 상태는 회색이 아니라 빨강이어야 미리보기 위에서 바로 눈에 띈다 */
+.toggleOff {
+  background: var(--color-error);
+}
+
+.toggleOff:hover {
+  filter: brightness(0.92);
+}
+
+/* 기기를 잡는 동안(권한 프롬프트 포함) 연타를 막는다 */
+.toggleOn:disabled,
+.toggleOff:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* 문구 자체는 에러와 같은 빨강을 쓰지 않는다 — 앞의 빨간 점으로만 녹음을 알린다 */
+.recordNotice {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-gray-500);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.recordNotice::before {
+  flex: none;
+  width: var(--space-2);
+  height: var(--space-2);
+  background: var(--color-error);
+  border-radius: var(--radius-full);
+  content: "";
+}
+
+/* 설정 열이 위로 몰리지 않게 미터를 바닥에 붙인다 */
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.meterLabel {
+  color: var(--color-gray-600);
+  font-size: var(--text-sm);
+}
+
+.meterBars {
+  display: flex;
+  gap: var(--space-1);
+  height: var(--space-2);
+}
+
+.meterBar,
+.meterBarOn {
+  flex: 1;
+  background: var(--color-gray-200);
+  border-radius: var(--radius-full);
+}
+
+.meterBarOn {
+  background: var(--color-success);
+}
+
+.meterHint {
+  color: var(--color-gray-400);
+  font-size: var(--text-xs);
+}
+
+/* 에러가 뒤늦게 나타나도 버튼 줄 높이가 밀리지 않게 자리를 미리 잡아둔다 */
+.error {
+  min-height: var(--space-5);
+  color: var(--color-error);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.actionButtons {
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+}
+
+.cancel,
+.submit {
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.cancel {
+  color: var(--color-gray-600);
+  background: var(--color-gray-100);
+  border: none;
+}
+
+.submit {
+  color: var(--color-white);
+  background: var(--color-primary);
+  border: none;
+}
+
+.submit:disabled {
+  background: var(--color-gray-300);
+  cursor: not-allowed;
+}
