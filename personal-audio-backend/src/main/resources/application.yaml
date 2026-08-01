@@ -17,5 +17,21 @@ spring:
     show-sql: true
     open-in-view: false
 
+  cloud:
+    aws:
+      region:
+        static: ap-northeast-2
+      sqs:
+        enabled: ${AWS_SQS_ENABLED:false}
+        listener:
+          max-concurrent-messages: ${SQS_MAX_CONCURRENT_MESSAGES:10}
+          poll-timeout: 20s
+
+app:
+  sqs:
+    queue-name: ${SQS_QUEUE_NAME:MyOpenViduQueue-Personal}
+  s3:
+    bucket: ${S3_BUCKET}
+
 server:
   port: ${SERVER_PORT:8080}

@@ -31,7 +31,7 @@ dependencies {
 	testAnnotationProcessor 'org.projectlombok:lombok'
 
 	// Spring Cloud AWS (SQS + S3)
-	implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:VERSION")
+	implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:4.1.0")
 	implementation "io.awspring.cloud:spring-cloud-aws-starter-sqs"
 	implementation "io.awspring.cloud:spring-cloud-aws-starter-s3"
 }
