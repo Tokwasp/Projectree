@@ -24,7 +24,7 @@ spring:
       sqs:
         enabled: ${AWS_SQS_ENABLED:false}
         listener:
-          max-concurrent-messages: ${SQS_MAX_CONCURRENT_MESSAGES:10}
+          max-concurrent-messages: ${SQS_MAX_CONCURRENT_MESSAGES:3}
           poll-timeout: 20s
 
 logging:
@@ -36,6 +36,10 @@ app:
     queue-name: ${SQS_QUEUE_NAME:MyOpenViduQueue-Personal}
   s3:
     bucket: ${S3_BUCKET}
+  audio:
+    silence-threshold: ${AUDIO_SILENCE_THRESHOLD:-30dB}
+    min-silence-duration: ${AUDIO_MIN_SILENCE_DURATION:500ms}
+    analyze-timeout: ${AUDIO_ANALYZE_TIMEOUT:2m}
 
 server:
   port: ${SERVER_PORT:8080}

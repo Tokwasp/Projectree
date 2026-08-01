@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ssafy.personal_audio_backend.service.RecordingFileService;
+import ssafy.personal_audio_backend.service.SpeechAnalysisService;
 
 @Slf4j
 @Component
@@ -13,6 +14,7 @@ import ssafy.personal_audio_backend.service.RecordingFileService;
 public class RecordingCompletedListener {
 
     private final RecordingFileService recordingFileService;
+    private final SpeechAnalysisService speechAnalysisService;
 
     @SqsListener("${app.sqs.queue-name}")
     public void handle(RecordingCompletedMessage message) {
@@ -26,7 +28,7 @@ public class RecordingCompletedListener {
 
         Path audioFile = recordingFileService.downloadToTempFile(message.getObjectKey());
         try {
-            log.info("audio ready. memberId={}, path={}", message.getMemberId(), audioFile);
+            speechAnalysisService.analyzeAndSave(message, audioFile);
         } finally {
             recordingFileService.delete(audioFile);
         }
