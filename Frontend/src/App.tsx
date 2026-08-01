@@ -10,6 +10,7 @@ import MyPage from "./page/MyPage/ui/MyPage";
 import ProjectList from "./page/Project/List/ui/ProjectList";
 import ProjectCreate from "./page/Project/Create/ui/ProjectCreate";
 import ProjectHome from "./page/Project/Home/ui/ProjectHome";
+import InvitationLanding from "./page/Project/Invitation/ui/InvitationLanding";
 import ProjectMember from "./page/Project/Member/ui/ProjectMember";
 import ProjectMeeting from "./page/Project/Meeting/ui/ProjectMeeting";
 import MeetingOverlay from "./page/Project/Meeting/components/MeetingOverlay/MeetingOverlay";
@@ -21,6 +22,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Landing />} />
           <Route path="/auth/:provider/callback" element={<OAuthCallback />} />
+          <Route path="/invitations/:token" element={<InvitationLanding />} />
         </Route>
 
         <Route element={<AppLayout />}>
