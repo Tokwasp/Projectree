@@ -2,6 +2,7 @@ package com.ssafy.projectree.domain.project.controller;
 
 import com.ssafy.projectree.domain.member.LoginMember;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
+import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberListResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.service.ProjectService;
@@ -9,6 +10,9 @@ import com.ssafy.projectree.global.annotation.Login;
 import com.ssafy.projectree.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -68,5 +72,17 @@ public class ProjectController {
         List<ProjectMemberResponse> members = projectService.getProjectMembers(projectId, loginMember.getId());
 
         return ResponseEntity.ok(ApiResponse.success(new ProjectMemberListResponse(members)));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<ProjectListResponse>> getProjectList(
+            @PageableDefault(size = 10, sort = {"createdAt", "id"}, direction = Sort.Direction.DESC)
+            Pageable pageable,
+            @Login LoginMember loginMember
+    ) {
+
+        ProjectListResponse projectList = projectService.getProjectList(pageable, loginMember.getId());
+
+        return ResponseEntity.ok(ApiResponse.success(projectList));
     }
 }
