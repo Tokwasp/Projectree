@@ -27,6 +27,10 @@ spring:
           max-concurrent-messages: ${SQS_MAX_CONCURRENT_MESSAGES:10}
           poll-timeout: 20s
 
+logging:
+  level:
+    io.awspring.cloud.sqs.listener.sink.AbstractMessageProcessingPipelineSink: off
+
 app:
   sqs:
     queue-name: ${SQS_QUEUE_NAME:MyOpenViduQueue-Personal}

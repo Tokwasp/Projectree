@@ -6,23 +6,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 
-/**
- * 리스너 예외를 한 곳에서 로깅한다.
- * 여기서 예외를 삼키면 실패한 메시지가 삭제되므로 반드시 다시 던진다.
- */
 @Slf4j
 @Component
 public class SqsListenerErrorHandler implements ErrorHandler<Object> {
 
     @Override
     public void handle(Message<Object> message, Throwable throwable) {
-        log.error("sqs message processing failed. payload={}", message.getPayload(), throwable);
+        log.error("sqs message processing failed. payload={}, cause={}",
+                message.getPayload(), rootCauseOf(throwable));
         throw toRuntimeException(throwable);
     }
 
     @Override
     public void handle(Collection<Message<Object>> messages, Throwable throwable) {
-        log.error("sqs batch processing failed. size={}", messages.size(), throwable);
+        log.error("sqs batch processing failed. size={}, cause={}",
+                messages.size(), rootCauseOf(throwable));
         throw toRuntimeException(throwable);
     }
 
@@ -31,5 +29,13 @@ public class SqsListenerErrorHandler implements ErrorHandler<Object> {
             return runtimeException;
         }
         return new IllegalStateException(throwable);
+    }
+
+    private String rootCauseOf(Throwable throwable) {
+        Throwable current = throwable;
+        while (current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        return current.toString();
     }
 }

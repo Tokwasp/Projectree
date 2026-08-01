@@ -8,9 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import ssafy.personal_audio_backend.global.exception.CustomException;
 import ssafy.personal_audio_backend.service.exception.AudioErrorCode;
 
@@ -42,8 +44,13 @@ public class RecordingFileService {
                     bucket, objectKey, tempFile, Files.size(tempFile));
 
             return tempFile;
-        } catch (IOException e) {
+        } catch (NoSuchKeyException e) {
             delete(tempFile);
+            log.warn("audio not found. bucket={}, objectKey={}", bucket, objectKey);
+            throw new CustomException(AudioErrorCode.AUDIO_NOT_FOUND);
+        } catch (SdkException | IOException e) {
+            delete(tempFile);
+            log.warn("audio download failed. bucket={}, objectKey={}, cause={}", bucket, objectKey, e.toString());
             throw new CustomException(AudioErrorCode.AUDIO_DOWNLOAD_FAILED);
         }
     }
