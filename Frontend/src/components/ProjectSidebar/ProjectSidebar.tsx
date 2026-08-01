@@ -25,9 +25,7 @@ export default function ProjectSidebar() {
     {
       label: "노드",
       icon: NodeIcon,
-      onClick: () => {
-        // TODO: 노드 페이지 이동 또는 기능 추가
-      },
+      to: `/projects/${projectId}/tree`,
     },
     {
       label: "팀원",

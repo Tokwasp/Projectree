@@ -1,0 +1,35 @@
+/* 사이드바만 남기고 앱 헤더까지 덮는다 — 화면에는 사이드바와 우주 공간만 보여야 한다.
+   z-index는 앱 헤더(10)보다 높고 회의 오버레이(100)보다 낮게 둬서,
+   회의 중 미니 창이 트리 위에 계속 보이도록 한다 */
+.container {
+  position: fixed;
+  inset: 0 0 0 var(--app-sidebar-width);
+  z-index: 50;
+  overflow: hidden;
+  background: #000006;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+}
+
+/* 실제 노드 데이터가 아니라는 걸 화면에서 바로 알 수 있어야 한다 */
+.mockBadge {
+  position: absolute;
+  top: var(--space-6);
+  left: var(--space-6);
+  z-index: 20;
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+  background: rgba(6, 8, 20, 0.55);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(3px);
+}
