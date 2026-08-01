@@ -11,6 +11,9 @@ from .evidence import (
 )
 from .models import (
     Base,
+    AudioUploadEvent,
+    AnalysisCandidate,
+    BModelResult,
     CandidateReviewEvent,
     Category,
     GraphChangeEvent,
@@ -21,6 +24,8 @@ from .models import (
     NodeCandidateEvidence,
     NodeEmbedding,
     NodeEvidence,
+    NodeMergeHistory,
+    AnalysisJob,
     OutboxEvent,
     Relation,
     Request,
@@ -29,11 +34,12 @@ from .models import (
 )
 
 __all__ = [
-    "Base", "CandidateReviewEvent",
+    "Base", "AudioUploadEvent", "CandidateReviewEvent", "BModelResult", "AnalysisCandidate",
     "Meeting", "Request", "Node", "NodeAnalysisRun", "RetrievalResult",
     "NodeCandidate", "NodeCandidateEvidence",
     "NodeEmbedding", "TranscriptSegment",
-    "NodeEvidence", "Relation", "GraphChangeEvent", "OutboxEvent", "Category",
+    "NodeEvidence", "NodeMergeHistory", "Relation", "GraphChangeEvent",
+    "AnalysisJob", "OutboxEvent", "Category",
     "make_engine", "make_session_factory", "session_scope",
     "reseed_categories", "active_category_values",
     "EVIDENCE_KEY_VERSION", "build_evidence_key", "upsert_node_evidence",

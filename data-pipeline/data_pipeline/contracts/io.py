@@ -52,6 +52,10 @@ class ExtractedItem(BaseModel):
     content: str
     evidence: list[Evidence] = Field(min_length=1)
     note: str | None = None
+    # ACTION 의 시제 기반 진행 상태. 동결된 LTS 프롬프트는 아직 이 필드를 내지 않으므로
+    # 기본값은 None 이고, 그 경우 기존 default_lifecycle_status 로 폴백한다.
+    # 새 프롬프트 프로파일이 이 값을 채우면 Candidate → Node 까지 그대로 전달된다.
+    lifecycleStatus: str | None = None
 
 
 class ExtractionOutput(BaseModel):

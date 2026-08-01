@@ -19,6 +19,7 @@ from data_pipeline.storage import (
     GraphChangeEvent,
     Node,
     NodeCandidate,
+    NodeEmbedding,
     NodeEvidence,
     session_scope,
 )
@@ -81,6 +82,16 @@ def test_edit_unattached_node_invalidates_analysis_and_is_idempotent(
         node = session.get(Node, uuid.UUID(node_id))
         node.analysis_status = "ANALYZED"
         node.analysis_input_hash = "a" * 64
+        session.add(
+            NodeEmbedding(
+                node_id=node.id,
+                embedding_version="v1",
+                embedding_model="text-embedding-3-small",
+                dimension=1536,
+                embedded_text_hash="a" * 64,
+                status="READY",
+            )
+        )
         session.commit()
 
     result = edit_unattached_node(
@@ -100,7 +111,15 @@ def test_edit_unattached_node_invalidates_analysis_and_is_idempotent(
     assert result.node.analysis_input_hash is None
     with session_factory() as session:
         candidate = session.get(NodeCandidate, uuid.UUID(candidate_id))
+        embedding = session.get(
+            NodeEmbedding,
+            {
+                "node_id": uuid.UUID(node_id),
+                "embedding_version": "v1",
+            },
+        )
         assert candidate.suggested_title == "Redis 캐시 결정"
+        assert embedding.status == "STALE"
         events = session.query(GraphChangeEvent).order_by(
             GraphChangeEvent.created_at
         ).all()

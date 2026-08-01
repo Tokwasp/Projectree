@@ -9,6 +9,8 @@ UUID PK 는 SQLAlchemy 기본 Uuid 타입(PG=uuid, 그 외=CHAR(32))을 그대�
 
 from __future__ import annotations
 
+import json
+
 from sqlalchemy import JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.types import TypeDecorator, UserDefinedType
@@ -30,7 +32,7 @@ class _PGVector(UserDefinedType):
 
 
 class Vector(TypeDecorator):
-    """PostgreSQL=vector(dim), 그 외=JSON. M1 에서는 읽기/쓰기 경로가 없다(스키마 자리만)."""
+    """PostgreSQL=vector(dim), other dialects=JSON."""
 
     impl = JSON
     cache_ok = True
@@ -43,3 +45,19 @@ class Vector(TypeDecorator):
         if dialect.name == "postgresql":
             return dialect.type_descriptor(_PGVector(self.dim))
         return dialect.type_descriptor(JSON())
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        vector = [float(item) for item in value]
+        if dialect.name == "postgresql":
+            return "[" + ",".join(format(item, ".17g") for item in vector) + "]"
+        return vector
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            parsed = json.loads(value)
+            return [float(item) for item in parsed]
+        return [float(item) for item in value]

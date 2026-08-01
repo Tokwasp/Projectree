@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from data_pipeline.pipeline import (
+    AnalysisRunIncompleteError,
     edit_unattached_node,
     mark_analysis_run_completed,
     mark_analysis_run_failed,
@@ -282,26 +283,15 @@ def test_analysis_execution_transitions_without_incrementing_node_version(
         project_id="proj-01",
     )
     assert running.status.value == "RUNNING"
-    completed = mark_analysis_run_completed(
-        session_factory,
-        requested.run.analysis_run_id,
-        project_id="proj-01",
-    )
-    assert completed.status.value == "COMPLETED"
-
-    repeated = reanalyze_unattached_node(
-        session_factory,
-        node_id,
-        project_id="proj-01",
-        actor_id="reviewer",
-        expected_version=1,
-        retrieval_config_version="retrieval-test-v1",
-    )
-    assert repeated.created is False
-    assert repeated.run.status.value == "COMPLETED"
+    with pytest.raises(AnalysisRunIncompleteError):
+        mark_analysis_run_completed(
+            session_factory,
+            requested.run.analysis_run_id,
+            project_id="proj-01",
+        )
     with session_factory() as session:
         node = session.get(Node, uuid.UUID(node_id))
-        assert node.analysis_status == "ANALYZED"
+        assert node.analysis_status == "ANALYZING"
         assert node.version == 1
         assert session.query(NodeAnalysisRun).count() == 1
 

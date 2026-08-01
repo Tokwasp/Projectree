@@ -11,7 +11,12 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from data_pipeline.contracts.enums import GraphState, default_lifecycle_status
+from data_pipeline.contracts.enums import (
+    GraphState,
+    NodeType,
+    default_lifecycle_status,
+    lifecycle_status_valid,
+)
 from data_pipeline.storage.models import (
     Meeting,
     Node,
@@ -68,6 +73,25 @@ def normalize_extraction_items(raw_items: list[dict]) -> list[dict]:
 def _candidate_node_type(value: object) -> str:
     normalized = str(value or "").upper()
     return normalized if normalized in _ALLOWED_CANDIDATE_NODE_TYPES else "UNKNOWN"
+
+
+def _candidate_lifecycle_status(item: dict) -> str | None:
+    """Preserve an ACTION's tense-derived lifecycle state from extraction.
+
+    Returns None for non-ACTION items and for anything the model did not emit or
+    emitted outside the ActionStatus enum, so the review layer falls back to the
+    existing default instead of persisting an invented state.
+    """
+
+    if _candidate_node_type(item.get("type")) != NodeType.ACTION.value:
+        return None
+    raw = item.get("lifecycleStatus")
+    if not isinstance(raw, str):
+        return None
+    normalized = raw.strip().upper()
+    if not lifecycle_status_valid(NodeType.ACTION.value, normalized):
+        return None
+    return normalized
 
 
 def _bounded_category(value: object) -> str | None:
@@ -303,6 +327,7 @@ def create_generation_candidates(
             suggested_content=str(item.get("content") or ""),
             suggested_disposition=str(judgment.get("result")),
             suggested_reason=judgment.get("reason"),
+            suggested_lifecycle_status=_candidate_lifecycle_status(item),
             review_status="PENDING",
         )
         session.add(row)

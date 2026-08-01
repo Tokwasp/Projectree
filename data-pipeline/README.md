@@ -1,5 +1,87 @@
 # data-pipeline
 
+## Clova STT 어댑터
+
+`data_pipeline.stt.Transcriber`는 로컬 음성 `Path`와 `meeting_id`를 받아
+`run_meeting()`의 `meeting_input["segments"]`에 바로 넣을 수 있는 세그먼트
+목록을 반환한다. 현재 선택지는 `STT_ADAPTER=fake|clova`이다.
+
+- `fake`: 외부 API를 호출하지 않는다. `STT_FAKE_RESPONSE_PATH`의 JSON
+  fixture를 사용하며, 경로를 비우면 S3/SQS 연결 점검용 기본 응답을 사용한다.
+- `clova`: 기존 Clova Speech 동기 업로드 계약을 사용한다.
+  `CLOVA_INVOKE_URL`, `CLOVA_SECRET`이 반드시 필요하다.
+
+```python
+from pathlib import Path
+
+from data_pipeline.config import load_settings
+from data_pipeline.stt import build_transcriber
+
+settings = load_settings()
+transcriber = build_transcriber(settings.stt)
+segments = transcriber.transcribe(
+    Path("meeting.wav"),
+    meeting_id="meeting-001",
+)
+meeting_input = {
+    "projectId": "project-uuid",
+    "externalMeetingId": "meeting-001",
+    "segments": segments,
+}
+```
+
+테스트는 작은 Clova 응답 fixture와 주입한 mock HTTP client만 사용하며 실제
+Clova API를 호출하지 않는다.
+
+## S3·SQS 음성 Worker
+
+입력 object key 계약은 다음과 같다.
+
+```text
+audio-input/{project_id}/{external_meeting_id}/{upload_id}/{filename}
+```
+
+Worker는 SQS를 한 메시지씩 long polling하고, S3 `ObjectCreated` Record를 모두
+검증한 다음 아래 순서로 처리한다.
+
+```text
+SQS 수신
+→ bucket/key/versionId 또는 eTag 멱등 claim
+→ S3 임시 다운로드
+→ Transcriber
+→ run_meeting()
+→ audio_upload_event COMPLETED
+→ SQS DeleteMessage
+```
+
+한 SQS 메시지에 여러 Record가 있으면 모두 성공한 경우에만 메시지를 삭제한다.
+중간 Record가 실패하면 앞서 완료된 Record는 DB에 보존되고, 메시지 재수신 시
+완료된 Record는 건너뛰고 실패한 Record만 재시도한다. 임시 음성 파일은 성공과
+실패 모두 삭제된다.
+
+첫 통합 점검에서는 실제 Clova·LLM·Embedding API를 사용하지 않는다.
+
+```powershell
+$env:APP_ENV = "test"
+$env:STT_ADAPTER = "fake"
+$env:LLM_ADAPTER = "fake"
+$env:EMBEDDING_ADAPTER = "fake"
+$env:AWS_REGION = "ap-northeast-2"
+$env:SQS_QUEUE_URL = "<test queue URL>"
+$env:S3_ALLOWED_BUCKETS = "<test bucket name>"
+$env:DATABASE_URL = "<disposable PostgreSQL URL>"
+
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m data_pipeline.worker
+```
+
+AWS SDK는 기본 credential chain을 사용한다. 환경값이 없을 때 운영 리소스를
+추측하지 않으며, Worker 시작 전에 `AWS_REGION`, `SQS_QUEUE_URL`,
+`S3_ALLOWED_BUCKETS`를 모두 요구한다. 필요한 최소 권한은 테스트 prefix의
+`s3:GetObject`, 테스트 Queue의 `sqs:ReceiveMessage`,
+`sqs:DeleteMessage`, `sqs:ChangeMessageVisibility`,
+`sqs:GetQueueAttributes`이다.
+
 ## STT 정규화 연결 흐름
 
 `run_meeting()`에 들어온 세그먼트의 `text`를 원문(`rawText`)으로 보존한 뒤,
@@ -36,22 +118,46 @@ Evidence에는 원문 위치와 출처로 계산한 안정적인 `evidence_key`�
 ## 분석 실행 경계
 
 `reanalyze_unattached_node()`는 현재 Node version과 결정적으로 계산한 `analysis_input_hash`를 기준으로
-분석 실행을 생성한다. 이 함수는 실제 Retrieval이나 B 모델을 호출하지 않는다.
+분석 실행을 생성한다. 이 함수 자체는 Embedding, Retrieval, B 모델을 호출하지 않는다.
+worker 경계인 `execute_analysis_retrieval()`에 주입 가능한 Embedding client를 전달하면
+Embedding 생성·저장과 pgvector Retrieval을 수행한다. Analysis Worker는
+`EMBEDDING_ADAPTER=gms|openai`일 때 OpenAI 호환 Embedding API adapter를 사용한다.
 
 ```text
-Node: PENDING → ANALYZING → ANALYZED
-Run:  PENDING → RUNNING   → COMPLETED
+Node: PENDING → ANALYZING
+Run:  PENDING → RUNNING
 ```
 
-실패한 실행은 `FAILED`로 보존하고 다음 요청에서 attempt를 증가시킨다. 같은 입력의 PENDING,
-RUNNING 또는 COMPLETED 실행은 새로 만들지 않고 멱등 반환한다. 입력이 수정되면 기존 실행은
-`SUPERSEDED`, Node는 `STALE`이 된다. 분석 상태만 변경할 때는 Node `version`이 증가하지 않는다.
+Embedding과 Retrieval이 성공하면 주입식 B 모델 client를 받는 `execute_b_model()`이
+`CREATE_NEW`, `LINK`, `MERGE` 판단을 검증한다. 검증된 결과와 최종 승인 대기
+`AnalysisCandidate`를 같은 트랜잭션에 저장한 뒤에만 Run을 `COMPLETED`, Node를 `ANALYZED`로
+만든다. Retrieval이 0건이면 B 모델을 호출하지 않고 `SKIPPED /
+NO_RETRIEVAL_CANDIDATES`를 기록하며 Candidate 없이 정상 완료한다.
+
+계약 경계인 `approve_create_new()`, `approve_link_existing()`, `approve_merge_existing()`와
+공통 구현 `approve_analysis_candidate()`, `reject_analysis_candidate()`는 Candidate row를 잠그고
+최초의 `PENDING` 결정만 반영한다. 승인은 확정 계약의 부모 규칙에 따라 원본 UNATTACHED Node를
+ACTIVE로 전환하거나, 확정 Relation을 만들거나, 기존 target Node로 병합한다. MERGE는
+`node_merge_history`를 남기고 target의 READY Embedding을 STALE로 만든다. LINK처럼 embedding
+입력이 바뀌지 않는 승인은 기존 READY Embedding을 유지한다. 실제 외부 B 모델 adapter와
+Embedding adapter는 Analysis Worker에 연결되어 있다. 기존 ACTIVE Node 전체 backfill과
+최종 승인으로 STALE이 된 target의 자동 재생성은 별도 운영 작업으로 남아 있다.
+
+실패한 실행은 `FAILED`로 보존하고 다음 요청에서 attempt를 증가시킨다. 같은 입력의 PENDING 또는
+RUNNING 실행은 새로 만들지 않고 멱등 반환한다. 입력이 수정되면 기존 실행은 `SUPERSEDED`,
+Node는 `STALE`이 되고 기존 Embedding은 `STALE`이 된다. 분석 상태만 변경할 때는 Node
+`version`이 증가하지 않는다.
 
 PostgreSQL은 부분 UNIQUE 인덱스로 같은 Node·입력 해시의 활성 Run을 하나로 제한한다.
 복합 FK는 `current_analysis_run_id`가 다른 Node의 Run을 가리키지 못하게 하고, Retrieval target
 version은 1 이상만 허용한다. 분석 해시 v2에는 `retrieval_config_version`과 별도로 임베딩
 모델·버전도 포함한다. `retrieval_config_version`은 거리 계산법·Top-K·필터·정렬 정책이 바뀔 때
 반드시 증가시킨다.
+
+Retrieval은 같은 프로젝트의 `ACTIVE + UNATTACHED` Node 중 자기 자신과 병합된 Node를 제외한다.
+PostgreSQL에서는 pgvector cosine distance `<=>`의 오름차순으로 검색하고, 외부에 저장하는 값은
+`1 - distance`인 similarity다. 동점은 Node UUID 오름차순으로 고정한다. Top-K와 선택적인
+similarity 하한은 `RETRIEVAL_NODE_TOP_K`, `RETRIEVAL_MIN_SIMILARITY`로 설정한다.
 
 노드 생성 파이프라인. **토폴로지 A**: 그래프 **정본(source of truth)은 이 파이썬 프로젝트가
 소유하는 PostgreSQL** 이다. 스프링(`../Backend/`)은 이 그래프 DB 에 **직접 접근하지 않고**,
@@ -69,15 +175,21 @@ version은 1 이상만 허용한다. 분석 해시 v2에는 `retrieval_config_ve
 - 후보 목록/상세/수정/거절, candidate `version` 기반 낙관적 락, 감사 로그
 - 1차 검토 완료 시 UNATTACHED Node와 중복 방지 Evidence 생성
 - UNATTACHED Node 수정, 낙관적 락, 이전 분석 무효화
-- 분석 실행 요청·선점·완료·실패 상태 전이와 실행 이력 저장
+- 분석 실행 요청·선점·완료 보호·실패 상태 전이와 실행 이력 저장
+- 주입 가능한 Embedding 생성·저장과 동일 프로젝트 pgvector Top-K Retrieval
+- 주입 가능한 B 모델 판단, 검증 결과·최종 승인 Candidate 저장
+- Candidate 승인·거절과 CREATE_NEW/LINK/MERGE 원자 반영
+- FastAPI 검토 API, durable Analysis Worker, Outbox Publisher
+- GMS/OpenAI 호환 Embedding·B 모델 adapter
+- S3 ObjectCreated → SQS → Clova/Fake STT → Candidate 생성 Worker
 - Alembic schema, PostgreSQL 16 + pgvector, SQLite 오프라인 테스트 호환
 
 아직 구현되지 않은 범위:
 
-- embedding worker와 Top-K retrieval
-- B 모델 기반 기존 Node 병합 추천
-- 기존 Node 병합 최종 승인
-- HTTP/API 및 Spring 연동
+- 기존 ACTIVE Node Embedding backfill과 승인 후 자동 재생성
+- Spring 인증·API 호출·Outbox 수신 구현
+- OpenVidu Meeting ID 정본 및 project/meeting 매핑 확정
+- EC2 배포와 프로세스 감시 구성
 
 ## 환경변수와 로컬 파일
 
@@ -118,7 +230,9 @@ $env:DATABASE_URL = "postgresql+psycopg://pipeline:pipeline@localhost:5432/pipel
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-`docker compose ps`가 `healthy`, `alembic current`가 `0003_review_analysis (head)`인지 확인한다.
+`docker compose ps`가 `healthy`,
+`alembic current`가 `0004_runtime_pipeline (head)`인지 확인한다.
+`GET /health/ready`도 실제 DB의 Alembic revision이 이 head와 다르면 503을 반환한다.
 
 `docker compose up`만 사용하고 `Ctrl+C`를 누르면 PostgreSQL도 정지한다. 개발 중에는
 `docker compose up -d`로 백그라운드 실행한다. `docker compose down`은 컨테이너/네트워크만
@@ -162,15 +276,26 @@ Alembic head를 적용한 뒤 삭제한다. 원본 URL의 데이터베이스는 
 ```
 data-pipeline/
 ├── data_pipeline/
-│   ├── contracts/      # v2.2 pydantic: node/graph_state/lifecycle, 부모 규칙, 관계, Change Plan, DTO, lineage
-│   ├── storage/        # SQLAlchemy 모델 + alembic 마이그레이션 (정본 PG)
-│   ├── validation/     # 서버 하드 검증 9규칙 (PoC v3_runner 규칙 수확·재작성)
-│   ├── pipeline/       # apply 경로: 멱등성 → 검증 → Plan → 원자 반영(+optimistic lock)
-│   ├── retrieval/      # 검색기 설정 스텁만 (M1 구현 없음)
-│   └── config/         # 설정 로딩 + categories.json (설정 기반 카테고리)
-├── prompts/            # PoC 복사본 (v2.2 재작성 대상 — M2)
-├── evaluation/poc_frozen/  # 채점기·gold 5회의·라벨링 가이드 (동결 원본, 참조 전용)
-├── tests/              # 단위 + 가짜 JSON E2E
+│   ├── api/            # FastAPI 검토·상태·최종 승인 HTTP 경계
+│   ├── analysis_worker/# Embedding → Retrieval → B 모델 비동기 실행
+│   ├── outbox_publisher/# Spring 통지 relay
+│   ├── worker/         # S3/SQS 음성 입력 Worker
+│   ├── stt/            # Fake/Clova Transcriber
+│   ├── b_model/        # B 모델 port와 GMS adapter
+│   ├── retrieval/      # Embedding adapter와 pgvector 검색
+│   ├── contracts/      # Pydantic DTO와 상태 계약
+│   ├── pipeline/       # 생성·검토·분석·최종 승인 use case
+│   ├── storage/        # SQLAlchemy 모델 + Alembic 정본 PG(0004 단일 runtime revision)
+│   └── normalization/  # STT 기술용어 사전·규칙·service
+├── docs/
+│   ├── contracts/      # API·Outbox·SQS/OpenVidu 데이터 계약
+│   ├── operations/     # FastAPI·Worker·B 모델·AWS 실행
+│   ├── handoffs/       # Spring 등 다른 담당자 인수인계
+│   └── reports/        # 시점이 고정된 E2E·품질 결과
+├── evaluation/         # 품질 평가용 gold/scorer
+├── outputs/            # E2E 결과(Git 제외)
+├── scripts/            # 로컬 실행·평가 도구
+├── tests/              # 단위 + PostgreSQL 통합 + Fake E2E
 ├── alembic.ini, docker-compose.yml, .env.example, .gitlab-ci.yml
 ```
 

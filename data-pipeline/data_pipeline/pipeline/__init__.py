@@ -6,10 +6,18 @@ from .apply import apply_change_plan
 from .analysis import (
     ANALYSIS_INPUT_HASH_VERSION,
     build_analysis_input_hash,
+    execute_analysis_retrieval,
     mark_analysis_run_completed,
     mark_analysis_run_failed,
     mark_analysis_run_running,
     reanalyze_unattached_node,
+)
+from .confirmation import (
+    approve_analysis_candidate,
+    approve_create_new,
+    approve_link_existing,
+    approve_merge_existing,
+    reject_analysis_candidate,
 )
 from .chain import (
     M2_PIPELINE_VERSION,
@@ -26,19 +34,29 @@ from .chain import (
 )
 from .errors import (
     ApplyError,
+    AnalysisRunIncompleteError,
     AnalysisRunNotFoundError,
     AnalysisRunStateError,
+    AnalysisCandidateNotFoundError,
+    AnalysisCandidateStateError,
+    AnalysisCandidateVersionConflict,
+    BModelExecutionError,
+    BModelResultValidationError,
     CandidateNotFoundError,
     CandidateReviewError,
     CandidateStateError,
     CandidateValidationError,
     CandidateVersionConflict,
+    CrossProjectRetrievalError,
+    EmbeddingGenerationError,
+    EmbeddingValidationError,
     LegacyGraphMutationDisabledError,
     NodeNotFoundError,
     NodeReviewError,
     NodeStateError,
     NodeValidationError,
     NodeVersionConflict,
+    RetrievalExecutionError,
     StaleVersionError,
     TranscriptSegmentConflictError,
 )
@@ -63,6 +81,7 @@ from .service import (
     process_request,
 )
 from .review import (
+    UNSET,
     approve_candidate,
     bulk_approve_candidates,
     complete_initial_review,
@@ -71,9 +90,11 @@ from .review import (
     list_candidates,
     reject_candidate,
 )
+from .recommendation import execute_b_model
 from .unattached import edit_unattached_node
 
 __all__ = [
+    "UNSET",
     "process_request",
     "persist_generation_candidates",
     "claim_generation_request",
@@ -86,6 +107,13 @@ __all__ = [
     "complete_initial_review",
     "edit_unattached_node",
     "reanalyze_unattached_node",
+    "execute_analysis_retrieval",
+    "execute_b_model",
+    "approve_analysis_candidate",
+    "approve_create_new",
+    "approve_link_existing",
+    "approve_merge_existing",
+    "reject_analysis_candidate",
     "mark_analysis_run_running",
     "mark_analysis_run_completed",
     "mark_analysis_run_failed",
@@ -109,6 +137,16 @@ __all__ = [
     "ApplyError",
     "AnalysisRunNotFoundError",
     "AnalysisRunStateError",
+    "AnalysisRunIncompleteError",
+    "BModelExecutionError",
+    "BModelResultValidationError",
+    "AnalysisCandidateNotFoundError",
+    "AnalysisCandidateStateError",
+    "AnalysisCandidateVersionConflict",
+    "EmbeddingGenerationError",
+    "EmbeddingValidationError",
+    "RetrievalExecutionError",
+    "CrossProjectRetrievalError",
     "StaleVersionError",
     "TranscriptSegmentConflictError",
     "CandidateReviewError",

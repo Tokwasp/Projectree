@@ -12,7 +12,16 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .enums import AnalysisRunStatus, AnalysisStatus, GraphState, NodeType
+from .enums import (
+    AnalysisCandidateStatus,
+    AnalysisRunStatus,
+    AnalysisStatus,
+    BModelStatus,
+    GraphState,
+    NodeType,
+    RecommendationType,
+    RetrievalStageStatus,
+)
 
 
 # --- 스프링이 읽는 노드 투영 DTO ---------------------------------------------
@@ -167,6 +176,7 @@ class CandidateView(BaseModel):
     suggested_content: str
     suggested_disposition: str
     suggested_reason: str | None = None
+    suggested_lifecycle_status: str | None = None
     suggested_parent_candidate_id: str | None = None
     suggested_parent_node_id: str | None = None
 
@@ -175,6 +185,7 @@ class CandidateView(BaseModel):
     reviewed_title: str | None = None
     reviewed_content: str | None = None
     reviewed_disposition: str | None = None
+    reviewed_lifecycle_status: str | None = None
     reviewed_parent_mode: str
     reviewed_parent_candidate_id: str | None = None
     reviewed_parent_node_id: str | None = None
@@ -184,8 +195,14 @@ class CandidateView(BaseModel):
     effective_title: str
     effective_content: str
     effective_disposition: str
+    #: Lifecycle status the Node will actually receive on initial-review
+    #: completion. None only for UNKNOWN, which cannot become a Node.
+    effective_lifecycle_status: str | None = None
     effective_parent_candidate_id: str | None = None
     effective_parent_node_id: str | None = None
+    #: True when an ACTION carries no usable lifecycle proposal and therefore
+    #: falls back to the default. Surfaced so reviewers can confirm the state.
+    lifecycle_status_needs_review: bool = False
 
     review_status: str
     version: int
@@ -296,6 +313,15 @@ class AnalysisRunView(BaseModel):
     retrieval_config_version: str
     embedding_model: str | None = None
     embedding_version: str | None = None
+    retrieval_status: RetrievalStageStatus
+    retrieval_result_count: int | None = None
+    retrieval_completed_at: datetime | None = None
+    b_model_status: BModelStatus
+    b_model_skip_reason: str | None = None
+    b_model_failure_code: str | None = None
+    b_model_failure_message: str | None = None
+    b_model_started_at: datetime | None = None
+    b_model_completed_at: datetime | None = None
     attempt: int
     status: AnalysisRunStatus
     requested_by: str
@@ -311,6 +337,91 @@ class ReanalyzeUnattachedNodeResult(BaseModel):
     run: AnalysisRunView
     node_analysis_status: AnalysisStatus
     created: bool
+
+
+class RetrievalResultView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    target_node_id: str
+    target_node_version: int
+    rank: int
+    similarity: float
+
+
+class AnalysisRetrievalResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    run: AnalysisRunView
+    node_analysis_status: AnalysisStatus
+    embedding_created: bool
+    retrieval_results: list[RetrievalResultView] = Field(default_factory=list)
+
+
+class BModelDecision(BaseModel):
+    """Strict parsed result returned by an injected B-model client."""
+
+    model_config = ConfigDict(extra="forbid")
+    recommendation: RecommendationType
+    targetNodeId: UUID | None = None
+    relationType: FinalLinkRelationType | None = None
+    suggestedTitle: str = Field(min_length=1)
+    suggestedContent: str
+    reason: str = Field(min_length=1)
+    metadata: dict = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_combination(self):
+        if self.recommendation is RecommendationType.CREATE_NEW:
+            if self.targetNodeId is not None or self.relationType is not None:
+                raise ValueError(
+                    "CREATE_NEW must not contain targetNodeId or relationType"
+                )
+        elif self.recommendation is RecommendationType.LINK:
+            if self.targetNodeId is None or self.relationType is None:
+                raise ValueError(
+                    "LINK requires targetNodeId and relationType"
+                )
+        elif self.recommendation is RecommendationType.MERGE:
+            if self.targetNodeId is None or self.relationType is not None:
+                raise ValueError(
+                    "MERGE requires targetNodeId and no relationType"
+                )
+        if not self.suggestedTitle.strip():
+            raise ValueError("suggestedTitle must not be blank")
+        if not self.reason.strip():
+            raise ValueError("reason must not be blank")
+        return self
+
+
+class AnalysisCandidateView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    candidate_id: str
+    analysis_run_id: str
+    source_node_id: str
+    target_node_id: str | None = None
+    recommendation: RecommendationType
+    relation_type: FinalLinkRelationType | None = None
+    suggested_title: str
+    suggested_content: str
+    reason: str
+    status: AnalysisCandidateStatus
+    version: int
+    decided_by: str | None = None
+    decided_at: datetime | None = None
+
+
+class BModelExecutionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    run: AnalysisRunView
+    candidate: AnalysisCandidateView | None = None
+    b_model_called: bool
+
+
+class AnalysisCandidateDecisionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    candidate: AnalysisCandidateView
+    source_node_id: str
+    target_node_id: str | None = None
+    relation_id: str | None = None
+    merge_history_id: str | None = None
 
 
 class ApproveCreateNewCommand(BaseModel):

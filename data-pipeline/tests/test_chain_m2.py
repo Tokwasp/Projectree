@@ -76,8 +76,13 @@ def test_chain_persists_all_items_as_review_pending_candidates(session_factory, 
         client.messages[0],
         ensure_ascii=False,
     )
+    assert "서버 확정 요청 식별자" in extraction_request
+    assert '"meetingId": "M-CHAIN"' in client.messages[0][0]["content"]
     assert "소음 전처리는 CLOVA STT 전에 넣는 걸로 결정합시다." in extraction_request
     assert "소음 전처리는 클로바 STT 전에 넣는 걸로 결정합시다." not in extraction_request
+    judgment_request = json.dumps(client.messages[1], ensure_ascii=False)
+    assert "서버 확정 요청 식별자" in judgment_request
+    assert '"meetingId": "M-CHAIN"' in client.messages[1][0]["content"]
     assert res.proposal_result.status == "REVIEW_PENDING"
     assert res.proposal_result.candidateCount == 2
     assert count(session_factory, Node) == 0

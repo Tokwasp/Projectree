@@ -512,6 +512,7 @@ def run_judgment_only(
         items=items,
         candidates=candidates or {"decisions": []},
         segments=segments,
+        meeting_id=expected_meeting_id,
     )
     stage = _call_stage(
         client,
@@ -564,6 +565,7 @@ def run_generation_only(
         segments=prompt_segments,
         category_values=category_config.values,
         term_corrections=term_corrections,
+        meeting_id=meeting_input["externalMeetingId"],
     )
     extraction = _call_stage(
         client,
@@ -757,7 +759,7 @@ def run_meeting(
             raw_judgment=None,
             lineage=lineage_model,
         )
-        return MeetingRunResult(
+        result = MeetingRunResult(
             meeting_id=meeting_id,
             proposal_result=proposal_result,
             extraction=generation.extraction,
@@ -768,6 +770,15 @@ def run_meeting(
             prompt_profile=profile.name,
             lineage=lineage_model.model_dump(mode="json", exclude_none=True),
         )
+        if output_dir is not None:
+            result.output_dir = _write_artifacts(
+                Path(output_dir),
+                meeting_id,
+                result,
+                generation.extraction_prompt,
+                generation.judgment_prompt,
+            )
+        return result
 
     warnings: list[str] = []
     warning_stage = warning_code = None

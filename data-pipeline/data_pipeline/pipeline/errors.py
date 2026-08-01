@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from data_pipeline.retrieval.errors import (
+    CrossProjectRetrievalError,
+    EmbeddingGenerationError,
+    EmbeddingValidationError,
+    RetrievalExecutionError,
+)
 
 class ApplyError(Exception):
     """Plan 적용 중 무결성/정합성 오류 → 전체 롤백 (status REJECTED)."""
@@ -77,6 +83,44 @@ class AnalysisRunNotFoundError(NodeReviewError):
 
 class AnalysisRunStateError(NodeReviewError):
     pass
+
+
+class AnalysisRunIncompleteError(AnalysisRunStateError):
+    """A Run cannot be completed until all durable outputs exist."""
+
+    def __init__(self, missing_results: list[str]) -> None:
+        self.missing_results = tuple(missing_results)
+        super().__init__(
+            "analysis run is incomplete; missing results: "
+            + ", ".join(self.missing_results)
+        )
+
+
+class BModelExecutionError(AnalysisRunStateError):
+    pass
+
+
+class BModelResultValidationError(BModelExecutionError):
+    pass
+
+
+class AnalysisCandidateNotFoundError(NodeReviewError):
+    pass
+
+
+class AnalysisCandidateStateError(NodeReviewError):
+    pass
+
+
+class AnalysisCandidateVersionConflict(NodeReviewError):
+    def __init__(self, candidate_id: str, expected: int, actual: int) -> None:
+        self.candidate_id = candidate_id
+        self.expected = expected
+        self.actual = actual
+        super().__init__(
+            f"analysis candidate version conflict: candidate={candidate_id}, "
+            f"expected={expected}, actual={actual}"
+        )
 
 
 class TranscriptSegmentConflictError(RuntimeError):

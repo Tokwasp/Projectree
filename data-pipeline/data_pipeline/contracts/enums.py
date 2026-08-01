@@ -46,6 +46,36 @@ class AnalysisRunStatus(str, Enum):
     SUPERSEDED = "SUPERSEDED"
 
 
+class RetrievalStageStatus(str, Enum):
+    """Durable result state for the Retrieval stage inside one Run."""
+
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+class BModelStatus(str, Enum):
+    """Durable state of the B-model stage inside one Analysis Run."""
+
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
+    SKIPPED = "SKIPPED"
+    FAILED = "FAILED"
+
+
+class RecommendationType(str, Enum):
+    CREATE_NEW = "CREATE_NEW"
+    LINK = "LINK"
+    MERGE = "MERGE"
+
+
+class AnalysisCandidateStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
 ANALYSIS_STATUS_TRANSITIONS: dict[str, frozenset[str]] = {
     AnalysisStatus.PENDING.value: frozenset(
         {

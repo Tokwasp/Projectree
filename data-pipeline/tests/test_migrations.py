@@ -15,8 +15,10 @@ from sqlalchemy.exc import IntegrityError
 
 from data_pipeline.config import load_settings
 from data_pipeline.storage import (
+    Node,
     NodeCandidate,
     NodeCandidateEvidence,
+    Relation,
     Request,
     active_category_values,
 )
@@ -30,6 +32,9 @@ EXPECTED_TABLES = {
     "node_evidence", "node_candidate", "node_candidate_evidence",
     "candidate_review_event", "relation", "graph_change_event", "outbox_event", "category",
     "node_analysis_run", "retrieval_result",
+    "b_model_result", "analysis_candidate", "node_merge_history",
+    "audio_upload_event",
+    "analysis_job",
     "alembic_version",
 }
 
@@ -190,6 +195,191 @@ def test_node_has_initial_review_and_analysis_boundary_columns(session_factory):
         "confirmed_by",
         "confirmed_at",
     } <= node_columns
+
+
+def test_outbox_has_durable_claim_ownership(session_factory):
+    inspector = inspect(_engine(session_factory))
+    columns = {
+        column["name"] for column in inspector.get_columns("outbox_event")
+    }
+    indexes = {
+        index["name"]: index
+        for index in inspector.get_indexes("outbox_event")
+    }
+
+    assert {"claim_token", "claimed_at"} <= columns
+    assert indexes["ix_outbox_event_claimable"]["column_names"] == [
+        "status",
+        "available_at",
+    ]
+    if inspector.bind.dialect.name == "postgresql":
+        checks = {
+            constraint["name"]
+            for constraint in inspector.get_check_constraints("outbox_event")
+        }
+        assert {
+            "ck_outbox_event_status",
+            "ck_outbox_event_attempt_count",
+            "ck_outbox_event_max_attempts",
+            "ck_outbox_event_claim_owner",
+        } <= checks
+
+
+def test_postgresql_alembic_metadata_has_no_schema_drift(
+    session_factory,
+    monkeypatch,
+):
+    engine = _engine(session_factory)
+    if engine.dialect.name != "postgresql":
+        pytest.skip("PostgreSQL is canonical for the Alembic metadata check")
+    database_url = engine.url.render_as_string(hide_password=False)
+    _set_database_url(monkeypatch, database_url)
+
+    command.check(_alembic_config())
+
+
+def test_postgresql_engine_has_bounded_pool_and_statement_timeout(
+    session_factory,
+):
+    engine = _engine(session_factory)
+    if engine.dialect.name != "postgresql":
+        pytest.skip("PostgreSQL-only runtime connection settings")
+    settings = load_settings().database
+
+    assert engine.pool._pre_ping is True
+    assert engine.pool.size() == settings.pool_size
+    assert engine.pool._max_overflow == settings.max_overflow
+    assert engine.pool.timeout() == settings.pool_timeout_seconds
+    assert engine.pool._recycle == settings.pool_recycle_seconds
+    with engine.connect() as connection:
+        timeout_ms = connection.execute(
+            text(
+                "SELECT EXTRACT(EPOCH FROM "
+                "current_setting('statement_timeout')::interval) * 1000"
+            )
+        ).scalar_one()
+    assert int(timeout_ms) == settings.statement_timeout_ms
+
+
+def test_postgresql_runtime_upgrade_downgrade_reupgrade(
+    session_factory,
+    monkeypatch,
+):
+    engine = _engine(session_factory)
+    if engine.dialect.name != "postgresql":
+        pytest.skip("PostgreSQL-only additive migration verification")
+    database_url = engine.url.render_as_string(hide_password=False)
+    _set_database_url(monkeypatch, database_url)
+    config = _alembic_config()
+
+    command.downgrade(config, "0003_review_analysis")
+    assert "claim_token" not in {
+        column["name"] for column in inspect(engine).get_columns("outbox_event")
+    }
+    assert "analysis_job" not in inspect(engine).get_table_names()
+
+    command.upgrade(config, "head")
+    assert {"claim_token", "claimed_at"} <= {
+        column["name"] for column in inspect(engine).get_columns("outbox_event")
+    }
+    assert "analysis_job" in inspect(engine).get_table_names()
+
+    command.downgrade(config, "0003_review_analysis")
+    command.upgrade(config, "head")
+
+
+def test_postgresql_node_and_relation_integrity_constraints(session_factory):
+    with session_factory() as session:
+        if session.get_bind().dialect.name != "postgresql":
+            pytest.skip("PostgreSQL-only database integrity constraints")
+        inspector = inspect(session.get_bind())
+        expected_project_fks = {
+            "node": {
+                "fk_node_parent_project",
+                "fk_node_merged_into_project",
+            },
+            "relation": {
+                "fk_relation_from_project",
+                "fk_relation_to_project",
+            },
+            "b_model_result": {
+                "fk_b_model_result_source_project",
+                "fk_b_model_result_target_project",
+            },
+            "analysis_candidate": {
+                "fk_analysis_candidate_source_project",
+                "fk_analysis_candidate_target_project",
+            },
+            "node_merge_history": {
+                "fk_merge_history_source_project",
+                "fk_merge_history_target_project",
+            },
+            "analysis_job": {"fk_analysis_job_node_project"},
+        }
+        for table_name, expected in expected_project_fks.items():
+            actual = {
+                foreign_key["name"]
+                for foreign_key in inspector.get_foreign_keys(table_name)
+            }
+            assert expected <= actual
+
+        first = Node(
+            project_id="project-a",
+            source_meeting_id="meeting-a",
+            source_item_id="node-a",
+            node_type="DECISION",
+            category="BACKEND",
+            title="A",
+            content="A",
+            graph_state="ACTIVE",
+            lifecycle_status="ACTIVE",
+        )
+        second = Node(
+            project_id="project-b",
+            source_meeting_id="meeting-b",
+            source_item_id="node-b",
+            node_type="DECISION",
+            category="BACKEND",
+            title="B",
+            content="B",
+            graph_state="ACTIVE",
+            lifecycle_status="ACTIVE",
+        )
+        session.add_all([first, second])
+        session.flush()
+
+        session.add(
+            Relation(
+                project_id="project-a",
+                from_node_id=first.id,
+                to_node_id=second.id,
+                relation_type="RELATED_TO",
+                status="CONFIRMED",
+            )
+        )
+        with pytest.raises(IntegrityError):
+            session.flush()
+
+
+def test_postgresql_rejects_invalid_node_state_at_the_database(session_factory):
+    with session_factory() as session:
+        if session.get_bind().dialect.name != "postgresql":
+            pytest.skip("PostgreSQL-only database integrity constraints")
+        session.add(
+            Node(
+                project_id="project-a",
+                source_meeting_id="meeting-a",
+                source_item_id="invalid-node",
+                node_type="ACTION",
+                category="BACKEND",
+                title="invalid",
+                content="invalid",
+                graph_state="UNKNOWN",
+                lifecycle_status="ACTIVE",
+            )
+        )
+        with pytest.raises(IntegrityError):
+            session.flush()
 
 
 def test_node_evidence_key_and_merge_lookup_indexes(session_factory):
@@ -364,7 +554,7 @@ def test_clean_alembic_baseline_round_trip(tmp_path, monkeypatch):
     engine.dispose()
     assert (
         ScriptDirectory.from_config(config).get_current_head()
-        == "0003_review_analysis"
+        == "0004_runtime_pipeline"
     )
 
 
@@ -401,6 +591,9 @@ def test_analysis_execution_schema(session_factory):
         "retrieval_config_version",
         "embedding_model",
         "embedding_version",
+        "retrieval_status",
+        "retrieval_result_count",
+        "retrieval_completed_at",
         "attempt",
         "status",
         "requested_by",
@@ -420,6 +613,8 @@ def test_analysis_execution_schema(session_factory):
         "ck_analysis_run_status",
         "ck_analysis_run_node_version_positive",
         "ck_analysis_run_attempt_positive",
+        "ck_analysis_run_retrieval_status",
+        "ck_analysis_run_retrieval_count_non_negative",
     } <= run_checks
     assert "uq_analysis_run_node_version_hash_attempt" in run_unique
     run_indexes = {
@@ -451,6 +646,179 @@ def test_analysis_execution_schema(session_factory):
         assert current_fk["referred_columns"] == ["source_node_id", "id"]
     else:
         assert "uq_analysis_run_source_node_id" in run_unique
+
+
+def test_0004_backfills_existing_run_retrieval_stage(
+    tmp_path,
+    monkeypatch,
+):
+    database_url = f"sqlite:///{tmp_path / 'retrieval-stage.db'}"
+    _set_database_url(monkeypatch, database_url)
+    config = _alembic_config()
+    command.upgrade(config, "0003_review_analysis")
+    engine = make_engine(database_url)
+    node_id = uuid.uuid4()
+    run_id = uuid.uuid4()
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO node ("
+                "id, project_id, source_meeting_id, source_item_id, "
+                "node_type, category, title, content, graph_state, "
+                "analysis_status, lifecycle_status, version"
+                ") VALUES ("
+                ":id, 'project-a', 'meeting-a', 'item-a', "
+                "'DECISION', 'BACKEND', 'title', '', 'UNATTACHED', "
+                "'ANALYZING', 'ACTIVE', 1"
+                ")"
+            ),
+            {"id": node_id.hex},
+        )
+        connection.execute(
+            text(
+                "INSERT INTO node_analysis_run ("
+                "id, source_node_id, source_node_version, "
+                "analysis_input_hash, analysis_input_hash_version, "
+                "retrieval_config_version, embedding_model, "
+                "embedding_version, attempt, status, requested_by"
+                ") VALUES ("
+                ":id, :node_id, 1, :input_hash, 'analysis-input-v2', "
+                "'retrieval-v1', 'text-embedding-3-small', 'v1', "
+                "1, 'COMPLETED', 'reviewer'"
+                ")"
+            ),
+            {
+                "id": run_id.hex,
+                "node_id": node_id.hex,
+                "input_hash": "a" * 64,
+            },
+        )
+    engine.dispose()
+
+    command.upgrade(config, "head")
+
+    engine = make_engine(database_url)
+    with engine.connect() as connection:
+        stored = connection.execute(
+            text(
+                "SELECT retrieval_status, retrieval_result_count, "
+                "retrieval_completed_at FROM node_analysis_run "
+                "WHERE id = :id"
+            ),
+            {"id": run_id.hex},
+        ).one()
+    engine.dispose()
+    assert stored.retrieval_status == "PENDING"
+    assert stored.retrieval_result_count is None
+    assert stored.retrieval_completed_at is None
+
+
+def test_0004_rejects_an_unowned_legacy_publishing_event(
+    tmp_path,
+    monkeypatch,
+):
+    database_url = f"sqlite:///{tmp_path / 'legacy-outbox-claim.db'}"
+    _set_database_url(monkeypatch, database_url)
+    config = _alembic_config()
+    command.upgrade(config, "0003_review_analysis")
+    event_id = uuid.uuid4().hex
+    engine = make_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO outbox_event ("
+                "id, event_type, aggregate_type, aggregate_id, project_id, "
+                "schema_version, payload, status, created_at"
+                ") VALUES ("
+                ":id, 'ANALYSIS_QUEUED', 'node', 'node-1', 'project-a', "
+                "'v2.2', '{}', 'PUBLISHING', CURRENT_TIMESTAMP"
+                ")"
+            ),
+            {"id": event_id},
+        )
+    engine.dispose()
+
+    with pytest.raises(RuntimeError, match="legacy PUBLISHING"):
+        command.upgrade(config, "head")
+
+    engine = make_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE outbox_event SET status = 'PENDING' WHERE id = :id"
+            ),
+            {"id": event_id},
+        )
+    engine.dispose()
+
+    command.upgrade(config, "head")
+
+
+@pytest.mark.skipif(
+    not os.getenv("TEST_POSTGRESQL_URL"),
+    reason="TEST_POSTGRESQL_URL is not configured for a disposable database",
+)
+def test_postgresql_0004_preserves_legacy_completed_run(monkeypatch):
+    database_url = os.environ["TEST_POSTGRESQL_URL"]
+    _set_database_url(monkeypatch, database_url)
+    config = _alembic_config()
+    command.upgrade(config, "0003_review_analysis")
+    node_id = uuid.uuid4()
+    run_id = uuid.uuid4()
+    engine = make_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO node ("
+                "id, project_id, source_meeting_id, source_item_id, "
+                "node_type, category, title, content, graph_state, "
+                "analysis_status, lifecycle_status, version"
+                ") VALUES ("
+                ":id, 'project-a', 'meeting-a', 'item-a', "
+                "'DECISION', 'BACKEND', 'title', '', 'UNATTACHED', "
+                "'ANALYZED', 'ACTIVE', 1"
+                ")"
+            ),
+            {"id": node_id},
+        )
+        connection.execute(
+            text(
+                "INSERT INTO node_analysis_run ("
+                "id, source_node_id, source_node_version, "
+                "analysis_input_hash, analysis_input_hash_version, "
+                "retrieval_config_version, embedding_model, "
+                "embedding_version, attempt, status, requested_by, "
+                "completed_at"
+                ") VALUES ("
+                ":id, :node_id, 1, :input_hash, 'analysis-input-v2', "
+                "'retrieval-v1', 'text-embedding-3-small', 'v1', "
+                "1, 'COMPLETED', 'reviewer', CURRENT_TIMESTAMP"
+                ")"
+            ),
+            {
+                "id": run_id,
+                "node_id": node_id,
+                "input_hash": "c" * 64,
+            },
+        )
+    engine.dispose()
+
+    command.upgrade(config, "head")
+
+    engine = make_engine(database_url)
+    with engine.connect() as connection:
+        stored = connection.execute(
+            text(
+                "SELECT status, retrieval_status, "
+                "retrieval_result_count FROM node_analysis_run "
+                "WHERE id = :id"
+            ),
+            {"id": run_id},
+        ).one()
+    engine.dispose()
+    assert stored.status == "COMPLETED"
+    assert stored.retrieval_status == "PENDING"
+    assert stored.retrieval_result_count is None
 
 
 def test_0003_backfills_existing_evidence_key(tmp_path, monkeypatch):
@@ -491,8 +859,11 @@ def test_0003_rejects_existing_duplicate_evidence(tmp_path, monkeypatch):
 
 def test_revision_files_do_not_use_live_orm_metadata():
     revisions = ROOT / "data_pipeline" / "storage" / "migrations" / "versions"
+    steps = ROOT / "data_pipeline" / "storage" / "migrations" / "steps"
     source = "\n".join(
-        path.read_text(encoding="utf-8") for path in sorted(revisions.glob("*.py"))
+        path.read_text(encoding="utf-8")
+        for folder in (revisions, steps)
+        for path in sorted(folder.glob("*.py"))
     )
     assert "data_pipeline.storage.models" not in source
     assert "Base.metadata" not in source
@@ -505,6 +876,7 @@ def test_revision_files_do_not_use_live_orm_metadata():
         "0001_initial.py",
         "0002_seed_categories.py",
         "0003_review_analysis.py",
+        "0004_runtime_pipeline.py",
     }
 
 
@@ -517,6 +889,72 @@ def test_disposable_postgresql_migration_round_trip(monkeypatch):
     _set_database_url(monkeypatch, database_url)
     config = _alembic_config()
     command.downgrade(config, "base")
+    command.upgrade(config, "0003_review_analysis")
+
+    node_id = uuid.uuid4()
+    run_id = uuid.uuid4()
+    engine = make_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO node ("
+                "id, project_id, source_meeting_id, source_item_id, "
+                "node_type, category, title, content, graph_state, "
+                "analysis_status, lifecycle_status, version"
+                ") VALUES ("
+                ":id, 'project-a', 'meeting-a', 'item-a', "
+                "'DECISION', 'BACKEND', 'title', '', 'UNATTACHED', "
+                "'ANALYZING', 'ACTIVE', 1"
+                ")"
+            ),
+            {"id": node_id},
+        )
+        connection.execute(
+            text(
+                "INSERT INTO node_analysis_run ("
+                "id, source_node_id, source_node_version, "
+                "analysis_input_hash, analysis_input_hash_version, "
+                "retrieval_config_version, embedding_model, "
+                "embedding_version, attempt, status, requested_by"
+                ") VALUES ("
+                ":id, :node_id, 1, :input_hash, 'analysis-input-v2', "
+                "'retrieval-v1', 'text-embedding-3-small', 'v1', "
+                "1, 'RUNNING', 'reviewer'"
+                ")"
+            ),
+            {
+                "id": run_id,
+                "node_id": node_id,
+                "input_hash": "b" * 64,
+            },
+        )
+    engine.dispose()
+
     command.upgrade(config, "head")
+    engine = make_engine(database_url)
+    with engine.connect() as connection:
+        stored = connection.execute(
+            text(
+                "SELECT retrieval_status, retrieval_result_count "
+                "FROM node_analysis_run WHERE id = :id"
+            ),
+            {"id": run_id},
+        ).one()
+    engine.dispose()
+    assert stored.retrieval_status == "PENDING"
+    assert stored.retrieval_result_count is None
+
+    engine = make_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            text("DELETE FROM node_analysis_run WHERE id = :id"),
+            {"id": run_id},
+        )
+        connection.execute(
+            text("DELETE FROM node WHERE id = :id"),
+            {"id": node_id},
+        )
+    engine.dispose()
+
     command.downgrade(config, "base")
     command.upgrade(config, "head")

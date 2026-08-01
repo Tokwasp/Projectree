@@ -72,7 +72,7 @@ PIPELINE_PROFILES: dict[str, PipelineProfile] = {
         name="poc-lts",
         extraction_asset_name=POC_LTS_EXTRACTION_PROMPT_NAME,
         judgment_asset_name=POC_LTS_JUDGMENT_PROMPT_NAME,
-        renderer_version="poc-v3-v4-pair-1",
+        renderer_version="poc-v3-v4-pair-2",
         rendering_kind="POC_LTS",
         judgment_adapter_kind="POC_V4_TO_SERVER",
         status="DEFAULT",
@@ -81,7 +81,20 @@ PIPELINE_PROFILES: dict[str, PipelineProfile] = {
         name="m2-current-candidate",
         extraction_asset_name=CURRENT_EXTRACTION_PROMPT_NAME,
         judgment_asset_name=CURRENT_JUDGMENT_PROMPT_NAME,
-        renderer_version="m2-0.1.0",
+        renderer_version="m2-0.1.1",
+        rendering_kind="M2_CURRENT",
+        judgment_adapter_kind="IDENTITY",
+        status="CANDIDATE",
+    ),
+    # candidate-quality-v1: the m2 pair plus ACTION lifecycleStatus from tense,
+    # meeting-noise exclusion, uncertain-tech-term preservation, and the
+    # "personal work declarations survive" rule. Opt-in via
+    # PIPELINE_PROMPT_PROFILE; poc-lts stays the default.
+    "candidate-quality-v1": PipelineProfile(
+        name="candidate-quality-v1",
+        extraction_asset_name="extraction-candidate-quality-v1",
+        judgment_asset_name="judgment-candidate-quality-v1",
+        renderer_version="cq-1.0.0",
         rendering_kind="M2_CURRENT",
         judgment_adapter_kind="IDENTITY",
         status="CANDIDATE",
@@ -127,6 +140,18 @@ def _dump(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2)
 
 
+def _meeting_id_block(meeting_id: str | None) -> str:
+    if meeting_id is None:
+        return ""
+    return (
+        "\n\n### 서버 확정 요청 식별자\n"
+        "최상위 `meetingId`는 아래 값을 복사해 정확히 일치시켜라.\n"
+        "```json\n"
+        + _dump({"meetingId": meeting_id})
+        + "\n```\n"
+    )
+
+
 def _render_current_extraction(
     asset: PromptAsset,
     segments: list[dict],
@@ -169,13 +194,20 @@ def render_extraction_prompt(
     segments: list[dict],
     category_values: list[str],
     term_corrections: list[dict[str, str]] | None = None,
+    meeting_id: str | None = None,
 ) -> str:
     selected = get_pipeline_profile(profile)
     asset = selected.extraction_asset
     if selected.rendering_kind == "POC_LTS":
-        return _render_poc_extraction(asset, segments, term_corrections)
+        return (
+            _render_poc_extraction(asset, segments, term_corrections)
+            + _meeting_id_block(meeting_id)
+        )
     if selected.rendering_kind == "M2_CURRENT":
-        return _render_current_extraction(asset, segments, category_values)
+        return (
+            _render_current_extraction(asset, segments, category_values)
+            + _meeting_id_block(meeting_id)
+        )
     raise PromptRegistryError(f"Unknown extraction rendering kind: {selected.rendering_kind!r}")
 
 
@@ -193,24 +225,27 @@ def render_judgment_prompt(
     items: list[dict],
     candidates: dict | list | None,
     segments: list[dict],
+    meeting_id: str | None = None,
 ) -> str:
     selected = get_pipeline_profile(profile)
     asset = selected.judgment_asset
     content = asset.read_verified()
     if selected.rendering_kind == "POC_LTS":
-        return (
+        rendered = (
             content.replace("{{ITEMS_JSON}}", _dump(items))
             .replace("{{CANDIDATES_JSON}}", _dump(_candidate_list(candidates)))
             .replace("{{SEGMENTS_JSON}}", _dump(segments))
             .strip()
             + "\n"
         )
+        return rendered + _meeting_id_block(meeting_id)
     if selected.rendering_kind == "M2_CURRENT":
-        return (
+        rendered = (
             content.replace("{{INJECTION_GUARD}}", _INJECTION_GUARD)
             .replace("{{ITEMS_JSON}}", _dump(items))
             .replace("{{SEGMENTS_JSON}}", _dump(segments))
         )
+        return rendered + _meeting_id_block(meeting_id)
     raise PromptRegistryError(f"Unknown judgment rendering kind: {selected.rendering_kind!r}")
 
 
@@ -226,20 +261,32 @@ EXTRACTION_SHA256 = EXTRACTION_ASSET.sha256
 JUDGMENT_SHA256 = JUDGMENT_ASSET.sha256
 
 
-def build_extraction_prompt(segments: list[dict], category_values: list[str]) -> str:
+def build_extraction_prompt(
+    segments: list[dict],
+    category_values: list[str],
+    *,
+    meeting_id: str | None = None,
+) -> str:
     return render_extraction_prompt(
         DEFAULT_PIPELINE_PROFILE_NAME,
         segments=segments,
         category_values=category_values,
+        meeting_id=meeting_id,
     )
 
 
-def build_judgment_prompt(items: list[dict], segments: list[dict]) -> str:
+def build_judgment_prompt(
+    items: list[dict],
+    segments: list[dict],
+    *,
+    meeting_id: str | None = None,
+) -> str:
     return render_judgment_prompt(
         DEFAULT_PIPELINE_PROFILE_NAME,
         items=items,
         candidates={"decisions": []},
         segments=segments,
+        meeting_id=meeting_id,
     )
 
 

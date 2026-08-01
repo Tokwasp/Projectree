@@ -1,0 +1,96 @@
+{
+  "meetingId": "e2e-meeting-A",
+  "profile": "candidate-quality-v1",
+  "items": [
+    {
+      "id": "m1",
+      "type": "ISSUE",
+      "title": "Lambda에서 RDS 접근 불가(또는 어려움) 및 VPC 설정 복잡도",
+      "content": "Lambda 환경에서 RDS 접근이 잘 되지 않으며, VPC 설정이 복잡해 연결이 어렵다는 문제가 제기됨.",
+      "evidence": [
+        {
+          "quote": "지금 Lambda에서 RDS 접근이 잘 안 됩니다. VPC 설정이 복잡해서 연결이 어려워요.",
+          "segmentId": "a2"
+        }
+      ],
+      "lifecycleStatus": null,
+      "predictedCategory": "INFRA"
+    },
+    {
+      "id": "m2",
+      "type": "DECISION",
+      "title": "회의 처리 서버는 EC2 사용",
+      "content": "Lambda 대신 회의 처리 서버를 EC2로 구성하는 방향으로 진행하기로 함.",
+      "evidence": [
+        {
+          "quote": "그러면 회의 처리 서버는 EC2를 사용하는 걸로 하죠. 다들 괜찮으시죠?",
+          "segmentId": "a3"
+        }
+      ],
+      "lifecycleStatus": null,
+      "predictedCategory": "INFRA"
+    },
+    {
+      "id": "m3",
+      "type": "ACTION",
+      "title": "EC2에서 RDS 연결 구성",
+      "content": "EC2 환경에서 RDS 연결을 구성하기로 함.",
+      "evidence": [
+        {
+          "quote": "네, 좋습니다. 그럼 제가 EC2에서 RDS 연결을 구성하겠습니다.",
+          "segmentId": "a4"
+        }
+      ],
+      "lifecycleStatus": "TODO",
+      "predictedCategory": "INFRA"
+    },
+    {
+      "id": "m4",
+      "type": "ACTION",
+      "title": "SQS 생성 및 메시지 적재 확인",
+      "content": "SQS 큐를 만들고 메시지가 들어가는 것까지 확인 완료했다고 보고함.",
+      "evidence": [
+        {
+          "quote": "아 그리고 SQS 생성하고 메시지 적재되는 것까지는 제가 이미 확인했습니다.",
+          "segmentId": "a5"
+        }
+      ],
+      "lifecycleStatus": "COMPLETED",
+      "predictedCategory": "INFRA"
+    }
+  ],
+  "judgments": [
+    {
+      "itemId": "m1",
+      "result": "ATTACH",
+      "attachTo": "m2"
+    },
+    {
+      "itemId": "m2",
+      "result": "NEW_DECISION",
+      "category": "INFRA"
+    },
+    {
+      "itemId": "m3",
+      "result": "ATTACH",
+      "attachTo": "m2"
+    },
+    {
+      "itemId": "m4",
+      "reason": "NO_RELATED_DECISION",
+      "result": "UNATTACHED"
+    }
+  ],
+  "storedDispositions": {
+    "m2": "NEW_DECISION",
+    "m1": "ATTACH",
+    "m3": "ATTACH",
+    "m4": "UNATTACHED"
+  },
+  "storedLifecycles": {
+    "m2": null,
+    "m1": null,
+    "m3": "TODO",
+    "m4": "COMPLETED"
+  }
+}

@@ -334,7 +334,15 @@ def finalize_generation_candidates(
         )
         request_row.status = "REVIEW_PENDING"
         request_row.payload_hash = phash
-        request_row.warnings = list(warnings or [])
+        # Persist demotion decisions so reviewers can see WHY a suggestion was
+        # downgraded (e.g. EVIDENCE_INVALID cascading into MINUTES_ONLY). The
+        # in-memory result already carried these; the durable Request row did
+        # not, which made demotions invisible to every API consumer.
+        demotion_warnings = [
+            f"DEMOTED:{row.get('itemId')}:{row.get('rule')}"
+            for row in validation.demoted
+        ]
+        request_row.warnings = list(warnings or []) + demotion_warnings
         request_row.failure_stage = warning_failure_stage
         request_row.failure_code = warning_failure_code
         request_row.failure_message = (

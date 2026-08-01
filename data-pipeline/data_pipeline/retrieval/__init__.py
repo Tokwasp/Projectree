@@ -1,18 +1,53 @@
-"""검색기 (③ IF-3). **M1 에서는 구현 없음 — 설정 스텁만.**
-
-실제 하이브리드 검색(pg_bigm 텍스트 + pgvector + 용어/카테고리 부스트, RRF)은 후속
-마일스톤에서 구현한다. 튜너블 값(Top-K 등)은 코드 상수가 아니라
-`data_pipeline.config.RetrievalSettings`(환경변수 주입)로 관리한다.
-"""
+"""Embedding and project-scoped pgvector Retrieval."""
 
 from __future__ import annotations
 
 from data_pipeline.config import RetrievalSettings, load_settings
+from .embedding import (
+    EmbeddingClient,
+    build_embedding_text,
+    embedding_text_hash,
+    validate_embedding,
+)
+from .embedding_client import (
+    EmbeddingClientSettings,
+    EmbeddingResponseError,
+    EmbeddingTransportError,
+    GmsEmbeddingClient,
+    build_embedding_client,
+    load_embedding_client_settings,
+)
+from .errors import (
+    CrossProjectRetrievalError,
+    EmbeddingGenerationError,
+    EmbeddingValidationError,
+    RetrievalExecutionError,
+)
+from .search import RetrievedNode, search_similar_nodes
 
 
 def retrieval_settings() -> RetrievalSettings:
-    """현재 검색 설정 스텁을 반환한다. (검색 로직은 미구현.)"""
+    """Return the configured Retrieval policy."""
     return load_settings().retrieval
 
 
-__all__ = ["RetrievalSettings", "retrieval_settings"]
+__all__ = [
+    "CrossProjectRetrievalError",
+    "EmbeddingClient",
+    "EmbeddingClientSettings",
+    "EmbeddingGenerationError",
+    "EmbeddingResponseError",
+    "EmbeddingTransportError",
+    "EmbeddingValidationError",
+    "GmsEmbeddingClient",
+    "RetrievalExecutionError",
+    "RetrievalSettings",
+    "RetrievedNode",
+    "build_embedding_client",
+    "build_embedding_text",
+    "embedding_text_hash",
+    "load_embedding_client_settings",
+    "retrieval_settings",
+    "search_similar_nodes",
+    "validate_embedding",
+]

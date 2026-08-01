@@ -1,0 +1,25 @@
+{
+  "scenario": "meeting_a",
+  "description": "실제 라이브 E2E 회의 A. Lambda-RDS 이슈, EC2 결정, RDS 연결 ACTION(TODO), SQS 완료 ACTION(COMPLETED), 발화겹침 잡음 1건.",
+  "segments": [
+    {"segmentId": "a1", "startMs": 5000, "speakerLabel": "A", "text": "안녕하세요, 다들 오셨죠. 시작하겠습니다."},
+    {"segmentId": "a2", "startMs": 10000, "speakerLabel": "B", "text": "지금 Lambda에서 RDS 접근이 잘 안 됩니다. VPC 설정이 복잡해서 연결이 어려워요."},
+    {"segmentId": "a3", "startMs": 15000, "speakerLabel": "A", "text": "그러면 회의 처리 서버는 EC2를 사용하는 걸로 하죠. 다들 괜찮으시죠?"},
+    {"segmentId": "a4", "startMs": 20000, "speakerLabel": "C", "text": "네, 좋습니다. 그럼 제가 EC2에서 RDS 연결을 구성하겠습니다."},
+    {"segmentId": "a5", "startMs": 25000, "speakerLabel": "B", "text": "아 그리고 SQS 생성하고 메시지 적재되는 것까지는 제가 이미 확인했습니다."},
+    {"segmentId": "a6", "startMs": 30000, "speakerLabel": "D", "text": "잠깐만요, 마이크가 겹쳐서 잘 안 들렸어요. 다시 한 번 말씀해 주세요."},
+    {"segmentId": "a7", "startMs": 35000, "speakerLabel": "B", "text": "SQS 큐 만들고 메시지 들어가는 것까지 확인했다고요."},
+    {"segmentId": "a8", "startMs": 40000, "speakerLabel": "A", "text": "좋습니다. 그럼 오늘은 여기까지 하죠. 수고하셨습니다."}
+  ],
+  "required": [
+    {"key": "lambda-rds-issue", "type": "ISSUE", "titleAnyOf": ["Lambda", "RDS"], "lifecycle": null},
+    {"key": "ec2-decision", "type": "DECISION", "titleAnyOf": ["EC2"], "lifecycle": null},
+    {"key": "rds-connect-action", "type": "ACTION", "titleAnyOf": ["RDS"], "lifecycle": "TODO"},
+    {"key": "sqs-done-action", "type": "ACTION", "titleAnyOf": ["SQS"], "lifecycle": "COMPLETED"}
+  ],
+  "forbiddenTitleKeywords": ["마이크", "겹쳐", "다시 말", "인사", "수고", "안녕"],
+  "expectedParentEdges": [
+    {"childKey": "rds-connect-action", "parentKey": "ec2-decision"},
+    {"childKey": "lambda-rds-issue", "parentKey": "ec2-decision"}
+  ]
+}

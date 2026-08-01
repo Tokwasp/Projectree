@@ -6,15 +6,41 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from sqlalchemy import Engine, create_engine, event
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from data_pipeline.config import load_settings
 
 
 def make_engine(url: str | None = None, *, echo: bool = False) -> Engine:
-    database_url = url or load_settings().database_url
+    settings = load_settings()
+    database_url = url or settings.database_url
     connect_args: dict = {}
-    engine = create_engine(database_url, echo=echo, future=True, connect_args=connect_args)
+    engine_options: dict = {
+        "echo": echo,
+        "future": True,
+        "connect_args": connect_args,
+    }
+    if make_url(database_url).get_backend_name() == "postgresql":
+        database = settings.database
+        connect_args.update(
+            {
+                "connect_timeout": database.connect_timeout_seconds,
+                "options": (
+                    f"-c statement_timeout={database.statement_timeout_ms}"
+                ),
+            }
+        )
+        engine_options.update(
+            {
+                "pool_pre_ping": True,
+                "pool_size": database.pool_size,
+                "max_overflow": database.max_overflow,
+                "pool_timeout": database.pool_timeout_seconds,
+                "pool_recycle": database.pool_recycle_seconds,
+            }
+        )
+    engine = create_engine(database_url, **engine_options)
     if engine.dialect.name == "sqlite":
         # SQLite 는 기본적으로 외래키를 강제하지 않는다 — 켠다 (부모 규칙/무결성 테스트용).
         @event.listens_for(engine, "connect")

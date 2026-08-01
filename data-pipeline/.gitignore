@@ -11,5 +11,6 @@ outputs/
 .coverage
 htmlcov/
 .venv/
+.venv.zip
 venv/
 *.egg-info/

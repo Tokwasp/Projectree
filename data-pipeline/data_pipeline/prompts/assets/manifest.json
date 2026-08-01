@@ -33,6 +33,30 @@
       "changeType": "SEMANTIC",
       "path": "judgment_poc_v4_lts.md",
       "sha256": "258e5b42b74f2f1a25960e9eaf4f15d5894f77e48088b6938eaaf481d4f1c352"
+    },
+    {
+      "name": "extraction-candidate-quality-v1",
+      "kind": "EXTRACTION",
+      "version": "cq-1.0.1",
+      "changeType": "SEMANTIC",
+      "path": "extraction_candidate_quality_v1.md",
+      "sha256": "1d0627f8df3219011e98e5bbb69d13100323e934c53fb753dbce00b293a72710"
+    },
+    {
+      "name": "judgment-candidate-quality-v1",
+      "kind": "JUDGMENT",
+      "version": "cq-1.0.0",
+      "changeType": "SEMANTIC",
+      "path": "judgment_candidate_quality_v1.md",
+      "sha256": "483fb44bf59ec9b387c471541b041692e21fa15ea1b6894484642fa4c9219d8c"
+    },
+    {
+      "name": "b-model-recommendation-v1",
+      "kind": "B_MODEL",
+      "version": "b-1.0.0",
+      "changeType": "SEMANTIC",
+      "path": "b_model_recommendation_v1.md",
+      "sha256": "b0faed33a45ccf0c8c59fbcd63b669f5904f356236e843649056cc1c56e59047"
     }
   ]
 }

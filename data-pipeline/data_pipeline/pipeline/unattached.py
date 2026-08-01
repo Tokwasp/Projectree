@@ -28,6 +28,7 @@ from data_pipeline.storage.models import (
     GraphChangeEvent,
     Node,
     NodeAnalysisRun,
+    NodeEmbedding,
     NodeEvidence,
     TranscriptSegment,
 )
@@ -348,6 +349,10 @@ def edit_unattached_node(
         node.version += 1
         node.analysis_status = "STALE"
         node.analysis_input_hash = None
+        for embedding in session.execute(
+            select(NodeEmbedding).where(NodeEmbedding.node_id == node.id)
+        ).scalars():
+            embedding.status = "STALE"
         session.flush()
         session.refresh(node)
         after = _snapshot(node)
