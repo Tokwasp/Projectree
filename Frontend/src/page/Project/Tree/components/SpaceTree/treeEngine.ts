@@ -3,11 +3,11 @@ import { useMemo, useRef } from "react";
 import { Vector3 } from "three";
 import {
   CHILD_RING_BASE_RADIUS,
-  CHILD_RING_RADIUS_PER_EXTRA_CHILD,
   MAX_CHILD_SPREAD,
   MIN_CHILD_SPREAD,
   MIN_SIBLING_GAP,
   NODE_VISUALS,
+  SIBLING_CONE_RATIO,
   SPRING_BY_TYPE,
   type FlatTreeNode,
   type NodeType,
@@ -33,34 +33,87 @@ function hash01(id: string): number {
   return (h % 1000) / 1000;
 }
 
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+
 /**
- * 자식을 놓을 원의 반지름. 부채꼴이 좁으면 기본 반지름으로는 형제가 서로 닿으므로,
- * 이웃 사이 간격이 MIN_SIBLING_GAP 이상이 되는 거리까지 밀어낸다.
+ * 루트의 자식은 구면에 고르게 흩는다(황금나선). 평면 원에 두면 옆에서 봤을 때
+ * 트리 전체가 한 줄로 뭉쳐 보여 3D인 의미가 없어진다.
+ */
+function sphereDirections(count: number, seed: number): Vector3[] {
+  return Array.from({ length: count }, (_, index) => {
+    const y = 1 - ((index + 0.5) * 2) / count;
+    const ring = Math.sqrt(Math.max(0, 1 - y * y));
+    const phi = index * GOLDEN_ANGLE + seed * TAU;
+    return new Vector3(Math.cos(phi) * ring, y, Math.sin(phi) * ring);
+  });
+}
+
+/** 그 아래는 부모에서 자기까지의 방향을 축으로 하는 원뿔면에 둘러 놓는다. */
+function coneDirections(
+  outward: Vector3,
+  spread: number,
+  count: number,
+  seed: number,
+): Vector3[] {
+  if (count === 1) return [outward.clone()];
+
+  // outward와 평행하지 않은 벡터를 골라야 외적이 0이 되지 않는다
+  const helper =
+    Math.abs(outward.y) < 0.9 ? new Vector3(0, 1, 0) : new Vector3(1, 0, 0);
+  const u = new Vector3().crossVectors(outward, helper).normalize();
+  const v = new Vector3().crossVectors(outward, u).normalize();
+
+  const theta = spread / 2;
+  const sinT = Math.sin(theta);
+  const cosT = Math.cos(theta);
+
+  return Array.from({ length: count }, (_, index) => {
+    const phi = (TAU * index) / count + seed * TAU;
+    return new Vector3()
+      .addScaledVector(outward, cosT)
+      .addScaledVector(u, Math.cos(phi) * sinT)
+      .addScaledVector(v, Math.sin(phi) * sinT)
+      .normalize();
+  });
+}
+
+/** 방향 벡터들 중 가장 가까운 두 개의 거리 (단위구 위). */
+function minDirectionDistance(directions: Vector3[]): number {
+  let min = Infinity;
+  for (let i = 0; i < directions.length; i++) {
+    for (let j = i + 1; j < directions.length; j++) {
+      min = Math.min(min, directions[i].distanceTo(directions[j]));
+    }
+  }
+  return min;
+}
+
+/**
+ * 자식을 놓을 거리. 방향이 촘촘하면 기본 거리로는 형제가 서로 닿으므로,
+ * 가장 가까운 두 형제 사이가 MIN_SIBLING_GAP 이상 벌어지는 거리까지 밀어낸다.
  */
 function ringRadius(
   parentType: NodeType,
   children: TreeNodeInput[],
-  spread: number,
+  directions: Vector3[],
 ): number {
-  const extra =
-    Math.max(0, children.length - 3) * CHILD_RING_RADIUS_PER_EXTRA_CHILD;
-  const base = CHILD_RING_BASE_RADIUS + NODE_VISUALS[parentType].radius + extra;
+  const base = CHILD_RING_BASE_RADIUS + NODE_VISUALS[parentType].radius;
 
-  if (children.length < 2) return base;
+  if (directions.length < 2) return base;
 
-  const slice = spread / children.length;
   const widest = Math.max(
     ...children.map((child) => NODE_VISUALS[child.type].radius),
   );
-  const needed = (widest + MIN_SIBLING_GAP / 2) / Math.sin(slice / 2);
+  const needed =
+    (2 * widest + MIN_SIBLING_GAP) / minDirectionDistance(directions);
 
   return Math.max(base, needed);
 }
 
 /**
- * 방사형(마인드맵) 레이아웃을 한 번의 순회로 만든다. 자식은 부모를 중심으로 한 원에
- * 고르게 퍼지고, 자식이 많을수록 반지름이 커진다. 각 노드는 부모 기준 오프셋만 들고
- * 있으며, 월드 좌표는 런타임이 매 프레임 계산한다.
+ * 방사형 레이아웃을 한 번의 순회로 만든다. 루트의 자식은 구면에, 그 아래는 부모에서
+ * 자기까지의 방향을 축으로 하는 원뿔면에 배치되어 어느 각도에서 봐도 입체로 보인다.
+ * 각 노드는 부모 기준 오프셋만 들고 있고, 월드 좌표는 런타임이 매 프레임 계산한다.
  */
 export function buildTree(input: TreeNodeInput): FlatTree {
   const order: FlatTreeNode[] = [];
@@ -74,14 +127,14 @@ export function buildTree(input: TreeNodeInput): FlatTree {
   };
 
   /**
-   * outward: 부모에서 이 노드로 향하는 방향(라디안). 자식은 이 방향을 중심으로만 뻗는다.
-   * spread: 이 노드가 자식에게 쓸 수 있는 부채꼴 폭.
+   * outward: 부모에서 이 노드로 향하는 단위 벡터. 자식은 이 방향을 축으로만 뻗는다.
+   * spread: 이 노드가 자식에게 쓸 수 있는 원뿔의 꼭지각.
    */
   const visit = (
     node: TreeNodeInput,
     worldPos: Vector3,
     parent: { id: string; worldPos: Vector3 } | undefined,
-    outward: number,
+    outward: Vector3,
     spread: number,
   ) => {
     const flat: FlatTreeNode = {
@@ -100,37 +153,47 @@ export function buildTree(input: TreeNodeInput): FlatTree {
     const children = node.children ?? [];
     if (children.length === 0) return;
 
-    // 루트만 360도를 나눠 쓴다 — 위로 올라갈 부모가 없어 되돌아올 걱정이 없다
+    // 루트는 사방(구면)으로 흩고, 그 아래는 바깥 방향을 축으로 한 원뿔에만 둔다
     const isRoot = parent === undefined;
-    const childSpread = isRoot ? TAU : Math.min(spread, MAX_CHILD_SPREAD);
-    const radius = ringRadius(node.type, children, childSpread);
-    const slice = childSpread / children.length;
-    // 루트에서만 해시로 전체를 회전시킨다. 아래 단계는 바깥 방향에 고정돼야 일관적이다
-    const start = isRoot
-      ? hash01(node.id) * TAU
-      : outward - childSpread / 2;
+    const seed = hash01(node.id);
+    const childSpread = Math.min(spread, MAX_CHILD_SPREAD);
+    const directions = isRoot
+      ? sphereDirections(children.length, seed)
+      : coneDirections(outward, childSpread, children.length, seed);
+
+    const radius = ringRadius(node.type, children, directions);
+
+    // 형제 사이 각도보다 좁은 원뿔을 물려줘야 아래 가지끼리 서로 파고들지 않는다
+    const nextSpread =
+      directions.length < 2
+        ? childSpread
+        : Math.min(
+            MAX_CHILD_SPREAD,
+            Math.max(
+              MIN_CHILD_SPREAD,
+              2 *
+                Math.asin(Math.min(1, minDirectionDistance(directions) / 2)) *
+                SIBLING_CONE_RATIO,
+            ),
+          );
 
     children.forEach((child, index) => {
-      const angle = start + slice * (index + 0.5);
-      const zJitter =
-        Math.sin(angle * 2 + hash01(child.id) * 10) * radius * 0.18;
-      const childWorldPos = new Vector3(
-        worldPos.x + Math.cos(angle) * radius,
-        worldPos.y + Math.sin(angle) * radius,
-        worldPos.z + zJitter,
-      );
-      // 부채꼴이 계속 반으로 쪼개지면 반지름만 커지므로 하한을 둔다
+      const direction = directions[index];
+      const childWorldPos = worldPos
+        .clone()
+        .addScaledVector(direction, radius);
+
       visit(
         child,
         childWorldPos,
         { id: node.id, worldPos },
-        angle,
-        Math.max(slice, MIN_CHILD_SPREAD),
+        direction,
+        nextSpread,
       );
     });
   };
 
-  visit(input, new Vector3(0, 0, 0), undefined, 0, TAU);
+  visit(input, new Vector3(0, 0, 0), undefined, new Vector3(0, 1, 0), TAU);
 
   return { rootId: input.id, order, byType, edges };
 }
