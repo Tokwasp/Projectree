@@ -3,6 +3,8 @@ package com.ssafy.projectree.domain.project.controller;
 import com.ssafy.projectree.ControllerTestSupport;
 import com.ssafy.projectree.domain.member.LoginMember;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
+import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
+import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.global.exception.CustomException;
 import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -493,6 +496,87 @@ class ProjectControllerTest extends ControllerTestSupport {
         then(projectService).should(never()).deleteProject(anyInt(), anyInt());
     }
 
+    @DisplayName("프로젝트에서 탈퇴하면 200과 성공 메시지를 응답한다.")
+    @Test
+    void leaveProject() throws Exception {
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", 1)
+                        .session(loginSession(10)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("성공"))
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @DisplayName("탈퇴 요청의 경로 projectId와 세션의 로그인 회원 id가 서비스로 그대로 전달된다.")
+    @Test
+    void leaveProject_passesProjectIdAndLoginMemberId() throws Exception {
+        // when
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", 7)
+                        .session(loginSession(10)))
+                .andExpect(status().isOk());
+
+        // then
+        then(projectService).should().leaveProject(eq(7), eq(10));
+    }
+
+    @DisplayName("세션이 아예 없으면 탈퇴 요청에 401을 응답하고 서비스를 호출하지 않는다.")
+    @Test
+    void leaveProject_withoutSession() throws Exception {
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", 1))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.errorMessage").value("로그인이 필요합니다."));
+
+        then(projectService).should(never()).leaveProject(anyInt(), anyInt());
+    }
+
+    @DisplayName("OWNER가 탈퇴하려 하면 403과 탈퇴 권한 오류 메시지를 응답한다.")
+    @Test
+    void leaveProject_forbidden() throws Exception {
+        // given
+        willThrow(new CustomException(ProjectErrorCode.PROJECT_LEAVE_FORBIDDEN))
+                .given(projectService).leaveProject(anyInt(), anyInt());
+
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", 1)
+                        .session(loginSession(10)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.errorCode").value("PROJECT_LEAVE_FORBIDDEN"))
+                .andExpect(jsonPath("$.errorMessage").value("프로젝트 탈퇴 권한이 없습니다."));
+    }
+
+    @DisplayName("참여하지 않은 프로젝트에서 탈퇴하려 하면 404를 응답한다.")
+    @Test
+    void leaveProject_participantNotFound() throws Exception {
+        // given
+        willThrow(new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND))
+                .given(projectService).leaveProject(anyInt(), anyInt());
+
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", 1)
+                        .session(loginSession(10)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.errorCode").value("PROJECT_PARTICIPANT_NOT_FOUND"))
+                .andExpect(jsonPath("$.errorMessage").value("프로젝트에 참여 중인 회원이 아닙니다."));
+    }
+
+    @DisplayName("탈퇴 요청의 projectId가 정수가 아니면 500이 아니라 400을 응답하고 서비스를 호출하지 않는다.")
+    @Test
+    void leaveProject_withNonIntegerProjectId() throws Exception {
+        // when // then
+        mockMvc.perform(delete("/api/projects/{projectId}/members/me", "abc")
+                        .session(loginSession(10)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+
+        then(projectService).should(never()).leaveProject(anyInt(), anyInt());
+    }
+
     @DisplayName("존재하지 않는 경로로 요청하면 500이 아니라 404를 응답한다.")
     @Test
     void requestToUnknownEndpoint() throws Exception {
@@ -501,6 +585,118 @@ class ProjectControllerTest extends ControllerTestSupport {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.errorCode").value("ENDPOINT_NOT_FOUND"));
+    }
+
+    @DisplayName("팀원 목록을 조회하면 200과 참여자 목록을 응답한다.")
+    @Test
+    void getProjectMembers() throws Exception {
+        // given
+        given(projectService.getProjectMembers(anyInt(), anyInt()))
+                .willReturn(List.of(
+                        memberResponse(10, "김오너", "owner@gmail.com", ProjectRole.OWNER),
+                        memberResponse(11, "이멤버", "member@gmail.com", ProjectRole.MEMBER)
+                ));
+
+        // when // then
+        mockMvc.perform(get("/api/projects/{projectId}/members", 1).session(loginSession(10)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("성공"))
+                .andExpect(jsonPath("$.data.members").isArray())
+                .andExpect(jsonPath("$.data.members.length()").value(2))
+                .andExpect(jsonPath("$.data.members[0].memberId").value(10))
+                .andExpect(jsonPath("$.data.members[0].name").value("김오너"))
+                .andExpect(jsonPath("$.data.members[0].email").value("owner@gmail.com"))
+                .andExpect(jsonPath("$.data.members[0].role").value("OWNER"))
+                .andExpect(jsonPath("$.data.members[0].joinedAt").exists())
+                .andExpect(jsonPath("$.data.members[1].memberId").value(11))
+                .andExpect(jsonPath("$.data.members[1].role").value("MEMBER"));
+    }
+
+    @DisplayName("팀원 목록 응답은 배열이 아니라 members 를 가진 객체로 감싸진다.")
+    @Test
+    void getProjectMembers_wrapsMembersInObject() throws Exception {
+        // given
+        given(projectService.getProjectMembers(anyInt(), anyInt()))
+                .willReturn(List.of(memberResponse(10, "김오너", "owner@gmail.com", ProjectRole.OWNER)));
+
+        // when // then
+        mockMvc.perform(get("/api/projects/{projectId}/members", 1).session(loginSession(10)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isMap())
+                .andExpect(jsonPath("$.data.members").isArray());
+    }
+
+    @DisplayName("팀원 목록 조회의 경로 projectId와 세션의 로그인 회원 id가 서비스로 그대로 전달된다.")
+    @Test
+    void getProjectMembers_passesProjectIdAndLoginMemberId() throws Exception {
+        // given
+        given(projectService.getProjectMembers(anyInt(), anyInt())).willReturn(List.of());
+
+        // when
+        mockMvc.perform(get("/api/projects/{projectId}/members", 7).session(loginSession(10)))
+                .andExpect(status().isOk());
+
+        // then
+        then(projectService).should().getProjectMembers(eq(7), eq(10));
+    }
+
+    @DisplayName("세션이 아예 없으면 팀원 목록 조회에 401을 응답하고 서비스를 호출하지 않는다.")
+    @Test
+    void getProjectMembers_withoutSession() throws Exception {
+        // when // then
+        mockMvc.perform(get("/api/projects/{projectId}/members", 1))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.errorMessage").value("로그인이 필요합니다."));
+
+        then(projectService).should(never()).getProjectMembers(anyInt(), anyInt());
+    }
+
+    @DisplayName("참여하지 않은 프로젝트의 팀원 목록을 조회하면 404를 응답한다.")
+    @Test
+    void getProjectMembers_participantNotFound() throws Exception {
+        // given
+        given(projectService.getProjectMembers(anyInt(), anyInt()))
+                .willThrow(new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND));
+
+        // when // then
+        mockMvc.perform(get("/api/projects/{projectId}/members", 1).session(loginSession(10)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.errorCode").value("PROJECT_PARTICIPANT_NOT_FOUND"))
+                .andExpect(jsonPath("$.errorMessage").value("프로젝트에 참여 중인 회원이 아닙니다."));
+    }
+
+    @DisplayName("존재하지 않는 프로젝트의 팀원 목록을 조회하면 404를 응답한다.")
+    @Test
+    void getProjectMembers_projectNotFound() throws Exception {
+        // given
+        given(projectService.getProjectMembers(anyInt(), anyInt()))
+                .willThrow(new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
+
+        // when // then
+        mockMvc.perform(get("/api/projects/{projectId}/members", 999).session(loginSession(10)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.errorCode").value("PROJECT_NOT_FOUND"))
+                .andExpect(jsonPath("$.errorMessage").value("존재하지 않는 프로젝트입니다."));
+    }
+
+    @DisplayName("팀원 목록 조회의 projectId가 정수가 아니면 500이 아니라 400을 응답하고 서비스를 호출하지 않는다.")
+    @Test
+    void getProjectMembers_withNonIntegerProjectId() throws Exception {
+        // when // then
+        mockMvc.perform(get("/api/projects/{projectId}/members", "abc").session(loginSession(10)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+
+        then(projectService).should(never()).getProjectMembers(anyInt(), anyInt());
+    }
+
+    private ProjectMemberResponse memberResponse(int memberId, String name, String email, ProjectRole role) {
+        return new ProjectMemberResponse(memberId, name, email, role, LocalDateTime.of(2026, 7, 31, 1, 0));
     }
 
     private MockHttpSession loginSession(int memberId) {

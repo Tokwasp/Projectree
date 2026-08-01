@@ -6,15 +6,14 @@ import com.ssafy.projectree.domain.member.exception.AuthErrorCode;
 import com.ssafy.projectree.global.config.session.NaverOAuthProperties;
 import com.ssafy.projectree.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class NaverOAuthClient {
@@ -38,12 +37,12 @@ public class NaverOAuthClient {
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(requestMap)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, (request, errorResponse) -> {
+                    throw new CustomException(AuthErrorCode.NAVER_TOKEN_FAILED);
+                })
                 .body(NaverTokenResponse.class);
 
         if (response == null || response.isFailed()) {
-            log.warn("네이버 토큰 발급 실패 - error: {}, description: {}",
-                    response == null ? null : response.getError(),
-                    response == null ? null : response.getErrorDescription());
             throw new CustomException(AuthErrorCode.NAVER_TOKEN_FAILED);
         }
         return response;
@@ -54,12 +53,12 @@ public class NaverOAuthClient {
                 .uri(properties.getUserinfoUri())
                 .header(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + accessToken)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, (request, errorResponse) -> {
+                    throw new CustomException(AuthErrorCode.NAVER_PROFILE_FAILED);
+                })
                 .body(NaverUserInfoResponse.class);
 
         if (response == null || response.isFailed()) {
-            log.warn("네이버 프로필 조회 실패 - resultCode: {}, message: {}",
-                    response == null ? null : response.getResultCode(),
-                    response == null ? null : response.getMessage());
             throw new CustomException(AuthErrorCode.NAVER_PROFILE_FAILED);
         }
         return response;

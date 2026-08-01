@@ -7,11 +7,11 @@ import lombok.Getter;
 public class NodeCategoryResponseDto {
 
     private final int id;
-    private final String name;
+    private final String category;
 
     public NodeCategoryResponseDto(NodeCategory nodeCategory) {
         this.id = nodeCategory.getId();
-        this.name = nodeCategory.getCategory().name();
+        this.category = nodeCategory.getCategory().name();
     }
 
 }

@@ -3,10 +3,12 @@ package com.ssafy.projectree.domain.project.service;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.nodeCategory.entity.Category;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
+import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectCategory;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
+import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.exception.CustomException;
 import com.ssafy.projectree.global.exception.ProjectErrorCode;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -23,6 +26,7 @@ import java.util.Set;
 public class ProjectService {
     private final MemberRepository memberRepository;
     private final ProjectRepository projectRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     @Transactional
     public int createProject(ProjectCreateRequest request, int memberId) {
@@ -46,6 +50,31 @@ public class ProjectService {
         }
 
         projectRepository.delete(project);
+    }
+
+    @Transactional
+    public void leaveProject(int projectId, int memberId) {
+        Project project = findProject(projectId);
+
+        if (project.isNotParticipant(memberId)) {
+            throw new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND);
+        }
+
+        if (project.isOwner(memberId)) {
+            throw new CustomException(ProjectErrorCode.PROJECT_LEAVE_FORBIDDEN);
+        }
+
+        project.removeMember(memberId);
+    }
+
+    public List<ProjectMemberResponse> getProjectMembers(int projectId, int memberId) {
+        Project project = findProject(projectId);
+
+        if (project.isNotParticipant(memberId)) {
+            throw new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND);
+        }
+
+        return projectMemberRepository.findMemberResponsesByProjectId(projectId);
     }
 
     private void validateMember(int memberId) {
