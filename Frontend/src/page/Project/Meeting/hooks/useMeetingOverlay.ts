@@ -12,7 +12,7 @@ import {
 } from "../../../../utils/meetingSession";
 
 const MINI_WIDTH = 320;
-const MINI_HEIGHT = 240;
+const MINI_HEIGHT = 100;
 const MINI_MARGIN = 24;
 const DRAG_THRESHOLD = 4;
 
@@ -69,7 +69,6 @@ export const useMeetingOverlay = () => {
     return () => clearInterval(timer);
   }, [phase, startedAt]);
 
-  // 처음 미니 모드로 내려갈 때 우하단에 놓는다
   useEffect(() => {
     if (isImmersive || miniPos) return;
 
@@ -81,7 +80,6 @@ export const useMeetingOverlay = () => {
     );
   }, [isImmersive, miniPos, setMiniPos]);
 
-  // 창을 줄이면 화면 밖으로 나갈 수 있어 다시 가둔다
   useEffect(() => {
     const handleResize = () => {
       const current = useMeetingStore.getState().miniPos;
@@ -92,7 +90,6 @@ export const useMeetingOverlay = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, [setMiniPos]);
 
-  // 새로고침하면 세션을 복구할 수 없어 경고한다
   useEffect(() => {
     if (phase === "idle") return;
 
@@ -141,7 +138,6 @@ export const useMeetingOverlay = () => {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
-    // 움직이지 않았으면 클릭으로 보고 몰입 모드로 되돌린다
     if (!drag.moved) navigate(meetingPath);
   };
 
@@ -158,6 +154,10 @@ export const useMeetingOverlay = () => {
         await endMeeting(roomName);
       } catch (caught) {
         console.error("회의 종료 요청 실패:", caught);
+        window.alert(
+          "회의를 종료하지 못했습니다. 다른 참가자는 아직 회의 중입니다.",
+        );
+        return;
       }
     }
 

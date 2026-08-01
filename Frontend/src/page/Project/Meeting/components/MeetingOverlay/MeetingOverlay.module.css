@@ -5,20 +5,20 @@
   flex-direction: column;
   overflow: hidden;
   color: var(--color-white);
-  background: var(--color-gray-900);
+  background: var(--color-meeting-bg);
 }
 
-/* Outlet 영역에 정확히 겹친다 — 헤더 아래, 사이드바 오른쪽 */
 .immersive {
-  inset: var(--app-header-height) 0 0 var(--app-sidebar-width);
+  inset: 0 0 0 var(--app-sidebar-width);
+  border-left: 1px solid var(--color-meeting-border);
 }
 
-/* top/left를 0으로 두고 transform으로만 옮긴다 — 리페인트가 싸다 */
 .mini {
   top: 0;
   left: 0;
   width: 320px;
-  height: 240px;
+  height: auto;
+  border: 1px solid var(--color-meeting-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   transform: translate3d(var(--mini-x, 0), var(--mini-y, 0), 0);
@@ -30,43 +30,61 @@
 
 .header {
   display: flex;
+  flex: none;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-5);
   font-size: var(--text-sm);
-  border-bottom: 1px solid var(--color-gray-800);
+  border-bottom: 1px solid var(--color-meeting-border);
 }
 
 .mini .header {
+  padding: var(--space-2) var(--space-3);
   cursor: grab;
   touch-action: none;
 }
 
+.mini .controls {
+  padding: var(--space-2) var(--space-3);
+}
+
 .recording {
-  color: var(--color-error);
-  font-weight: var(--font-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-gray-300);
+  font-weight: var(--font-medium);
+}
+
+.recording::before {
+  width: var(--space-2);
+  height: var(--space-2);
+  background: var(--color-error);
+  border-radius: var(--radius-full);
+  content: "";
 }
 
 .roomName {
-  color: var(--color-gray-400);
+  color: var(--color-gray-500);
 }
 
 .meta {
   margin-left: auto;
-  color: var(--color-gray-300);
+  color: var(--color-gray-400);
 }
 
 .expand {
   padding: var(--space-1) var(--space-2);
   color: var(--color-white);
   font-size: var(--text-xs);
-  background: var(--color-gray-700);
-  border: none;
+  background: var(--color-meeting-panel);
+  border: 1px solid var(--color-meeting-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .soundBanner {
+  flex: none;
   padding: var(--space-2);
   color: var(--color-gray-900);
   font-size: var(--text-xs);
@@ -75,99 +93,187 @@
   cursor: pointer;
 }
 
-.stage {
+.stage,
+.stageSpotlight {
   display: flex;
   flex: 1;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  overflow-y: auto;
-}
-
-.videoGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--space-3);
-}
-
-/* 미니 모드에선 영상을 감춘다 — 언마운트가 아니라 숨기기만 해서 연결을 유지한다 */
-.mini .videoGrid {
-  display: none;
-}
-
-.videoGrid:empty {
-  display: none;
-}
-
-.videoTile {
-  position: relative;
+  min-height: 0;
+  padding: var(--space-4);
   overflow: hidden;
-  background: var(--color-gray-800);
+}
+
+.stage {
+  container-type: size;
+}
+
+.mini .stage,
+.mini .stageSpotlight {
+  display: none;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows, 1), minmax(0, 1fr));
+  gap: var(--space-3);
+  width: min(100%, calc(100cqh * var(--ratio, 1.778)));
+  aspect-ratio: var(--ratio, 1.778);
+  margin: auto;
+}
+
+.spotlight {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-gray-900);
+  border-radius: var(--radius-lg);
+}
+
+.spotlight video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.filmstrip {
+  display: grid;
+  flex: none;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: var(--space-3);
+  width: 220px;
+  min-height: 0;
+}
+
+.tile {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-gray-900);
   border-radius: var(--radius-md);
 }
 
-.videoTile video {
+.tile video {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
+  height: 100%;
+  object-fit: contain;
 }
 
 .mirrored {
   transform: scaleX(-1);
 }
 
-.videoLabel {
+.tileLabel {
   position: absolute;
   bottom: var(--space-2);
   left: var(--space-2);
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-xs);
-  background: var(--color-gray-900);
+  background: rgba(0, 0, 0, 0.55);
   border-radius: var(--radius-sm);
 }
 
-.roster {
+.screenThumb {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--color-gray-900);
+  border: 1px solid var(--color-meeting-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.screenThumb:hover,
+.screenThumb:focus-visible {
+  border-color: var(--color-primary);
+}
+
+.screenThumb video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.overflowCell {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+  background: var(--color-meeting-panel);
+  border-radius: var(--radius-md);
 }
 
 .controls {
   display: flex;
+  flex: none;
+  align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding: var(--space-3);
-  border-top: 1px solid var(--color-gray-800);
+  border-top: 1px solid var(--color-meeting-border);
 }
 
 .control,
 .controlActive,
-.controlOff,
-.leave,
-.finish {
-  padding: var(--space-2) var(--space-4);
+.controlDanger,
+.leave {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-10);
+  height: var(--space-10);
+  padding: 0;
   color: var(--color-white);
-  font-size: var(--text-xs);
-  background: var(--color-gray-700);
-  border: none;
-  border-radius: var(--radius-md);
+  background: var(--color-meeting-panel);
+  border: 1px solid var(--color-meeting-border);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: background var(--transition-fast);
 }
 
+.control:hover,
+.leave:hover {
+  background: var(--color-gray-700);
+}
+
 .controlActive {
   background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
-.controlOff {
-  background: var(--color-gray-500);
+.controlDanger {
+  background: var(--color-error);
+  border-color: var(--color-error);
 }
 
-.leave {
-  background: var(--color-gray-600);
+.controlDanger:hover,
+.finish:hover {
+  filter: brightness(0.92);
 }
 
 .finish {
+  margin-left: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-white);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   background: var(--color-error);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }

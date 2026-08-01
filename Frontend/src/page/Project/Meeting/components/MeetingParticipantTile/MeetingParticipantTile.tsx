@@ -1,7 +1,7 @@
 import style from "./MeetingParticipantTile.module.css";
+import { MicOffIcon } from "../MeetingIcons";
 import type { MeetingParticipant } from "../../../../../store/meetingStore";
 
-// 색은 토큰만 사용한다
 const AVATAR_COLORS = [
   "var(--color-primary)",
   "var(--color-info)",
@@ -33,9 +33,13 @@ export default function MeetingParticipantTile({
     <div className={speaking ? style.tileSpeaking : style.tile}>
       <div className={style.avatar} style={{ background: colorFor(identity) }}>
         {name.trim().slice(0, 2) || "?"}
-        {!micOn && <span className={style.muted}>음소거</span>}
       </div>
       <span className={style.name}>
+        {!micOn && (
+          <span className={style.muted} title="음소거됨">
+            <MicOffIcon />
+          </span>
+        )}
         {name}
         {isLocal && " (나)"}
       </span>

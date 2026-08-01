@@ -7,12 +7,17 @@ export interface MeetingParticipant {
   name: string;
   isLocal: boolean;
   micOn: boolean;
+  camOn: boolean;
 }
+
+export type MeetingTileKind = "camera" | "screen";
 
 export interface MeetingVideoTile {
   id: string;
   label: string;
   mirrored: boolean;
+  kind: MeetingTileKind;
+  identity: string;
 }
 
 export interface MeetingMiniPosition {
