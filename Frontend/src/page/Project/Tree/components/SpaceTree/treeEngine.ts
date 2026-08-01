@@ -48,6 +48,29 @@ function sphereDirections(count: number, seed: number): Vector3[] {
   });
 }
 
+/** 2D 배치용 — 루트의 자식을 XY 평면의 원 위에 둔다. */
+function circleDirections(count: number, seed: number): Vector3[] {
+  return Array.from({ length: count }, (_, index) => {
+    const angle = seed * TAU + (TAU * index) / count;
+    return new Vector3(Math.cos(angle), Math.sin(angle), 0);
+  });
+}
+
+/** 2D 배치용 — 바깥 방향을 중심으로 XY 평면 부채꼴에 펼친다. */
+function fanDirections(
+  outward: Vector3,
+  spread: number,
+  count: number,
+): Vector3[] {
+  const base = Math.atan2(outward.y, outward.x);
+  const slice = spread / count;
+
+  return Array.from({ length: count }, (_, index) => {
+    const angle = base - spread / 2 + slice * (index + 0.5);
+    return new Vector3(Math.cos(angle), Math.sin(angle), 0);
+  });
+}
+
 /** 그 아래는 부모에서 자기까지의 방향을 축으로 하는 원뿔면에 둘러 놓는다. */
 function coneDirections(
   outward: Vector3,
@@ -115,7 +138,7 @@ function ringRadius(
  * 자기까지의 방향을 축으로 하는 원뿔면에 배치되어 어느 각도에서 봐도 입체로 보인다.
  * 각 노드는 부모 기준 오프셋만 들고 있고, 월드 좌표는 런타임이 매 프레임 계산한다.
  */
-export function buildTree(input: TreeNodeInput): FlatTree {
+export function buildTree(input: TreeNodeInput, planar = false): FlatTree {
   const order: FlatTreeNode[] = [];
   const edges: TreeEdge[] = [];
   const byType: Record<NodeType, FlatTreeNode[]> = {
@@ -157,9 +180,13 @@ export function buildTree(input: TreeNodeInput): FlatTree {
     const isRoot = parent === undefined;
     const seed = hash01(node.id);
     const childSpread = Math.min(spread, MAX_CHILD_SPREAD);
-    const directions = isRoot
-      ? sphereDirections(children.length, seed)
-      : coneDirections(outward, childSpread, children.length, seed);
+    const directions = planar
+      ? isRoot
+        ? circleDirections(children.length, seed)
+        : fanDirections(outward, childSpread, children.length)
+      : isRoot
+        ? sphereDirections(children.length, seed)
+        : coneDirections(outward, childSpread, children.length, seed);
 
     const radius = ringRadius(node.type, children, directions);
 
@@ -210,6 +237,11 @@ export interface NodeRuntimeState {
 export interface TreeRuntime {
   nodeStates: Map<string, NodeRuntimeState>;
   order: string[];
+  /**
+   * 목표 위치만 갈아끼운다. 노드를 순간이동시키지 않고 스프링이 새 위치로 끌고 가므로,
+   * 2D/3D 전환이 그대로 이동 모션이 된다.
+   */
+  applyLayout: (next: FlatTree) => void;
   beginDrag: (id: string) => void;
   updateDragPoint: (point: Vector3) => void;
   endDrag: () => void;
@@ -231,7 +263,9 @@ export function useTreeRuntime(flat: FlatTree): TreeRuntime {
         id: node.id,
         type: node.type,
         parentId: node.parentId,
-        localOffset: node.localOffset,
+        // 반드시 복사해야 한다 — 그대로 참조하면 applyLayout의 copy가
+        // 원본 배치(flat)를 덮어써서 되돌아갈 곳이 사라진다
+        localOffset: node.localOffset.clone(),
         current: worldPos,
         velocity: new Vector3(),
       });
@@ -276,17 +310,26 @@ export function useTreeRuntime(flat: FlatTree): TreeRuntime {
     }
   }, 0);
 
-  return {
-    nodeStates,
-    order,
-    beginDrag: (id) => {
-      draggingIdRef.current = id;
-      const state = nodeStates.get(id);
-      if (state) dragTargetRef.current.copy(state.current);
-    },
-    updateDragPoint: (point) => dragTargetRef.current.copy(point),
-    endDrag: () => {
-      draggingIdRef.current = null;
-    },
-  };
+  // 참조가 매 렌더 바뀌면 이걸 의존성으로 쓰는 effect가 계속 다시 돈다
+  return useMemo(
+    () => ({
+      nodeStates,
+      order,
+      applyLayout: (next: FlatTree) => {
+        for (const node of next.order) {
+          nodeStates.get(node.id)?.localOffset.copy(node.localOffset);
+        }
+      },
+      beginDrag: (id: string) => {
+        draggingIdRef.current = id;
+        const state = nodeStates.get(id);
+        if (state) dragTargetRef.current.copy(state.current);
+      },
+      updateDragPoint: (point: Vector3) => dragTargetRef.current.copy(point),
+      endDrag: () => {
+        draggingIdRef.current = null;
+      },
+    }),
+    [nodeStates, order],
+  );
 }

@@ -1,9 +1,4 @@
 import type { TreeNodeInput } from "../page/Project/Tree/components/SpaceTree";
-
-/**
- * 노드 API가 붙기 전까지 우주 공간을 확인하기 위한 샘플 트리.
- * 계층은 root(프로젝트) → category(6종 고정) → decision → task → issue 다.
- */
 export const mockProjectTree: TreeNodeInput = {
   id: "root",
   type: "root",

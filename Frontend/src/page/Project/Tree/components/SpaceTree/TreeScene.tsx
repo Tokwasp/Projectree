@@ -27,11 +27,18 @@ const PLANET_TYPES = ["category", "decision", "task", "issue"] as const;
 interface TreeSceneProps {
   data: TreeNodeInput;
   controlsRef: OrbitControlsRef;
+  is2D: boolean;
 }
 
-export function TreeScene({ data, controlsRef }: TreeSceneProps) {
+export function TreeScene({ data, controlsRef, is2D }: TreeSceneProps) {
   const flat = useMemo(() => buildTree(data), [data]);
+  const planar = useMemo(() => buildTree(data, true), [data]);
   const runtime = useTreeRuntime(flat);
+
+  // 목표만 바꾸면 스프링이 새 배치까지 끌고 간다 — 순간이동이 아니라 이동 모션이 된다
+  useEffect(() => {
+    runtime.applyLayout(is2D ? planar : flat);
+  }, [is2D, flat, planar, runtime]);
 
   return (
     <>

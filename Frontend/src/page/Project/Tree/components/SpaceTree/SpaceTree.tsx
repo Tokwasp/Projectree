@@ -1,9 +1,9 @@
 import { OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { MOUSE } from "three";
+import { MOUSE, Vector3 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import {
   CAMERA,
@@ -51,7 +51,7 @@ export function SpaceTree({ data }: SpaceTreeProps) {
           decay={2}
         />
 
-        <TreeScene data={data} controlsRef={controlsRef} />
+        <TreeScene data={data} controlsRef={controlsRef} is2D={is2D} />
 
         <OrbitControls
           ref={controlsRef}
@@ -86,9 +86,16 @@ export function SpaceTree({ data }: SpaceTreeProps) {
   );
 }
 
+interface CameraPose {
+  position: Vector3;
+  target: Vector3;
+}
+
 /**
- * 2D로 들어가면 카메라를 Z축 정면으로 스냅하고 회전을 잠근다 — 카메라 타입을 바꾸지
- * 않고도 평면 그래프처럼 읽힌다. 3D로 나오면 회전만 다시 켠다.
+ * 2D 전환의 본체는 노드 재배치(TreeScene)다. 여기서는 카메라만 거든다 —
+ * 평면을 옆에서 보면 선으로만 보이므로 정면 쪽으로 부드럽게 이동시키고,
+ * 3D로 돌아올 때는 2D로 들어가기 직전의 시점으로 되돌린다.
+ * 회전을 잠그지는 않으므로 전환 후에도 자유롭게 돌려볼 수 있다.
  */
 function ViewModeController({
   is2D,
@@ -97,25 +104,68 @@ function ViewModeController({
   is2D: boolean;
   controlsRef: OrbitControlsRef;
 }) {
+  const goalRef = useRef<CameraPose | null>(null);
+  /** 2D로 들어가기 직전의 시점. 3D로 돌아올 때 여기로 복귀한다 */
+  const savedRef = useRef<CameraPose | null>(null);
+
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls) return;
 
-    if (is2D) {
-      const camera = controls.object;
-      const distance = camera.position.distanceTo(controls.target);
-      camera.up.set(0, 1, 0);
-      camera.position.set(
+    if (!is2D) {
+      goalRef.current = savedRef.current;
+      savedRef.current = null;
+      return;
+    }
+
+    const camera = controls.object;
+    savedRef.current = {
+      position: camera.position.clone(),
+      target: controls.target.clone(),
+    };
+
+    const distance = camera.position.distanceTo(controls.target);
+    camera.up.set(0, 1, 0);
+    goalRef.current = {
+      position: new Vector3(
         controls.target.x,
         controls.target.y,
         controls.target.z + distance,
-      );
-      controls.enableRotate = false;
-    } else {
-      controls.enableRotate = true;
-    }
-    controls.update();
+      ),
+      target: controls.target.clone(),
+    };
   }, [is2D, controlsRef]);
+
+  // 이동 중에 사용자가 회전·줌을 시작하면 카메라를 놓아준다.
+  // 안 그러면 OrbitControls가 옮긴 위치를 다음 프레임에 lerp가 덮어써 서로 밀고 당긴다
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    const release = () => {
+      goalRef.current = null;
+    };
+
+    controls.addEventListener("start", release);
+    return () => controls.removeEventListener("start", release);
+  }, [controlsRef]);
+
+  useFrame((_, delta) => {
+    const controls = controlsRef.current;
+    const goal = goalRef.current;
+    if (!controls || !goal) return;
+
+    // 프레임레이트가 달라도 같은 속도로 붙도록 delta로 보간한다.
+    // 시선(target)까지 같이 옮겨야 팬으로 옮겨둔 화면도 제대로 복귀한다
+    const step = Math.min(1, delta * 3.5);
+    controls.object.position.lerp(goal.position, step);
+    controls.target.lerp(goal.target, step);
+    controls.update();
+
+    if (controls.object.position.distanceTo(goal.position) < 0.05) {
+      goalRef.current = null;
+    }
+  });
 
   return null;
 }
@@ -146,7 +196,7 @@ function ViewModeToggle({
         ...UI_SURFACE,
       }}
     >
-      {is2D ? "3D로 보기" : "2D로 보기"}
+      {is2D ? "3D로 보기" : "펼쳐 보기"}
     </button>
   );
 }
@@ -224,7 +274,9 @@ function ZoomControl({ controlsRef }: { controlsRef: OrbitControlsRef }) {
           onPointerDown={() => (draggingRef.current = true)}
           onPointerUp={() => (draggingRef.current = false)}
           onChange={(event) =>
-            setDistance(MAX_DISTANCE + MIN_DISTANCE - Number(event.target.value))
+            setDistance(
+              MAX_DISTANCE + MIN_DISTANCE - Number(event.target.value),
+            )
           }
           style={{
             position: "absolute",

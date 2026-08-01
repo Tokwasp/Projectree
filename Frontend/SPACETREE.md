@@ -1208,7 +1208,7 @@ function ViewModeToggle({
         ...UI_SURFACE,
       }}
     >
-      {is2D ? "3D로 보기" : "2D로 보기"}
+      {is2D ? "3D로 보기" : "펼쳐 보기"}
     </button>
   );
 }
