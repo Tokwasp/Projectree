@@ -4,6 +4,9 @@ import { Vector3 } from "three";
 import {
   CHILD_RING_BASE_RADIUS,
   CHILD_RING_RADIUS_PER_EXTRA_CHILD,
+  MAX_CHILD_SPREAD,
+  MIN_CHILD_SPREAD,
+  MIN_SIBLING_GAP,
   NODE_VISUALS,
   SPRING_BY_TYPE,
   type FlatTreeNode,
@@ -30,9 +33,28 @@ function hash01(id: string): number {
   return (h % 1000) / 1000;
 }
 
-function ringRadius(parentType: NodeType, childCount: number): number {
-  const extra = Math.max(0, childCount - 3) * CHILD_RING_RADIUS_PER_EXTRA_CHILD;
-  return CHILD_RING_BASE_RADIUS + NODE_VISUALS[parentType].radius + extra;
+/**
+ * 자식을 놓을 원의 반지름. 부채꼴이 좁으면 기본 반지름으로는 형제가 서로 닿으므로,
+ * 이웃 사이 간격이 MIN_SIBLING_GAP 이상이 되는 거리까지 밀어낸다.
+ */
+function ringRadius(
+  parentType: NodeType,
+  children: TreeNodeInput[],
+  spread: number,
+): number {
+  const extra =
+    Math.max(0, children.length - 3) * CHILD_RING_RADIUS_PER_EXTRA_CHILD;
+  const base = CHILD_RING_BASE_RADIUS + NODE_VISUALS[parentType].radius + extra;
+
+  if (children.length < 2) return base;
+
+  const slice = spread / children.length;
+  const widest = Math.max(
+    ...children.map((child) => NODE_VISUALS[child.type].radius),
+  );
+  const needed = (widest + MIN_SIBLING_GAP / 2) / Math.sin(slice / 2);
+
+  return Math.max(base, needed);
 }
 
 /**
@@ -51,10 +73,16 @@ export function buildTree(input: TreeNodeInput): FlatTree {
     issue: [],
   };
 
+  /**
+   * outward: 부모에서 이 노드로 향하는 방향(라디안). 자식은 이 방향을 중심으로만 뻗는다.
+   * spread: 이 노드가 자식에게 쓸 수 있는 부채꼴 폭.
+   */
   const visit = (
     node: TreeNodeInput,
     worldPos: Vector3,
     parent: { id: string; worldPos: Vector3 } | undefined,
+    outward: number,
+    spread: number,
   ) => {
     const flat: FlatTreeNode = {
       id: node.id,
@@ -72,11 +100,18 @@ export function buildTree(input: TreeNodeInput): FlatTree {
     const children = node.children ?? [];
     if (children.length === 0) return;
 
-    const radius = ringRadius(node.type, children.length);
-    const rotationOffset = hash01(node.id) * TAU;
+    // 루트만 360도를 나눠 쓴다 — 위로 올라갈 부모가 없어 되돌아올 걱정이 없다
+    const isRoot = parent === undefined;
+    const childSpread = isRoot ? TAU : Math.min(spread, MAX_CHILD_SPREAD);
+    const radius = ringRadius(node.type, children, childSpread);
+    const slice = childSpread / children.length;
+    // 루트에서만 해시로 전체를 회전시킨다. 아래 단계는 바깥 방향에 고정돼야 일관적이다
+    const start = isRoot
+      ? hash01(node.id) * TAU
+      : outward - childSpread / 2;
 
     children.forEach((child, index) => {
-      const angle = rotationOffset + (TAU * index) / children.length;
+      const angle = start + slice * (index + 0.5);
       const zJitter =
         Math.sin(angle * 2 + hash01(child.id) * 10) * radius * 0.18;
       const childWorldPos = new Vector3(
@@ -84,11 +119,18 @@ export function buildTree(input: TreeNodeInput): FlatTree {
         worldPos.y + Math.sin(angle) * radius,
         worldPos.z + zJitter,
       );
-      visit(child, childWorldPos, { id: node.id, worldPos });
+      // 부채꼴이 계속 반으로 쪼개지면 반지름만 커지므로 하한을 둔다
+      visit(
+        child,
+        childWorldPos,
+        { id: node.id, worldPos },
+        angle,
+        Math.max(slice, MIN_CHILD_SPREAD),
+      );
     });
   };
 
-  visit(input, new Vector3(0, 0, 0), undefined);
+  visit(input, new Vector3(0, 0, 0), undefined, 0, TAU);
 
   return { rootId: input.id, order, byType, edges };
 }

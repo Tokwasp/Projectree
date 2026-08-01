@@ -90,6 +90,16 @@ export const SPRING_BY_TYPE: Record<NodeType, SpringConfig> = {
 export const CHILD_RING_BASE_RADIUS = 2.4;
 export const CHILD_RING_RADIUS_PER_EXTRA_CHILD = 0.75;
 
+/**
+ * 루트를 뺀 노드는 "부모에서 자기까지의 방향"을 중심으로 이 각도 안에서만 자식을 뻗는다.
+ * 360도로 퍼뜨리면 자식이 루트 쪽으로 되돌아와 이웃 가지와 겹친다.
+ */
+export const MAX_CHILD_SPREAD = Math.PI * (2 / 3);
+/** 부채꼴이 계속 좁아지면 반지름만 커지므로 하한을 둔다. */
+export const MIN_CHILD_SPREAD = Math.PI * (2 / 9);
+/** 형제 노드 표면 사이 최소 여유. 부채꼴이 좁으면 반지름을 키워 이만큼을 확보한다. */
+export const MIN_SIBLING_GAP = 0.7;
+
 export const EDGE_COLOR = "#7fd8ff";
 
 export interface LabelFadeRange {

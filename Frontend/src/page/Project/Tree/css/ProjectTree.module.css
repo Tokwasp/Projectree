@@ -20,9 +20,10 @@
 }
 
 /* 실제 노드 데이터가 아니라는 걸 화면에서 바로 알 수 있어야 한다 */
+/* 좌상단은 카테고리 필터가 쓰므로 좌하단에 둔다 */
 .mockBadge {
   position: absolute;
-  top: var(--space-6);
+  bottom: var(--space-6);
   left: var(--space-6);
   z-index: 20;
   padding: var(--space-1) var(--space-3);
