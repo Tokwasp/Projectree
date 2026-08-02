@@ -40,6 +40,17 @@ app:
     silence-threshold: ${AUDIO_SILENCE_THRESHOLD:-30dB}
     min-silence-duration: ${AUDIO_MIN_SILENCE_DURATION:500ms}
     analyze-timeout: ${AUDIO_ANALYZE_TIMEOUT:2m}
+  ai:
+    gms:
+      base-url: ${GMS_BASE_URL:}
+      api-key: ${GMS_API_KEY:}
+      model: ${GMS_MODEL:gpt-5.4-mini}
+      transcribe-model: ${GMS_TRANSCRIBE_MODEL:whisper-1}
+      max-upload-bytes: ${GMS_MAX_UPLOAD_BYTES:24000000}
+      timeout: ${GMS_TIMEOUT:300s}
+    audio:
+      max-seconds: ${AI_AUDIO_MAX_SECONDS:1200}
+      convert-timeout: ${AI_AUDIO_CONVERT_TIMEOUT:5m}
 
 server:
   port: ${SERVER_PORT:8080}
