@@ -1,9 +1,9 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { MOUSE, Vector3 } from "three";
+import { MOUSE, Vector3, type PerspectiveCamera } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import {
   CAMERA,
@@ -14,6 +14,7 @@ import {
   type TreeNodeInput,
 } from "./config";
 import { TreeScene } from "./TreeScene";
+import { boundingRadius, buildTree } from "./treeEngine";
 
 /**
  * 마운트하는 단 하나의 컴포넌트. Canvas, 카메라·컨트롤, Bloom, 오버레이 UI를 소유한다.
@@ -30,6 +31,12 @@ interface SpaceTreeProps {
 export function SpaceTree({ data }: SpaceTreeProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const [is2D, setIs2D] = useState(false);
+
+  const flat = useMemo(() => buildTree(data), [data]);
+  const planar = useMemo(() => buildTree(data, true), [data]);
+
+  // 평면 배치는 3D보다 훨씬 넓게 퍼진다 — 전환할 때 카메라를 여기에 맞춰야 잘리지 않는다
+  const planarRadius = useMemo(() => boundingRadius(planar), [planar]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
@@ -51,7 +58,12 @@ export function SpaceTree({ data }: SpaceTreeProps) {
           decay={2}
         />
 
-        <TreeScene data={data} controlsRef={controlsRef} is2D={is2D} />
+        <TreeScene
+          flat={flat}
+          planar={planar}
+          controlsRef={controlsRef}
+          is2D={is2D}
+        />
 
         <OrbitControls
           ref={controlsRef}
@@ -66,7 +78,11 @@ export function SpaceTree({ data }: SpaceTreeProps) {
             RIGHT: MOUSE.PAN,
           }}
         />
-        <ViewModeController is2D={is2D} controlsRef={controlsRef} />
+        <ViewModeController
+          is2D={is2D}
+          controlsRef={controlsRef}
+          fitRadius={planarRadius}
+        />
 
         {/* 셰이더의 발광을 실제로 빛나게 만든다 */}
         <EffectComposer multisampling={4}>
@@ -91,12 +107,21 @@ interface CameraPose {
   target: Vector3;
 }
 
+/** 반지름 radius인 구가 화면에 다 들어오는 카메라 거리 */
+function fitDistance(camera: PerspectiveCamera, radius: number): number {
+  const halfFov = (camera.fov * Math.PI) / 360;
+  const byHeight = radius / Math.tan(halfFov);
+  return Math.max(byHeight, byHeight / camera.aspect) * 1.1;
+}
+
 function ViewModeController({
   is2D,
   controlsRef,
+  fitRadius,
 }: {
   is2D: boolean;
   controlsRef: OrbitControlsRef;
+  fitRadius: number;
 }) {
   const goalRef = useRef<CameraPose | null>(null);
   const savedRef = useRef<CameraPose | null>(null);
@@ -106,28 +131,31 @@ function ViewModeController({
     if (!controls) return;
 
     if (!is2D) {
+      controls.maxDistance = CAMERA.MAX_DISTANCE;
       goalRef.current = savedRef.current;
       savedRef.current = null;
       return;
     }
 
-    const camera = controls.object;
+    const camera = controls.object as PerspectiveCamera;
     savedRef.current = {
       position: camera.position.clone(),
       target: controls.target.clone(),
     };
 
-    const distance = camera.position.distanceTo(controls.target);
+    // 평면 배치는 원점 기준으로 퍼지므로 시선도 원점으로 되돌려야 한쪽이 잘리지 않는다
+    const target = new Vector3(0, 0, 0);
+    const distance = fitDistance(camera, fitRadius);
+
+    // 기본 상한(70)으로는 못 담는 트리도 있다 — 그때만 상한을 늘린다
+    controls.maxDistance = Math.max(CAMERA.MAX_DISTANCE, distance);
     camera.up.set(0, 1, 0);
+
     goalRef.current = {
-      position: new Vector3(
-        controls.target.x,
-        controls.target.y,
-        controls.target.z + distance,
-      ),
-      target: controls.target.clone(),
+      position: new Vector3(target.x, target.y, target.z + distance),
+      target,
     };
-  }, [is2D, controlsRef]);
+  }, [is2D, controlsRef, fitRadius]);
 
   // 이동 중에 사용자가 회전·줌을 시작하면 카메라를 놓아준다.
   // 안 그러면 OrbitControls가 옮긴 위치를 다음 프레임에 lerp가 덮어써 서로 밀고 당긴다

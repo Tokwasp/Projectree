@@ -5,17 +5,12 @@ import * as THREE from "three";
 import {
   EDGE_COLOR,
   LABEL_FADE_DISTANCE,
-  LABEL_KEEP_DISTANCE_RATIO,
-  LABEL_KEEP_MARGIN,
-  LABEL_REFRESH_INTERVAL,
-  MAX_VISIBLE_LABELS,
   NODE_VISUALS,
   SPACE,
   UI_FONT,
   type FlatTreeNode,
   type OrbitControlsRef,
   type TreeEdge,
-  type TreeNodeInput,
 } from "./config";
 import {
   nodeVertexShader,
@@ -24,19 +19,29 @@ import {
   starfieldFragmentShader,
   starfieldVertexShader,
 } from "./shaders";
-import { buildTree, useTreeRuntime, type TreeRuntime } from "./treeEngine";
+import {
+  useTreeRuntime,
+  type FlatTree,
+  type TreeRuntime,
+} from "./treeEngine";
 
 const PLANET_TYPES = ["category", "decision", "task", "issue"] as const;
 
 interface TreeSceneProps {
-  data: TreeNodeInput;
+  /** 기본(3D) 배치 */
+  flat: FlatTree;
+  /** "펼쳐 보기"용 평면 배치 */
+  planar: FlatTree;
   controlsRef: OrbitControlsRef;
   is2D: boolean;
 }
 
-export function TreeScene({ data, controlsRef, is2D }: TreeSceneProps) {
-  const flat = useMemo(() => buildTree(data), [data]);
-  const planar = useMemo(() => buildTree(data, true), [data]);
+export function TreeScene({
+  flat,
+  planar,
+  controlsRef,
+  is2D,
+}: TreeSceneProps) {
   const runtime = useTreeRuntime(flat);
 
   // 목표만 바꾸면 스프링이 새 배치까지 끌고 간다 — 순간이동이 아니라 이동 모션이 된다
@@ -54,7 +59,9 @@ export function TreeScene({ data, controlsRef, is2D }: TreeSceneProps) {
           <PlanetNodes key={type} nodes={flat.byType[type]} runtime={runtime} />
         ) : null,
       )}
-      <VisibleNodeLabels nodes={flat.order} runtime={runtime} />
+      {flat.order.map((node) => (
+        <NodeLabel key={node.id} node={node} runtime={runtime} />
+      ))}
     </>
   );
 }
@@ -304,100 +311,10 @@ function RootNode({
 }
 
 /**
- * 라벨만 DOM이라 노드 수에 비례해 무거워진다. 그래서 전부 만들지 않고,
- * "화면 안에 있고 + 가까운" 것만 골라 그 개수를 상한으로 묶는다.
- * 고른 목록이 바뀔 때만 리렌더하므로 노드가 몇 개든 DOM 비용이 일정하다.
+ * 노드 아래에 떠 있는 제목 태그. 위치와 투명도를 물리 상태에서 직접 갱신하므로
+ * 리렌더 없이 드래그와 스프링 모션을 따라간다. 카메라가 멀어지면 타입별로 순서대로
+ * 사라져(LABEL_FADE_DISTANCE) 줌아웃할 때 화면이 정리된다.
  */
-function VisibleNodeLabels({
-  nodes,
-  runtime,
-}: {
-  nodes: FlatTreeNode[];
-  runtime: TreeRuntime;
-}) {
-  const { camera } = useThree();
-  const [visibleIds, setVisibleIds] = useState<string[]>([]);
-
-  const nodeById = useMemo(
-    () => new Map(nodes.map((node) => [node.id, node])),
-    [nodes],
-  );
-
-  const nextCheckRef = useRef(0);
-  const frustum = useMemo(() => new THREE.Frustum(), []);
-  const projection = useMemo(() => new THREE.Matrix4(), []);
-  const probe = useMemo(() => new THREE.Sphere(), []);
-
-  useFrame(({ clock }) => {
-    if (clock.elapsedTime < nextCheckRef.current) return;
-    nextCheckRef.current = clock.elapsedTime + LABEL_REFRESH_INTERVAL;
-
-    projection.multiplyMatrices(
-      camera.projectionMatrix,
-      camera.matrixWorldInverse,
-    );
-    frustum.setFromProjectionMatrix(projection);
-
-    // 새로 넣을 후보(엄격)와 이미 있는 것을 유지할 후보(느슨)를 따로 모은다
-    const entering: { id: string; distance: number }[] = [];
-    const keepable = new Set<string>();
-
-    for (const node of nodes) {
-      const state = runtime.nodeStates.get(node.id);
-      if (!state) continue;
-
-      const distance = camera.position.distanceTo(state.current);
-      const fadeEnd = LABEL_FADE_DISTANCE[node.type].end;
-      const radius = NODE_VISUALS[node.type].radius;
-
-      probe.set(state.current, radius + LABEL_KEEP_MARGIN);
-      if (
-        distance >= fadeEnd * LABEL_KEEP_DISTANCE_RATIO ||
-        !frustum.intersectsSphere(probe)
-      ) {
-        continue;
-      }
-      keepable.add(node.id);
-
-      // 점이 아니라 노드 크기만큼의 구로 판정해야 화면 가장자리에서 라벨이 끊기지 않는다
-      probe.set(state.current, radius + 1);
-      if (distance < fadeEnd && frustum.intersectsSphere(probe)) {
-        entering.push({ id: node.id, distance });
-      }
-    }
-
-    entering.sort((a, b) => a.distance - b.distance);
-
-    setVisibleIds((prev) => {
-      // 유지 대상을 먼저 채워야 상한에 걸릴 때 기존 라벨이 밀려나지 않는다
-      const kept = prev.filter((id) => keepable.has(id));
-      const keptIds = new Set(kept);
-      const added = entering
-        .map((candidate) => candidate.id)
-        .filter((id) => !keptIds.has(id));
-
-      // 정렬을 고정해야 카메라가 움직일 때마다 순서만 바뀌어 리렌더되는 일이 없다
-      const next = [...kept, ...added].slice(0, MAX_VISIBLE_LABELS).sort();
-
-      return prev.length === next.length &&
-        prev.every((id, index) => id === next[index])
-        ? prev
-        : next;
-    });
-  }, 1);
-
-  return (
-    <>
-      {visibleIds.map((id) => {
-        const node = nodeById.get(id);
-        return node ? (
-          <NodeLabel key={id} node={node} runtime={runtime} />
-        ) : null;
-      })}
-    </>
-  );
-}
-
 function NodeLabel({
   node,
   runtime,
@@ -407,26 +324,32 @@ function NodeLabel({
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const lastOpacityRef = useRef(-1);
   const visual = NODE_VISUALS[node.type];
   const fadeRange = LABEL_FADE_DISTANCE[node.type];
   const { camera } = useThree();
 
   useFrame(() => {
     const state = runtime.nodeStates.get(node.id);
-    if (!state || !groupRef.current) return;
+    const wrapper = wrapperRef.current;
+    if (!state || !groupRef.current || !wrapper) return;
 
     groupRef.current.position.copy(state.current);
     groupRef.current.position.y -= visual.radius + 0.35;
 
-    // 멀어져 사라지는 것은 VisibleNodeLabels가 언마운트로 처리한다.
-    // 여기서는 사라지기 직전 구간이 뚝 끊기지 않도록 투명도만 낮춘다
     const distance = camera.position.distanceTo(state.current);
     const opacity =
       1 - THREE.MathUtils.smoothstep(distance, fadeRange.start, fadeRange.end);
-    if (wrapperRef.current) {
-      wrapperRef.current.style.opacity = opacity.toString();
+
+    // 대부분의 프레임에서 값이 그대로다. 매번 쓰면 라벨 수만큼 스타일 재계산이 걸린다
+    if (Math.abs(opacity - lastOpacityRef.current) > 0.01) {
+      lastOpacityRef.current = opacity;
+      wrapper.style.opacity = opacity.toString();
+      wrapper.style.display = opacity < 0.02 ? "none" : "block";
     }
   }, 1);
+
+  const glowColor = visual.glowColor;
 
   return (
     <group ref={groupRef}>
@@ -454,8 +377,8 @@ function NodeLabel({
               height: 6,
               margin: "0 auto 4px",
               borderRadius: "50%",
-              background: visual.glowColor,
-              boxShadow: `0 0 6px 1px ${visual.glowColor}`,
+              background: glowColor,
+              boxShadow: `0 0 6px 1px ${glowColor}`,
             }}
           />
           <div
@@ -465,9 +388,11 @@ function NodeLabel({
               maxWidth: 160,
               padding: "3px 9px",
               borderRadius: 999,
-              background: "rgba(6, 8, 20, 0.55)",
-              border: `1px solid ${visual.glowColor}66`,
-              backdropFilter: "blur(3px)",
+              // backdrop-filter는 요소마다 뒤 배경을 다시 샘플링해 블러한다.
+              // 캔버스 위에서 움직이는 라벨 100개에 걸면 합성 비용이 감당이 안 된다 —
+              // 배경을 더 불투명하게 해서 같은 가독성을 얻는다
+              background: "rgba(6, 8, 20, 0.82)",
+              border: `1px solid ${glowColor}66`,
               color: "#f2f4ff",
               fontSize: 11,
               fontFamily: UI_FONT,
@@ -477,7 +402,6 @@ function NodeLabel({
               whiteSpace: "normal",
               wordBreak: "keep-all",
               overflowWrap: "break-word",
-              textShadow: `0 0 8px ${visual.glowColor}55`,
             }}
           >
             {node.title}

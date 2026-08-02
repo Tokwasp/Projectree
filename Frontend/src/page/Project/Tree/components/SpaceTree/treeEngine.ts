@@ -225,6 +225,24 @@ export function buildTree(input: TreeNodeInput, planar = false): FlatTree {
   return { rootId: input.id, order, byType, edges };
 }
 
+/** 원점에서 가장 먼 노드까지의 거리. 카메라를 트리에 맞출 때 쓴다. */
+export function boundingRadius(flat: FlatTree): number {
+  const positions = new Map<string, Vector3>();
+  let max = 0;
+
+  for (const node of flat.order) {
+    const parent = node.parentId ? positions.get(node.parentId) : undefined;
+    const world = parent
+      ? parent.clone().add(node.localOffset)
+      : node.localOffset.clone();
+
+    positions.set(node.id, world);
+    max = Math.max(max, world.length());
+  }
+
+  return max;
+}
+
 export interface NodeRuntimeState {
   id: string;
   type: NodeType;

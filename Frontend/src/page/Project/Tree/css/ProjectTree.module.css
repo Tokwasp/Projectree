@@ -20,11 +20,12 @@
 }
 
 /* 실제 노드 데이터가 아니라는 걸 화면에서 바로 알 수 있어야 한다 */
-/* 좌상단은 카테고리 필터가 쓰므로 좌하단에 둔다 */
+/* 좌상단은 카테고리 필터, 좌하단은 범례, 우측은 2D 토글·줌이 쓴다 — 상단 가운데로 */
 .mockBadge {
   position: absolute;
-  bottom: var(--space-6);
-  left: var(--space-6);
+  top: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 20;
   padding: var(--space-1) var(--space-3);
   color: var(--color-warning);
