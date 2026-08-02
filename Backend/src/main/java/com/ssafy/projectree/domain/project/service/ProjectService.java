@@ -3,6 +3,8 @@ package com.ssafy.projectree.domain.project.service;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.nodeCategory.entity.Category;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
+import com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse;
+import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectCategory;
@@ -13,6 +15,8 @@ import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.exception.CustomException;
 import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,6 +79,13 @@ public class ProjectService {
         }
 
         return projectMemberRepository.findMemberResponsesByProjectId(projectId);
+    }
+
+    public ProjectListResponse getProjectList(Pageable pageable, int memberId) {
+        Page<ProjectItemResponse> projectPage =
+                projectRepository.findProjectItemsByMemberId(memberId, pageable);
+
+        return new ProjectListResponse(projectPage);
     }
 
     private void validateMember(int memberId) {
