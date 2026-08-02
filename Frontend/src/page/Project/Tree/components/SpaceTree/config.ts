@@ -44,15 +44,16 @@ export interface NodeVisual {
 export const NODE_VISUALS: Record<NodeType, NodeVisual> = {
   root: {
     radius: 1.2,
-    baseColor: "#a855f7",
-    bandColor: "#f5d0fe",
-    glowColor: "#e879f9",
-  },
-  category: {
-    radius: 1.0,
+
     baseColor: "#d97706",
     bandColor: "#fde68a",
     glowColor: "#fbbf24",
+  },
+  category: {
+    radius: 1.0,
+    baseColor: "#a855f7",
+    bandColor: "#f5d0fe",
+    glowColor: "#e879f9",
   },
   decision: {
     radius: 0.8,
@@ -118,6 +119,20 @@ export const LABEL_FADE_DISTANCE: Record<NodeType, LabelFadeRange> = {
   category: { start: 51, end: 58 },
   root: { start: 58, end: 64 },
 };
+
+/**
+ * 한 화면에 DOM으로 유지할 라벨 수 상한.
+ * 라벨만 DOM이라 노드 수에 비례해 무거워진다 — 상한을 걸면 비용이 노드 수와 무관해진다.
+ */
+export const MAX_VISIBLE_LABELS = 100;
+/** 라벨 목록을 다시 고르는 주기(초). 매 프레임 고를 필요는 없다. */
+export const LABEL_REFRESH_INTERVAL = 0.15;
+/**
+ * 이미 보이는 라벨은 아래 여유만큼 더 버틴다. 진입 기준과 유지 기준을 다르게 둬야
+ * 화면 경계에 걸친 노드가 매 판정마다 들어왔다 나갔다 하며 깜빡이지 않는다.
+ */
+export const LABEL_KEEP_MARGIN = 6;
+export const LABEL_KEEP_DISTANCE_RATIO = 1.15;
 
 export const CAMERA = {
   INITIAL_POSITION: [10, 8, 22] as [number, number, number],

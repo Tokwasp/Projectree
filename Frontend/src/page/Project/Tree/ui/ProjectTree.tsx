@@ -17,10 +17,6 @@ export default function ProjectTree() {
     [tree],
   );
 
-  /**
-   * SpaceTree는 data 참조가 바뀔 때만 레이아웃을 다시 계산한다 —
-   * 선택이 그대로면 같은 객체를 넘겨 물리 상태가 초기화되지 않게 한다.
-   */
   const visibleTree = useMemo(() => {
     if (!tree) return null;
     if (!selectedCategoryId) return tree;

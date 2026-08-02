@@ -5,6 +5,10 @@ import * as THREE from "three";
 import {
   EDGE_COLOR,
   LABEL_FADE_DISTANCE,
+  LABEL_KEEP_DISTANCE_RATIO,
+  LABEL_KEEP_MARGIN,
+  LABEL_REFRESH_INTERVAL,
+  MAX_VISIBLE_LABELS,
   NODE_VISUALS,
   SPACE,
   UI_FONT,
@@ -50,9 +54,7 @@ export function TreeScene({ data, controlsRef, is2D }: TreeSceneProps) {
           <PlanetNodes key={type} nodes={flat.byType[type]} runtime={runtime} />
         ) : null,
       )}
-      {flat.order.map((node) => (
-        <NodeLabel key={node.id} node={node} runtime={runtime} />
-      ))}
+      <VisibleNodeLabels nodes={flat.order} runtime={runtime} />
     </>
   );
 }
@@ -301,6 +303,101 @@ function RootNode({
   );
 }
 
+/**
+ * 라벨만 DOM이라 노드 수에 비례해 무거워진다. 그래서 전부 만들지 않고,
+ * "화면 안에 있고 + 가까운" 것만 골라 그 개수를 상한으로 묶는다.
+ * 고른 목록이 바뀔 때만 리렌더하므로 노드가 몇 개든 DOM 비용이 일정하다.
+ */
+function VisibleNodeLabels({
+  nodes,
+  runtime,
+}: {
+  nodes: FlatTreeNode[];
+  runtime: TreeRuntime;
+}) {
+  const { camera } = useThree();
+  const [visibleIds, setVisibleIds] = useState<string[]>([]);
+
+  const nodeById = useMemo(
+    () => new Map(nodes.map((node) => [node.id, node])),
+    [nodes],
+  );
+
+  const nextCheckRef = useRef(0);
+  const frustum = useMemo(() => new THREE.Frustum(), []);
+  const projection = useMemo(() => new THREE.Matrix4(), []);
+  const probe = useMemo(() => new THREE.Sphere(), []);
+
+  useFrame(({ clock }) => {
+    if (clock.elapsedTime < nextCheckRef.current) return;
+    nextCheckRef.current = clock.elapsedTime + LABEL_REFRESH_INTERVAL;
+
+    projection.multiplyMatrices(
+      camera.projectionMatrix,
+      camera.matrixWorldInverse,
+    );
+    frustum.setFromProjectionMatrix(projection);
+
+    // 새로 넣을 후보(엄격)와 이미 있는 것을 유지할 후보(느슨)를 따로 모은다
+    const entering: { id: string; distance: number }[] = [];
+    const keepable = new Set<string>();
+
+    for (const node of nodes) {
+      const state = runtime.nodeStates.get(node.id);
+      if (!state) continue;
+
+      const distance = camera.position.distanceTo(state.current);
+      const fadeEnd = LABEL_FADE_DISTANCE[node.type].end;
+      const radius = NODE_VISUALS[node.type].radius;
+
+      probe.set(state.current, radius + LABEL_KEEP_MARGIN);
+      if (
+        distance >= fadeEnd * LABEL_KEEP_DISTANCE_RATIO ||
+        !frustum.intersectsSphere(probe)
+      ) {
+        continue;
+      }
+      keepable.add(node.id);
+
+      // 점이 아니라 노드 크기만큼의 구로 판정해야 화면 가장자리에서 라벨이 끊기지 않는다
+      probe.set(state.current, radius + 1);
+      if (distance < fadeEnd && frustum.intersectsSphere(probe)) {
+        entering.push({ id: node.id, distance });
+      }
+    }
+
+    entering.sort((a, b) => a.distance - b.distance);
+
+    setVisibleIds((prev) => {
+      // 유지 대상을 먼저 채워야 상한에 걸릴 때 기존 라벨이 밀려나지 않는다
+      const kept = prev.filter((id) => keepable.has(id));
+      const keptIds = new Set(kept);
+      const added = entering
+        .map((candidate) => candidate.id)
+        .filter((id) => !keptIds.has(id));
+
+      // 정렬을 고정해야 카메라가 움직일 때마다 순서만 바뀌어 리렌더되는 일이 없다
+      const next = [...kept, ...added].slice(0, MAX_VISIBLE_LABELS).sort();
+
+      return prev.length === next.length &&
+        prev.every((id, index) => id === next[index])
+        ? prev
+        : next;
+    });
+  }, 1);
+
+  return (
+    <>
+      {visibleIds.map((id) => {
+        const node = nodeById.get(id);
+        return node ? (
+          <NodeLabel key={id} node={node} runtime={runtime} />
+        ) : null;
+      })}
+    </>
+  );
+}
+
 function NodeLabel({
   node,
   runtime,
@@ -321,12 +418,13 @@ function NodeLabel({
     groupRef.current.position.copy(state.current);
     groupRef.current.position.y -= visual.radius + 0.35;
 
+    // 멀어져 사라지는 것은 VisibleNodeLabels가 언마운트로 처리한다.
+    // 여기서는 사라지기 직전 구간이 뚝 끊기지 않도록 투명도만 낮춘다
     const distance = camera.position.distanceTo(state.current);
     const opacity =
       1 - THREE.MathUtils.smoothstep(distance, fadeRange.start, fadeRange.end);
     if (wrapperRef.current) {
       wrapperRef.current.style.opacity = opacity.toString();
-      wrapperRef.current.style.display = opacity < 0.02 ? "none" : "block";
     }
   }, 1);
 
@@ -341,10 +439,13 @@ function NodeLabel({
         <div
           ref={wrapperRef}
           style={{
+            // 0에서 시작해야 한다. 기본값 1이면 붙는 첫 프레임에 불투명하게 번쩍이고,
+            // drei가 좌표를 잡기 전이라 화면 구석에 잠깐 찍히는 것까지 같이 보인다
+            opacity: 0,
             textAlign: "center",
             pointerEvents: "none",
             userSelect: "none",
-            transition: "opacity 0.12s linear",
+            transition: "opacity 0.18s linear",
           }}
         >
           <div

@@ -1,10 +1,7 @@
 import { apiRequest } from "../../../../api/apiClient";
 import type { NodeType, TreeNodeInput } from "../components/SpaceTree";
 
-/**
- * 서버 응답 형태. 백엔드 노드 API가 아직 없어서 경로와 필드명은 가정이며,
- * 확정되면 이 파일과 toTreeNodeInput만 고치면 된다.
- */
+// 서버 응답
 export interface ProjectTreeNodeResponse {
   nodeId: number | string;
   type: string;
@@ -20,7 +17,6 @@ const NODE_TYPES: NodeType[] = [
   "issue",
 ];
 
-/** 서버가 모르는 타입을 보내와도 화면이 깨지지 않게 task로 떨어뜨린다. */
 const toNodeType = (raw: string): NodeType => {
   const normalized = raw?.toLowerCase() as NodeType;
   return NODE_TYPES.includes(normalized) ? normalized : "task";

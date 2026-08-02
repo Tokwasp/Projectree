@@ -91,12 +91,6 @@ interface CameraPose {
   target: Vector3;
 }
 
-/**
- * 2D 전환의 본체는 노드 재배치(TreeScene)다. 여기서는 카메라만 거든다 —
- * 평면을 옆에서 보면 선으로만 보이므로 정면 쪽으로 부드럽게 이동시키고,
- * 3D로 돌아올 때는 2D로 들어가기 직전의 시점으로 되돌린다.
- * 회전을 잠그지는 않으므로 전환 후에도 자유롭게 돌려볼 수 있다.
- */
 function ViewModeController({
   is2D,
   controlsRef,
@@ -105,7 +99,6 @@ function ViewModeController({
   controlsRef: OrbitControlsRef;
 }) {
   const goalRef = useRef<CameraPose | null>(null);
-  /** 2D로 들어가기 직전의 시점. 3D로 돌아올 때 여기로 복귀한다 */
   const savedRef = useRef<CameraPose | null>(null);
 
   useEffect(() => {
