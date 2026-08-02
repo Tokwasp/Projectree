@@ -24,11 +24,12 @@ spring:
     init:
       mode: always
 
-  # 레디스
+
   data:
     web:
       pageable:
         max-page-size: 50
+    # 레디스
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
