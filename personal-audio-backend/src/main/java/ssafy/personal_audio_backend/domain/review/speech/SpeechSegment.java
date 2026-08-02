@@ -6,6 +6,8 @@ import ssafy.personal_audio_backend.global.exception.CustomException;
 
 public class SpeechSegment {
 
+    private static final double MIN_SPEECH_SECONDS = 0.5;
+
     private final double startSeconds;
     private final double endSeconds;
 
@@ -26,6 +28,10 @@ public class SpeechSegment {
 
     public double durationSeconds() {
         return endSeconds - startSeconds;
+    }
+
+    public boolean isNoise() {
+        return durationSeconds() < MIN_SPEECH_SECONDS;
     }
 
     public double silenceSecondsUntil(SpeechSegment next) {
