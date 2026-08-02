@@ -29,7 +29,7 @@ class SpeechFeedbackTest {
         assertThat(feedback.personal()).isEqualTo("간투사가 잦아요");
     }
 
-    @DisplayName("속도와 습관은 40자로 자른다")
+    @DisplayName("속도는 40자, 말버릇은 65자로 자른다")
     @Test
     void ofTruncatesShortFeedback() {
         String tooLong = "가".repeat(80);
@@ -37,7 +37,7 @@ class SpeechFeedbackTest {
         SpeechFeedback feedback = SpeechFeedback.of(tooLong, tooLong, "좋아요");
 
         assertThat(feedback.speed()).hasSize(40);
-        assertThat(feedback.personal()).hasSize(40);
+        assertThat(feedback.personal()).hasSize(65);
     }
 
     @DisplayName("종합 피드백은 60자로 자른다")
@@ -53,11 +53,12 @@ class SpeechFeedbackTest {
     void ofKeepsWarmFeedbackAsIs() {
         SpeechFeedback feedback = SpeechFeedback.of(
                 "조금 느리지만 편안하게 들려요",
-                "간투사가 거의 없어 듣기 편해요!",
+                "말하기 전에 아.. 하시는 습관이 있는 것 같아요. 조금 줄이면 더 좋을 것 같아요",
                 "차분하고 듣는 사람을 배려하는 말투예요. 좋습니다!");
 
         assertThat(feedback.speed()).isEqualTo("조금 느리지만 편안하게 들려요");
-        assertThat(feedback.personal()).isEqualTo("간투사가 거의 없어 듣기 편해요!");
+        assertThat(feedback.personal())
+                .isEqualTo("말하기 전에 아.. 하시는 습관이 있는 것 같아요. 조금 줄이면 더 좋을 것 같아요");
         assertThat(feedback.overall()).isEqualTo("차분하고 듣는 사람을 배려하는 말투예요. 좋습니다!");
     }
 

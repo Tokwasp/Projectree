@@ -32,7 +32,6 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(classes = {SpeechFeedbackSmokeTest.SmokeConfig.class, RestClientConfig.class})
 class SpeechFeedbackSmokeTest {
 
-    private static final double ASSUMED_SPEAKING_SECONDS = 8.0;
     private static final String UNUSED_BUCKET = "unused";
 
     @Autowired
@@ -40,6 +39,10 @@ class SpeechFeedbackSmokeTest {
 
     @Value("${GMS_SMOKE_AUDIO:}")
     private String audioPath;
+
+    /** 실제 파이프라인에서는 ffmpeg 가 계산한다. 녹음 길이에 맞춰 .env 에서 조정한다. */
+    @Value("${GMS_SMOKE_SPEAKING_SECONDS:30}")
+    private double assumedSpeakingSeconds;
 
     @Value("${app.ai.gms.base-url}")
     private String baseUrl;
@@ -91,7 +94,7 @@ class SpeechFeedbackSmokeTest {
     }
 
     private SpeechSegments assumedSegments() {
-        return SpeechSegments.of(List.of(SpeechSegment.of(0.0, ASSUMED_SPEAKING_SECONDS)));
+        return SpeechSegments.of(List.of(SpeechSegment.of(0.0, assumedSpeakingSeconds)));
     }
 
     @Configuration

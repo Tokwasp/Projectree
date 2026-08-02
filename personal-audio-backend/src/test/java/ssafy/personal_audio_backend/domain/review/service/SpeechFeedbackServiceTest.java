@@ -86,7 +86,7 @@ class SpeechFeedbackServiceTest {
         verify(gmsChatClient).completeJson(anyString(), userMessageCaptor.capture());
         assertThat(userMessageCaptor.getValue())
                 .contains("분당 음절수: 72")
-                .contains("간투사(명확): 2회 — 어×2")
+                .contains("말버릇(확실): 2회 — 어×2")
                 .contains("발화 시간: 10초");
     }
 

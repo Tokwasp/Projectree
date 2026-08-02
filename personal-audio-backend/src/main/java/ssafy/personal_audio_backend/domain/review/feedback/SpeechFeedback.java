@@ -6,9 +6,12 @@ import ssafy.personal_audio_backend.global.exception.CustomException;
 
 public class SpeechFeedback {
 
-    private static final int SHORT_MAX_LENGTH = 40;
+    private static final int SPEED_MAX_LENGTH = 40;
+    private static final int PERSONAL_MAX_LENGTH = 65;
     private static final int OVERALL_MAX_LENGTH = 60;
     private static final String WHITESPACE = "\\s+";
+    /** 프롬프트로 금지해도 모델이 굽은 따옴표로 우회하므로 여기서 지운다. */
+    private static final String QUOTES = "[\"'“”‘’«»「」`]";
     private static final String SINGLE_SPACE = " ";
     private static final String EMPTY = "";
 
@@ -24,8 +27,8 @@ public class SpeechFeedback {
 
     public static SpeechFeedback of(String speed, String personal, String overall) {
         SpeechFeedback feedback = new SpeechFeedback(
-                normalize(speed, SHORT_MAX_LENGTH),
-                normalize(personal, SHORT_MAX_LENGTH),
+                normalize(speed, SPEED_MAX_LENGTH),
+                normalize(personal, PERSONAL_MAX_LENGTH),
                 normalize(overall, OVERALL_MAX_LENGTH)
         );
         if (feedback.isEmpty()) {
@@ -60,7 +63,9 @@ public class SpeechFeedback {
             return EMPTY;
         }
 
-        String collapsed = raw.replaceAll(WHITESPACE, SINGLE_SPACE).trim();
+        String collapsed = raw.replaceAll(QUOTES, EMPTY)
+                .replaceAll(WHITESPACE, SINGLE_SPACE)
+                .trim();
         if (collapsed.length() <= maxLength) {
             return collapsed;
         }
