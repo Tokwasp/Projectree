@@ -13,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import ssafy.personal_audio_backend.domain.BaseEntity;
+import ssafy.personal_audio_backend.domain.review.feedback.SpeechFeedback;
 import ssafy.personal_audio_backend.domain.review.speech.SpeechSegments;
 
 @Getter
@@ -53,6 +54,15 @@ public class MeetingReview extends BaseEntity {
     @Column(name = "last_egress_id", length = 100)
     private String lastEgressId;
 
+    @Column(name = "speed_feedback", length = 100)
+    private String speedFeedback;
+
+    @Column(name = "personal_feedback", length = 100)
+    private String personalFeedback;
+
+    @Column(name = "overall_feedback", length = 100)
+    private String overallFeedback;
+
     private MeetingReview(String roomName, int memberId) {
         this.roomName = roomName;
         this.memberId = memberId;
@@ -71,5 +81,15 @@ public class MeetingReview extends BaseEntity {
         this.segmentCount += segments.segmentCount();
         this.longestSilenceSeconds = Math.max(this.longestSilenceSeconds, segments.longestSilenceSeconds());
         this.lastEgressId = egressId;
+    }
+
+    public void applyFeedback(SpeechFeedback feedback) {
+        if (feedback.isEmpty()) {
+            return;
+        }
+
+        this.speedFeedback = feedback.speed();
+        this.personalFeedback = feedback.personal();
+        this.overallFeedback = feedback.overall();
     }
 }
