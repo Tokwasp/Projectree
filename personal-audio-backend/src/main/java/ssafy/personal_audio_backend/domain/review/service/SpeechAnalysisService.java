@@ -4,45 +4,51 @@ import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import ssafy.personal_audio_backend.domain.review.MeetingReview;
+import ssafy.personal_audio_backend.domain.review.feedback.SpeechFeedback;
 import ssafy.personal_audio_backend.domain.review.speech.SpeechSegments;
+import ssafy.personal_audio_backend.global.exception.CustomException;
 import ssafy.personal_audio_backend.global.listener.sqs.RecordingCompletedMessage;
-import ssafy.personal_audio_backend.domain.review.repository.MeetingReviewRepository;
 
 @Slf4j
-@Transactional
 @RequiredArgsConstructor
 @Service
 public class SpeechAnalysisService {
 
     private final FfmpegSilenceDetector silenceDetector;
     private final SilenceDetectOutputParser outputParser;
-    private final MeetingReviewRepository meetingReviewRepository;
+    private final SpeechFeedbackService speechFeedbackService;
+    private final MeetingReviewAppender meetingReviewAppender;
 
     public void analyzeAndSave(RecordingCompletedMessage message, Path audioFile) {
-        SpeechSegments segments = outputParser.parse(silenceDetector.detect(audioFile));
-        int memberId = Math.toIntExact(message.getMemberId());
-
-        MeetingReview review = meetingReviewRepository.findByRoomNameAndMemberId(message.getRoomName(), memberId)
-                .orElseGet(() -> MeetingReview.of(message.getRoomName(), memberId));
-
-        if (review.isAlreadyApplied(message.getEgressId())) {
-            log.info("이미 반영한 녹음입니다. roomName={}, memberId={}, egressId={}", message.getRoomName(), memberId, message.getEgressId());
+        if (meetingReviewAppender.isAlreadyApplied(message)) {
+            log.info("recording already applied. roomName={}, memberId={}, egressId={}", message.getRoomName(), message.getMemberId(), message.getEgressId());
             return;
         }
 
-        review.add(segments, message.getEgressId());
-        meetingReviewRepository.save(review);
-        logAnalyzed(message, segments);
+        SpeechSegments segments = outputParser.parse(silenceDetector.detect(audioFile));
+        SpeechFeedback feedback = generateFeedbackQuietly(audioFile, segments);
+
+        meetingReviewAppender.append(message, segments, feedback);
+        logAnalyzed(message, segments, feedback);
     }
 
-    private void logAnalyzed(RecordingCompletedMessage message, SpeechSegments segments) {
-        log.info("speech analyzed. roomName={}, memberId={}, speakingSeconds={}, segmentCount={}, longestSilenceSeconds={}",
+    private SpeechFeedback generateFeedbackQuietly(Path audioFile, SpeechSegments segments) {
+        try {
+            return speechFeedbackService.generate(audioFile, segments);
+        } catch (CustomException e) {
+            log.warn("ai feedback generation failed. file={}, errorCode={}", audioFile, e.getErrorCode());
+            return SpeechFeedback.none();
+        }
+    }
+
+    private void logAnalyzed(RecordingCompletedMessage message, SpeechSegments segments, SpeechFeedback feedback) {
+        log.info("speech analyzed. roomName={}, memberId={}, speakingSeconds={}, segmentCount={}, "
+                        + "longestSilenceSeconds={}, feedbackApplied={}",
                 message.getRoomName(),
                 message.getMemberId(),
                 segments.speakingSeconds(),
                 segments.segmentCount(),
-                segments.longestSilenceSeconds());
+                segments.longestSilenceSeconds(),
+                !feedback.isEmpty());
     }
 }
