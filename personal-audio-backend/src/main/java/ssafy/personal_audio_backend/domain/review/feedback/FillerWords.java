@@ -22,7 +22,9 @@ public final class FillerWords {
             "그냥", "이제", "인제", "막", "약간", "좀", "뭔가",
             "아무튼", "암튼", "어쨌든", "하여튼", "여하튼",
             "아니", "이렇게", "그렇게", "그쵸", "그죠",
-            "진짜", "되게", "완전"
+            "진짜", "되게", "완전",
+            // 지시어를 말 사이에 끼워 넣는 습관 ("그 이거… 저거…")
+            "이거", "이걸", "저거", "저건", "그거", "그걸"
     );
 
     private static final Set<String> ALL = Stream.concat(CLEAR.stream(), AMBIGUOUS.stream())

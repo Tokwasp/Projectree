@@ -10,7 +10,7 @@ class FillerWordsTest {
     @DisplayName("사전은 명확한 간투사와 문맥의존 간투사로 나뉜다")
     @Test
     void size() {
-        assertThat(FillerWords.size()).isEqualTo(50);
+        assertThat(FillerWords.size()).isEqualTo(56);
         assertThat(FillerWords.clearSize()).isEqualTo(24);
     }
 
