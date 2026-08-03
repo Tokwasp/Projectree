@@ -8,20 +8,33 @@ export interface SocialLoginRequest {
   state?: string;
 }
 
-export interface LoginUser {
-  memberId: number;
+// 서버는 회원 식별자를 id로 내려준다 (네이버 응답에는 아직 없다)
+interface SocialLoginResponse {
+  id?: number;
   name: string;
   imageUrl: string;
 }
 
-const postSocialLogin = (
+export interface LoginUser {
+  memberId: number | null;
+  name: string;
+  imageUrl: string;
+}
+
+const postSocialLogin = async (
   provider: SocialProvider,
   payload: SocialLoginRequest,
-) =>
-  apiRequest<LoginUser>(`/auth/${provider}`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+): Promise<LoginUser> => {
+  const { id, name, imageUrl } = await apiRequest<SocialLoginResponse>(
+    `/auth/${provider}`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+
+  return { memberId: id ?? null, name, imageUrl };
+};
 
 export const naverLogin = (payload: SocialLoginRequest) =>
   postSocialLogin("naver", payload);
