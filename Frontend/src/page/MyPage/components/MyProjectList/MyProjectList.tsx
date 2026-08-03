@@ -1,16 +1,9 @@
-import type { UserProjectSummary } from "../../../../types/User";
+import { Link } from "react-router-dom";
+import type { ProjectSummary } from "../../../../types/Project";
 import style from "./MyProjectList.module.css";
 
 interface MyProjectListProps {
-  projects: UserProjectSummary[];
-}
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(date));
+  projects: ProjectSummary[];
 }
 
 export default function MyProjectList({
@@ -18,64 +11,68 @@ export default function MyProjectList({
 }: MyProjectListProps) {
   return (
     <section className={style.section}>
-      <h2 className={style.title}>참여 중인 프로젝트</h2>
+      <div className={style.sectionHeader}>
+        <h2 className={style.title}>
+          참여 중인 프로젝트
+        </h2>
+
+        <Link className={style.viewAllLink} to="/projects">
+          전체 프로젝트 보기
+        </Link>
+      </div>
 
       {projects.length === 0 ? (
         <p className={style.emptyMessage}>
           참여 중인 프로젝트가 없습니다.
         </p>
       ) : (
-        <div className={style.tableWrapper}>
-          <table className={style.table}>
-            <thead>
-              <tr>
-                <th>프로젝트 이름</th>
-                <th>역할</th>
-                <th>참여일</th>
-                <th>최근 활동</th>
-              </tr>
-            </thead>
+        <div className={style.projectCard}>
+          <div className={style.listHeader} aria-hidden="true">
+            <span>프로젝트 이름</span>
+            <span>참여 인원</span>
+            <span />
+          </div>
 
-            <tbody>
-              {projects.map((project) => (
-                <tr key={project.projectId}>
-                  <td>
-                    <div className={style.projectInfo}>
-                      {project.thumbnailUrl ? (
-                        <img
-                          className={style.projectThumbnail}
-                          src={project.thumbnailUrl}
-                          alt=""
-                        />
-                      ) : (
-                        <span
-                          className={style.projectFallback}
-                          aria-hidden="true"
-                        >
-                          {project.title.charAt(0)}
-                        </span>
-                      )}
-
-                      <span className={style.projectName}>
-                        {project.title}
+          <ul className={style.projectList}>
+            {projects.map((project) => (
+              <li key={project.projectId}>
+                <Link
+                  className={style.projectRow}
+                  to={`/projects/${project.projectId}`}
+                  aria-label={`${project.title} 프로젝트로 이동`}
+                >
+                  <span className={style.projectInfo}>
+                    {project.thumbnailUrl ? (
+                      <img
+                        className={style.projectThumbnail}
+                        src={project.thumbnailUrl}
+                        alt=""
+                      />
+                    ) : (
+                      <span
+                        className={style.projectFallback}
+                        aria-hidden="true"
+                      >
+                        {project.title.charAt(0)}
                       </span>
-                    </div>
-                  </td>
-                  <td>{project.role}</td>
-                  <td>
-                    <time dateTime={project.joinedAt}>
-                      {formatDate(project.joinedAt)}
-                    </time>
-                  </td>
-                  <td>
-                    <time dateTime={project.lastActivityAt}>
-                      {formatDate(project.lastActivityAt)}
-                    </time>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    )}
+
+                    <span className={style.projectName}>
+                      {project.title}
+                    </span>
+                  </span>
+
+                  <span className={style.memberCount}>
+                    {project.memberCount}명
+                  </span>
+
+                  <span className={style.arrow} aria-hidden="true">
+                    ›
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </section>
