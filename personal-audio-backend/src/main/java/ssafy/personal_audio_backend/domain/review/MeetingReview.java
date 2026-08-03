@@ -24,10 +24,16 @@ import ssafy.personal_audio_backend.domain.review.speech.SpeechSegments;
                 name = "uk_meeting_review_room_member",
                 columnNames = {"room_name", "member_id"}
         ),
-        indexes = @Index(
-                name = "idx_meeting_review_member_created",
-                columnList = "member_id, created_at"
-        )
+        indexes = {
+                @Index(
+                        name = "idx_meeting_review_member_created",
+                        columnList = "member_id, created_at"
+                ),
+                @Index(
+                        name = "idx_meeting_review_project_member",
+                        columnList = "project_id, member_id"
+                )
+        }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MeetingReview extends BaseEntity {
@@ -39,17 +45,14 @@ public class MeetingReview extends BaseEntity {
     @Column(name = "room_name", nullable = false, length = 100)
     private String roomName;
 
+    @Column(name = "project_id", nullable = false)
+    private int projectId;
+
     @Column(name = "member_id", nullable = false)
     private int memberId;
 
     @Column(name = "speaking_seconds", nullable = false)
     private int speakingSeconds;
-
-    @Column(name = "segment_count", nullable = false)
-    private int segmentCount;
-
-    @Column(name = "longest_silence_seconds", nullable = false)
-    private int longestSilenceSeconds;
 
     @Column(name = "last_egress_id", length = 100)
     private String lastEgressId;
@@ -63,13 +66,14 @@ public class MeetingReview extends BaseEntity {
     @Column(name = "overall_feedback", length = 100)
     private String overallFeedback;
 
-    private MeetingReview(String roomName, int memberId) {
+    private MeetingReview(String roomName, int projectId, int memberId) {
         this.roomName = roomName;
+        this.projectId = projectId;
         this.memberId = memberId;
     }
 
-    public static MeetingReview of(String roomName, int memberId) {
-        return new MeetingReview(roomName, memberId);
+    public static MeetingReview of(String roomName, int projectId, int memberId) {
+        return new MeetingReview(roomName, projectId, memberId);
     }
 
     public boolean isAlreadyApplied(String egressId) {
@@ -78,8 +82,6 @@ public class MeetingReview extends BaseEntity {
 
     public void add(SpeechSegments segments, String egressId) {
         this.speakingSeconds += segments.speakingSeconds();
-        this.segmentCount += segments.segmentCount();
-        this.longestSilenceSeconds = Math.max(this.longestSilenceSeconds, segments.longestSilenceSeconds());
         this.lastEgressId = egressId;
     }
 

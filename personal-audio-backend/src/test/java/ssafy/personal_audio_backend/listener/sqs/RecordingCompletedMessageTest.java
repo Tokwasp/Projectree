@@ -18,6 +18,7 @@ class RecordingCompletedMessageTest {
         String payload = """
                 {
                   "roomName": "efb9541a-97fc-4647-9de2-80873b708c0c",
+                  "projectId": 5,
                   "memberId": 7,
                   "kind": "PARTICIPANT",
                   "objectKey": "meetings/efb9541a-97fc-4647-9de2-80873b708c0c/7/2026-08-01T052705.ogg",
@@ -29,6 +30,7 @@ class RecordingCompletedMessageTest {
         RecordingCompletedMessage message = jsonMapper.readValue(payload, RecordingCompletedMessage.class);
 
         assertThat(message.getRoomName()).isEqualTo("efb9541a-97fc-4647-9de2-80873b708c0c");
+        assertThat(message.getProjectId()).isEqualTo(5L);
         assertThat(message.getMemberId()).isEqualTo(7L);
         assertThat(message.getKind()).isEqualTo("PARTICIPANT");
         assertThat(message.getObjectKey())

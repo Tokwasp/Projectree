@@ -12,6 +12,7 @@ import lombok.ToString;
 public class RecordingCompletedMessage {
 
     private String roomName;
+    private Long projectId;
     private Long memberId;
     private String kind;
     private String objectKey;

@@ -30,7 +30,7 @@ public class MeetingReviewAppender {
         int memberId = memberIdOf(message);
 
         MeetingReview review = meetingReviewRepository.findByRoomNameAndMemberId(message.getRoomName(), memberId)
-                .orElseGet(() -> MeetingReview.of(message.getRoomName(), memberId));
+                .orElseGet(() -> MeetingReview.of(message.getRoomName(), projectIdOf(message), memberId));
 
         if (review.isAlreadyApplied(message.getEgressId())) {
             log.info("recording already applied. roomName={}, memberId={}, egressId={}",
@@ -45,5 +45,9 @@ public class MeetingReviewAppender {
 
     private int memberIdOf(RecordingCompletedMessage message) {
         return Math.toIntExact(message.getMemberId());
+    }
+
+    private int projectIdOf(RecordingCompletedMessage message) {
+        return Math.toIntExact(message.getProjectId());
     }
 }

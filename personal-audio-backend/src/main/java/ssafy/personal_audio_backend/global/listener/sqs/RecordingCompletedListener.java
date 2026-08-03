@@ -18,8 +18,9 @@ public class RecordingCompletedListener {
 
     @SqsListener("${app.sqs.queue-name}")
     public void handle(RecordingCompletedMessage message) {
-        log.info("recording completed. roomName={}, memberId={}, kind={}, objectKey={}, egressId={}, endedAt={}",
+        log.info("recording completed. roomName={}, projectId={}, memberId={}, kind={}, objectKey={}, egressId={}, endedAt={}",
                 message.getRoomName(),
+                message.getProjectId(),
                 message.getMemberId(),
                 message.getKind(),
                 message.getObjectKey(),

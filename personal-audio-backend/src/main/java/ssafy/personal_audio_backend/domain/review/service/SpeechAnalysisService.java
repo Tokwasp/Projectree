@@ -42,13 +42,13 @@ public class SpeechAnalysisService {
     }
 
     private void logAnalyzed(RecordingCompletedMessage message, SpeechSegments segments, SpeechFeedback feedback) {
-        log.info("speech analyzed. roomName={}, memberId={}, speakingSeconds={}, segmentCount={}, "
-                        + "longestSilenceSeconds={}, feedbackApplied={}",
+        log.info("speech analyzed. roomName={}, projectId={}, memberId={}, speakingSeconds={}, segmentCount={}, "
+                        + "feedbackApplied={}",
                 message.getRoomName(),
+                message.getProjectId(),
                 message.getMemberId(),
                 segments.speakingSeconds(),
                 segments.segmentCount(),
-                segments.longestSilenceSeconds(),
                 !feedback.isEmpty());
     }
 }
