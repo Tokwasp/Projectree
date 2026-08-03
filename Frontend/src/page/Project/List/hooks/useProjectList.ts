@@ -1,60 +1,37 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError } from "../../../../api/apiClient";
 import type { ProjectSummary } from "../../../../types/Project";
 import {
+  getCachedProjectList,
   getProjectList,
+  prefetchProjectList,
   type ProjectListResponse,
 } from "../api/projectListApi";
 
 export default function useProjectList(page: number, size: number) {
   const [projectList, setProjectList] =
-    useState<ProjectListResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+    useState<ProjectListResponse | null>(() =>
+      getCachedProjectList(page, size),
+    );
+  const [isLoading, setIsLoading] = useState(
+    () => getCachedProjectList(page, size) === null,
+  );
   const [error, setError] = useState<string | null>(null);
-  const cacheRef = useRef(new Map<string, ProjectListResponse>());
-  const pendingRequestsRef = useRef(
-    new Map<string, Promise<ProjectListResponse>>(),
-  );
 
-  const requestProjectList = useCallback(
-    (targetPage: number): Promise<ProjectListResponse> => {
-      const cacheKey = `${targetPage}:${size}`;
-      const cachedProjectList = cacheRef.current.get(cacheKey);
-
-      if (cachedProjectList) {
-        return Promise.resolve(cachedProjectList);
-      }
-
-      const pendingRequest = pendingRequestsRef.current.get(cacheKey);
-
-      if (pendingRequest) {
-        return pendingRequest;
-      }
-
-      const request = getProjectList(targetPage, size)
-        .then((response) => {
-          cacheRef.current.set(cacheKey, response);
-          return response;
-        })
-        .finally(() => {
-          pendingRequestsRef.current.delete(cacheKey);
-        });
-
-      pendingRequestsRef.current.set(cacheKey, request);
-      return request;
-    },
-    [size],
-  );
+  const cachedProjectList = getCachedProjectList(page, size);
+  const currentProjectList = cachedProjectList ?? projectList;
 
   useEffect(() => {
     let isActive = true;
 
     const fetchProjectList = async () => {
-      setIsLoading(true);
+      const cachedResponse = getCachedProjectList(page, size);
+
+      setIsLoading(cachedResponse === null);
       setError(null);
 
       try {
-        const response = await requestProjectList(page);
+        const response = await getProjectList(page, size);
 
         if (isActive) {
           setProjectList(response);
@@ -63,7 +40,9 @@ export default function useProjectList(page: number, size: number) {
         const nextPage = response.page + 1;
 
         if (nextPage < response.totalPages) {
-          void requestProjectList(nextPage).catch(() => undefined);
+          void prefetchProjectList(nextPage, size).catch(
+            () => undefined,
+          );
         }
       } catch (caughtError) {
         const message =
@@ -86,10 +65,10 @@ export default function useProjectList(page: number, size: number) {
     return () => {
       isActive = false;
     };
-  }, [page, requestProjectList]);
+  }, [page, size]);
 
   const projects: ProjectSummary[] =
-    projectList?.projects.map((project) => ({
+    currentProjectList?.projects.map((project) => ({
       projectId: project.projectId,
       title: project.title,
       memberCount: project.memberCnt,
@@ -98,10 +77,10 @@ export default function useProjectList(page: number, size: number) {
 
   return {
     projects,
-    page: projectList?.page ?? page,
-    totalElements: projectList?.totalElements ?? 0,
-    totalPages: projectList?.totalPages ?? 0,
-    isLoading,
-    error,
+    page: currentProjectList?.page ?? page,
+    totalElements: currentProjectList?.totalElements ?? 0,
+    totalPages: currentProjectList?.totalPages ?? 0,
+    isLoading: cachedProjectList ? false : isLoading,
+    error: cachedProjectList ? null : error,
   };
 }

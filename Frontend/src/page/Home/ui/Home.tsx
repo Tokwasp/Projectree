@@ -1,12 +1,13 @@
 import RecentProjectSection from "../components/RecentProjectSection/RecentProjectSection";
 import useProjectList from "../../Project/List/hooks/useProjectList";
 
+const PROJECT_LIST_SIZE = 8;
 const RECENT_PROJECT_COUNT = 4;
 
 export default function Home() {
   const { projects, isLoading, error } = useProjectList(
     0,
-    RECENT_PROJECT_COUNT,
+    PROJECT_LIST_SIZE,
   );
 
   if (isLoading) {
@@ -17,5 +18,9 @@ export default function Home() {
     return <p role="alert">{error}</p>;
   }
 
-  return <RecentProjectSection projects={projects} />;
+  return (
+    <RecentProjectSection
+      projects={projects.slice(0, RECENT_PROJECT_COUNT)}
+    />
+  );
 }

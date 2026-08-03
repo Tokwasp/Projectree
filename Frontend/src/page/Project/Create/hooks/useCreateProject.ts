@@ -4,6 +4,7 @@ import {
   type ProjectCreateRequest,
 } from "../api/projectApi";
 import { ApiError } from "../../../../api/apiClient";
+import { addProjectToListCache } from "../../List/api/projectListApi";
 
 export default function useCreateProject() {
   const [isCreating, setIsCreating] = useState(false);
@@ -16,7 +17,16 @@ export default function useCreateProject() {
     setError(null);
 
     try {
-      return await requestCreateProject(request);
+      const projectId = await requestCreateProject(request);
+
+      addProjectToListCache({
+        projectId,
+        title: request.title,
+        photoUrl: request.photoUrl,
+        memberCnt: 1,
+      });
+
+      return projectId;
     } catch (caughtError) {
       const message =
         caughtError instanceof ApiError

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { LoginUser } from "../page/Auth/api/authApi";
+import { clearProjectListCache } from "../page/Project/List/api/projectListApi";
 import { disconnectMeeting } from "../utils/meetingSession";
 
 interface AuthStore {
@@ -22,6 +23,7 @@ export const useAuthStore = create<AuthStore>()(
 
       logout: () => {
         disconnectMeeting();
+        clearProjectListCache();
         set({ name: null, imageUrl: null });
         useAuthStore.persist.clearStorage();
       },
