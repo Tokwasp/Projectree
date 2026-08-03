@@ -1,15 +1,33 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import projectPlaceholder from "../../../../assets/project-placeholder.svg";
+import projectImage01 from "../../../../assets/project-images/project_img01.png";
+import projectImage02 from "../../../../assets/project-images/project_img02.png";
+import projectImage03 from "../../../../assets/project-images/project_img03.png";
+import projectImage04 from "../../../../assets/project-images/project_img04.png";
 import style from "../css/ProjectCreate.module.css";
 import useCategories from "../hooks/useCategories";
 import useCreateProject from "../hooks/useCreateProject";
 
 const DEFAULT_PROJECT_IMAGES = [
   {
-    id: "project-placeholder",
-    src: projectPlaceholder,
-    alt: "프로젝트 기본 이미지",
+    id: "project-image-01",
+    src: projectImage01,
+    alt: "프로젝트 기본 이미지 1",
+  },
+  {
+    id: "project-image-02",
+    src: projectImage02,
+    alt: "프로젝트 기본 이미지 2",
+  },
+  {
+    id: "project-image-03",
+    src: projectImage03,
+    alt: "프로젝트 기본 이미지 3",
+  },
+  {
+    id: "project-image-04",
+    src: projectImage04,
+    alt: "프로젝트 기본 이미지 4",
   },
 ] as const;
 
