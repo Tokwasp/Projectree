@@ -1,6 +1,21 @@
 import RecentProjectSection from "../components/RecentProjectSection/RecentProjectSection";
-import { mockProjects } from "../../../mocks/ProjectMocks";
+import useProjectList from "../../Project/List/hooks/useProjectList";
+
+const RECENT_PROJECT_COUNT = 4;
 
 export default function Home() {
-  return <RecentProjectSection projects={mockProjects.slice(0, 8)} />;
+  const { projects, isLoading, error } = useProjectList(
+    0,
+    RECENT_PROJECT_COUNT,
+  );
+
+  if (isLoading) {
+    return <p>최근 프로젝트를 불러오는 중입니다.</p>;
+  }
+
+  if (error) {
+    return <p role="alert">{error}</p>;
+  }
+
+  return <RecentProjectSection projects={projects} />;
 }
