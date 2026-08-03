@@ -20,6 +20,14 @@ spring:
   # Session Mock
   session:
     store-type: none
+  # AWS — 실제 호출은 하지 않지만 S3Client 빈 생성에 자격증명·리전이 필요하다.
+  cloud:
+    aws:
+      credentials:
+        access-key: test-access-key
+        secret-key: test-secret-key
+      region:
+        static: ap-northeast-2
   mail:
     host: localhost
     port: 2525
@@ -44,6 +52,9 @@ app:
     cookie:
       secure: false
       same-site: Lax
+  s3:
+    bucket: test-bucket
+    presigned-url-expire-seconds: 300
 
 # Google Oauth
 google:

@@ -53,6 +53,10 @@ dependencies {
     // 2.x는 Spring Boot 3 전용이라 Boot 4에서 기동 실패한다. 3.x가 Boot 4 대응 버전.
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 
+    // s3
+    implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:4.1.0')
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
+
     // .env 로딩은 application.yaml의 spring.config.import 로 처리 (Spring Boot 내장 기능)
 
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
