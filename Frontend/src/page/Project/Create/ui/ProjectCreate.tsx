@@ -48,7 +48,7 @@ export default function ProjectCreate() {
     });
 
     if (projectId !== null) {
-      navigate(`/projects/${projectId}`);
+      navigate("/projects");
     }
   };
 
