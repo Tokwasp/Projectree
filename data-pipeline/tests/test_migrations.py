@@ -24,6 +24,10 @@ from data_pipeline.storage import (
 )
 from data_pipeline.storage.evidence import build_evidence_key
 from data_pipeline.storage.db import make_engine
+from .conftest import (
+    _create_isolated_postgresql_database,
+    _drop_isolated_postgresql_database,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,6 +39,15 @@ EXPECTED_TABLES = {
     "b_model_result", "analysis_candidate", "node_merge_history",
     "audio_upload_event",
     "analysis_job",
+    "generation_run",
+    "meeting_summary",
+    "project_graph_state",
+    "analysis_delivery_state",
+    "node_revision",
+    "evidence",
+    "node_revision_evidence",
+    "merge_operation",
+    "merge_operation_dependency",
     "alembic_version",
 }
 
@@ -332,7 +345,6 @@ def test_postgresql_node_and_relation_integrity_constraints(session_factory):
             title="A",
             content="A",
             graph_state="ACTIVE",
-            lifecycle_status="ACTIVE",
         )
         second = Node(
             project_id="project-b",
@@ -343,7 +355,6 @@ def test_postgresql_node_and_relation_integrity_constraints(session_factory):
             title="B",
             content="B",
             graph_state="ACTIVE",
-            lifecycle_status="ACTIVE",
         )
         session.add_all([first, second])
         session.flush()
@@ -375,7 +386,6 @@ def test_postgresql_rejects_invalid_node_state_at_the_database(session_factory):
                 title="invalid",
                 content="invalid",
                 graph_state="UNKNOWN",
-                lifecycle_status="ACTIVE",
             )
         )
         with pytest.raises(IntegrityError):
@@ -554,8 +564,44 @@ def test_clean_alembic_baseline_round_trip(tmp_path, monkeypatch):
     engine.dispose()
     assert (
         ScriptDirectory.from_config(config).get_current_head()
-        == "0004_runtime_pipeline"
+        == "0009_graph_event_contract_v1"
     )
+
+
+def test_0008_to_0009_upgrade_preserves_meeting_and_adds_graph_contract(
+    tmp_path,
+    monkeypatch,
+):
+    database_url = f"sqlite:///{tmp_path / '0008-to-0009.db'}"
+    _set_database_url(monkeypatch, database_url)
+    config = _alembic_config()
+    command.upgrade(config, "0008_meeting_summary")
+    engine = make_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO meeting "
+                "(id, project_id, external_meeting_id, status, created_at, updated_at) "
+                "VALUES (:id, '10', '501', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            ),
+            {"id": uuid.uuid4().hex},
+        )
+    engine.dispose()
+
+    command.upgrade(config, "head")
+    engine = make_engine(database_url)
+    inspector = inspect(engine)
+    assert {"project_graph_state", "analysis_delivery_state"} <= set(
+        inspector.get_table_names()
+    )
+    assert "deleted_by" in {
+        column["name"] for column in inspector.get_columns("node")
+    }
+    with engine.connect() as connection:
+        assert connection.execute(
+            text("SELECT COUNT(*) FROM meeting WHERE project_id='10'")
+        ).scalar_one() == 1
+    engine.dispose()
 
 
 def test_analysis_execution_schema(session_factory):
@@ -877,7 +923,122 @@ def test_revision_files_do_not_use_live_orm_metadata():
         "0002_seed_categories.py",
         "0003_review_analysis.py",
         "0004_runtime_pipeline.py",
+        "0005_manual_user_decisions.py",
+        "0006_automatic_node_merge.py",
+        "0007_drop_lifecycle_status.py",
+        "0008_meeting_summary.py",
+        "0009_graph_event_contract_v1.py",
     }
+
+
+@pytest.mark.skipif(
+    not os.getenv("DATABASE_URL_TEST", "").startswith("postgresql"),
+    reason="requires a disposable PostgreSQL base URL",
+)
+def test_0006_honestly_backfills_legacy_revision_and_evidence(monkeypatch):
+    database_url, admin_engine = _create_isolated_postgresql_database(
+        os.environ["DATABASE_URL_TEST"]
+    )
+    try:
+        _set_database_url(monkeypatch, database_url)
+        config = _alembic_config()
+        command.upgrade(config, "0005_manual_user_decisions")
+        engine = make_engine(database_url)
+        project = "legacy-project"
+        meeting = "legacy-meeting"
+        node_id = uuid.uuid4()
+        segment_db_id = uuid.uuid4()
+        quote = "legacy evidence"
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO meeting ("
+                    "id, project_id, external_meeting_id, status, created_at, updated_at"
+                    ") VALUES (:id, :project, :meeting, 'COMPLETED', now(), now())"
+                ),
+                {"id": uuid.uuid4(), "project": project, "meeting": meeting},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO node ("
+                    "id, project_id, source_meeting_id, source_item_id, node_type, "
+                    "category, title, content, graph_state, analysis_status, "
+                    "lifecycle_status, version, created_at, updated_at"
+                    ") VALUES ("
+                    ":id, :project, :meeting, 'legacy-item', 'DECISION', "
+                    "'BACKEND', 'legacy title', 'legacy content', 'ACTIVE', "
+                    "'ANALYZED', 'ACTIVE', 3, now(), now())"
+                ),
+                {"id": node_id, "project": project, "meeting": meeting},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO transcript_segment ("
+                    "id, project_id, external_meeting_id, segment_id, sequence_no, "
+                    "text, raw_text, normalized_text"
+                    ") VALUES ("
+                    ":id, :project, :meeting, 's1', 0, :quote, :quote, :quote)"
+                ),
+                {
+                    "id": segment_db_id,
+                    "project": project,
+                    "meeting": meeting,
+                    "quote": quote,
+                },
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO node_evidence ("
+                    "id, node_id, evidence_key, segment_id, quote, quote_start, "
+                    "quote_end, evidence_type, source_meeting_id"
+                    ") VALUES ("
+                    ":id, :node_id, :key, 's1', :quote, 0, :quote_end, "
+                    "'MEETING', :meeting)"
+                ),
+                {
+                    "id": uuid.uuid4(),
+                    "node_id": node_id,
+                    "key": uuid.uuid4().hex + uuid.uuid4().hex,
+                    "quote": quote,
+                    "quote_end": len(quote),
+                    "meeting": meeting,
+                },
+            )
+        engine.dispose()
+
+        command.upgrade(config, "head")
+        engine = make_engine(database_url)
+        with engine.connect() as connection:
+            node = connection.execute(
+                text(
+                    "SELECT current_revision_id, origin_type "
+                    "FROM node WHERE id = :id"
+                ),
+                {"id": node_id},
+            ).mappings().one()
+            revision = connection.execute(
+                text(
+                    "SELECT version, requires_evidence, legacy_imported "
+                    "FROM node_revision WHERE id = :id"
+                ),
+                {"id": node["current_revision_id"]},
+            ).mappings().one()
+            evidence = connection.execute(
+                text(
+                    "SELECT source_type, quoted_text, transcript_segment_id "
+                    "FROM evidence"
+                )
+            ).mappings().one()
+            assert node["origin_type"] == "LEGACY"
+            assert revision["version"] == 3
+            assert revision["requires_evidence"] is False
+            assert revision["legacy_imported"] is True
+            assert evidence["source_type"] == "TRANSCRIPT"
+            assert evidence["quoted_text"] == quote
+            assert evidence["transcript_segment_id"] == segment_db_id
+        engine.dispose()
+    finally:
+        _drop_isolated_postgresql_database(database_url, admin_engine)
 
 
 @pytest.mark.skipif(
@@ -944,6 +1105,12 @@ def test_disposable_postgresql_migration_round_trip(monkeypatch):
     assert stored.retrieval_status == "PENDING"
     assert stored.retrieval_result_count is None
 
+    # 0006 intentionally blocks physical Revision/Evidence deletion. First
+    # downgrade only that revision so its immutable trigger and additive tables
+    # are removed, then clear this disposable fixture before exercising the
+    # historical base round trip. A populated production DB must be backed up
+    # and migrated forward; head->base is not a data-preserving operation.
+    command.downgrade(config, "0005_manual_user_decisions")
     engine = make_engine(database_url)
     with engine.begin() as connection:
         connection.execute(
@@ -955,6 +1122,5 @@ def test_disposable_postgresql_migration_round_trip(monkeypatch):
             {"id": node_id},
         )
     engine.dispose()
-
     command.downgrade(config, "base")
     command.upgrade(config, "head")

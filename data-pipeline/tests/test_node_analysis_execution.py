@@ -7,6 +7,7 @@ from threading import Barrier
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+from data_pipeline.retrieval.embedding import EMBEDDING_CONTRACT_VERSION
 from data_pipeline.pipeline import (
     AnalysisRunIncompleteError,
     edit_unattached_node,
@@ -52,7 +53,7 @@ def test_reanalyze_is_idempotent_for_same_node_version_and_hash(
     assert repeated.run.attempt == 1
     assert repeated.run.status.value == "PENDING"
     assert repeated.run.embedding_model == "text-embedding-3-small"
-    assert repeated.run.embedding_version == "v1"
+    assert repeated.run.embedding_version == EMBEDDING_CONTRACT_VERSION
     with session_factory() as session:
         node = session.get(Node, uuid.UUID(node_id))
         assert node.version == 1

@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import select, text, update
+from sqlalchemy import select, text
 
+from data_pipeline.jobs import MANUAL_DECISION_COMPLETED
 from data_pipeline.contracts import (
     AnalysisCandidateDecisionResult,
     AnalysisCandidateStatus,
@@ -20,6 +24,7 @@ from data_pipeline.contracts import (
 )
 from data_pipeline.storage import (
     AnalysisCandidate,
+    AnalysisJob,
     GraphChangeEvent,
     Node,
     NodeAnalysisRun,
@@ -30,13 +35,41 @@ from data_pipeline.storage import (
 )
 
 from .analysis import _run_is_current
+from .decision_first import release_pending_dependent_nodes_if_ready
 from .errors import (
     AnalysisCandidateNotFoundError,
     AnalysisCandidateStateError,
     AnalysisCandidateVersionConflict,
+    AnalysisRunNotFoundError,
+    NodeNotFoundError,
     NodeStateError,
     NodeValidationError,
+    NodeVersionConflict,
 )
+from .revisions import (
+    create_node_revision,
+    current_revision_evidence_specs,
+    mark_node_embedding_stale,
+    reconcile_embedding_status_after_revision,
+)
+
+
+@dataclass(frozen=True)
+class UserNodeDecisionResult:
+    requested_action: str
+    source_node_id: str
+    target_node_id: str | None
+    relation_id: str | None
+    merge_history_id: str | None
+    graph_change_event_id: str
+    replayed: bool
+
+
+@dataclass(frozen=True)
+class _AppliedDecision:
+    relation: Relation | None
+    merge_history: NodeMergeHistory | None
+    graph_change_event: GraphChangeEvent
 
 
 def _parse_candidate_id(value: str | uuid.UUID) -> uuid.UUID:
@@ -44,6 +77,13 @@ def _parse_candidate_id(value: str | uuid.UUID) -> uuid.UUID:
         return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
     except (TypeError, ValueError) as exc:
         raise NodeValidationError("candidate_id must be a UUID") from exc
+
+
+def _parse_uuid(value: str | uuid.UUID, *, field: str) -> uuid.UUID:
+    try:
+        return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
+    except (TypeError, ValueError) as exc:
+        raise NodeValidationError(f"{field} must be a UUID") from exc
 
 
 def _candidate_view(candidate: AnalysisCandidate) -> AnalysisCandidateView:
@@ -187,17 +227,6 @@ def _create_relation(
     return relation
 
 
-def _stale_embeddings(session, node_id: uuid.UUID) -> None:
-    session.execute(
-        update(NodeEmbedding)
-        .where(
-            NodeEmbedding.node_id == node_id,
-            NodeEmbedding.status == "READY",
-        )
-        .values(status="STALE")
-    )
-
-
 def _node_snapshot(node: Node) -> dict:
     return {
         "nodeId": str(node.id),
@@ -217,39 +246,292 @@ def _node_snapshot(node: Node) -> dict:
 def _audit(
     session,
     *,
-    candidate: AnalysisCandidate,
+    project_id: str,
+    request_id: str | None,
+    candidate_id: uuid.UUID | None,
     node: Node,
     change_type: str,
     before: dict,
     detail: dict,
-) -> None:
-    session.add(
-        GraphChangeEvent(
-            project_id=candidate.project_id,
-            request_id=str(candidate.analysis_run_id),
-            node_id=node.id,
-            item_id=None,
-            change_type=change_type,
-            actor_type="USER",
-            before=before,
-            after=_node_snapshot(node),
-            detail={"candidateId": str(candidate.id), **detail},
-        )
+) -> GraphChangeEvent:
+    audit_detail = dict(detail)
+    if candidate_id is not None:
+        audit_detail["candidateId"] = str(candidate_id)
+    event = GraphChangeEvent(
+        project_id=project_id,
+        request_id=request_id,
+        node_id=node.id,
+        item_id=None,
+        change_type=change_type,
+        actor_type="USER",
+        before=before,
+        after=_node_snapshot(node),
+        detail=audit_detail,
     )
+    outbox_payload = {
+        "changeType": change_type,
+        "nodeId": str(node.id),
+    }
+    if candidate_id is not None:
+        outbox_payload["candidateId"] = str(candidate_id)
+    session.add(event)
     session.add(
         OutboxEvent(
             event_type="GRAPH_CHANGED",
             aggregate_type="node",
             aggregate_id=str(node.id),
-            project_id=candidate.project_id,
+            project_id=project_id,
             schema_version="v2.2",
-            payload={
-                "candidateId": str(candidate.id),
-                "changeType": change_type,
-                "nodeId": str(node.id),
-            },
+            payload=outbox_payload,
             status="PENDING",
         )
+    )
+    session.flush()
+    return event
+
+
+def _validate_target_shape(
+    source: Node,
+    target: Node | None,
+    action: RecommendationType,
+) -> None:
+    if action is RecommendationType.CREATE_NEW:
+        if target is not None:
+            raise NodeValidationError("CREATE_NEW does not accept a target")
+        return
+    if target is None:
+        raise NodeValidationError(f"{action.value} requires a target")
+    if target.id == source.id:
+        raise AnalysisCandidateStateError(
+            f"{action.value} target must not be the source Node"
+        )
+    if (
+        target.graph_state
+        not in {GraphState.ACTIVE.value, GraphState.UNATTACHED.value}
+        or target.merged_into_node_id is not None
+    ):
+        raise AnalysisCandidateStateError("target Node is not available")
+
+
+def _apply_locked_decision(
+    session,
+    *,
+    project_id: str,
+    actor_id: str,
+    action: RecommendationType,
+    source: Node,
+    target: Node | None,
+    relation_type: str | None,
+    merged_title: str | None,
+    merged_content: str | None,
+    analysis_run_id: uuid.UUID | None,
+    candidate_id: uuid.UUID | None,
+    audit_request_id: str | None,
+    audit_detail: dict,
+) -> _AppliedDecision:
+    """Apply one already-locked, version-validated graph decision."""
+
+    if (
+        source.graph_state != GraphState.UNATTACHED.value
+        or source.merged_into_node_id is not None
+    ):
+        raise AnalysisCandidateStateError(
+            "only a non-merged UNATTACHED source Node can be decided"
+        )
+    _validate_target_shape(source, target, action)
+
+    now = datetime.now(timezone.utc)
+    source_before = _node_snapshot(source)
+    relation = None
+    merge_history = None
+    audit_node = source
+    audit_before = source_before
+    change_type = ""
+    detail = dict(audit_detail)
+
+    if action is RecommendationType.CREATE_NEW:
+        if relation_type is not None:
+            raise NodeValidationError("CREATE_NEW does not accept relation_type")
+        if not _can_be_active(session, source):
+            raise AnalysisCandidateStateError(
+                "Action/Issue requires a valid ATTACHED_TO parent"
+            )
+        source.graph_state = GraphState.ACTIVE.value
+        source.confirmed_by = actor_id
+        source.confirmed_at = now
+        source.version += 1
+        change_type = "CONFIRM_CREATE"
+    elif action is RecommendationType.LINK:
+        if target is None or relation_type is None:
+            raise NodeValidationError("LINK requires target and relation_type")
+        if relation_type == RelationType.ATTACHED_TO.value:
+            allowed = {
+                NodeType.ACTION.value: {NodeType.DECISION.value},
+                NodeType.ISSUE.value: {
+                    NodeType.DECISION.value,
+                    NodeType.ACTION.value,
+                },
+            }.get(source.node_type, set())
+            if (
+                target.graph_state != GraphState.ACTIVE.value
+                or target.node_type not in allowed
+                or target.category != source.category
+                or target.merged_into_node_id is not None
+            ):
+                raise AnalysisCandidateStateError(
+                    "ATTACHED_TO target is not a valid ACTIVE parent"
+                )
+            relation = _create_relation(
+                session,
+                project_id=project_id,
+                source=source,
+                target=target,
+                relation_type=relation_type,
+            )
+            source.parent_id = target.id
+        elif relation_type == RelationType.RELATED_TO.value:
+            if not _can_be_active(session, source):
+                raise AnalysisCandidateStateError(
+                    "RELATED_TO does not satisfy the parent requirement"
+                )
+            relation = _create_relation(
+                session,
+                project_id=project_id,
+                source=source,
+                target=target,
+                relation_type=relation_type,
+            )
+        else:
+            raise NodeValidationError(f"unsupported relation_type: {relation_type}")
+        source.graph_state = GraphState.ACTIVE.value
+        source.confirmed_by = actor_id
+        source.confirmed_at = now
+        source.version += 1
+        change_type = "CONFIRM_LINK"
+        detail.update(
+            {
+                "targetNodeId": str(target.id),
+                "relationType": relation_type,
+                "relationId": str(relation.id),
+            }
+        )
+    elif action is RecommendationType.MERGE:
+        if target is None:
+            raise NodeValidationError("MERGE requires a target")
+        if relation_type is not None:
+            raise NodeValidationError("MERGE does not accept relation_type")
+        if target.node_type != source.node_type:
+            raise AnalysisCandidateStateError(
+                "MERGE target must have the same Node type"
+            )
+        if target.category != source.category:
+            # Defense in depth: every Retrieval path scopes category, but an
+            # apply transaction must still reject a forged or stale candidate.
+            raise AnalysisCandidateStateError(
+                "MERGE target must have the same category"
+            )
+        if target.graph_state != GraphState.ACTIVE.value:
+            raise AnalysisCandidateStateError(
+                "MERGE target must be an ACTIVE canonical Node"
+            )
+        if not _can_be_active(session, target):
+            raise AnalysisCandidateStateError(
+                "merge target cannot satisfy ACTIVE parent rules"
+            )
+        if merged_title is None or not merged_title.strip():
+            raise NodeValidationError("merged_title must not be blank")
+        if merged_content is None:
+            raise NodeValidationError("merged_content must be provided")
+        target_before = _node_snapshot(target)
+        source_version = source.version
+        target_version = target.version
+        target_evidence = current_revision_evidence_specs(session, node=target)
+        if target.current_revision_id is None:
+            # A legacy projection has no Revision from which the helper can
+            # derive the next version. The approved mutation must still advance
+            # optimistic concurrency exactly once.
+            target.version += 1
+        create_node_revision(
+            session,
+            node=target,
+            title=merged_title.strip(),
+            content=merged_content,
+            node_type=target.node_type,
+            category=target.category,
+            due_date=target.due_date,
+            created_by_type="USER",
+            created_by_id=actor_id,
+            generation_run_id=None,
+            evidence_specs=target_evidence,
+            requires_evidence=bool(target_evidence),
+            legacy_imported=not bool(target_evidence),
+        )
+        target.graph_state = GraphState.ACTIVE.value
+        target.confirmed_by = actor_id
+        target.confirmed_at = now
+        source.graph_state = GraphState.MERGED.value
+        source.merged_into_node_id = target.id
+        source.version += 1
+        reconcile_embedding_status_after_revision(session, node=target)
+        mark_node_embedding_stale(session, node=source)
+        merge_history = NodeMergeHistory(
+            project_id=project_id,
+            source_node_id=source.id,
+            target_node_id=target.id,
+            analysis_run_id=analysis_run_id,
+            candidate_id=candidate_id,
+            approved_by=actor_id,
+            approved_at=now,
+            source_version=source_version,
+            target_version=target_version,
+            merged_title=target.title,
+            merged_content=target.content,
+        )
+        session.add(merge_history)
+        session.flush()
+        audit_node = target
+        audit_before = target_before
+        change_type = "CONFIRM_MERGE"
+        detail.update(
+            {
+                "sourceNodeId": str(source.id),
+                "targetNodeId": str(target.id),
+                "mergeHistoryId": str(merge_history.id),
+            }
+        )
+    else:  # pragma: no cover - enum exhaustiveness
+        raise NodeValidationError(f"unsupported requested action: {action.value}")
+
+    if source.node_type == NodeType.DECISION.value:
+        released = release_pending_dependent_nodes_if_ready(
+            session,
+            project_id=project_id,
+            meeting_id=source.source_meeting_id,
+        )
+        detail.update(
+            {
+                "decisionFirstPhase": released.phase,
+                "releasedDependentNodeCount": released.queued_count,
+                "releasedDependentNodeIds": [
+                    str(node_id) for node_id in released.queued_node_ids
+                ],
+            }
+        )
+
+    event = _audit(
+        session,
+        project_id=project_id,
+        request_id=audit_request_id,
+        candidate_id=candidate_id,
+        node=audit_node,
+        change_type=change_type,
+        before=audit_before,
+        detail=detail,
+    )
+    return _AppliedDecision(
+        relation=relation,
+        merge_history=merge_history,
+        graph_change_event=event,
     )
 
 
@@ -319,7 +601,6 @@ def approve_analysis_candidate(
     project_id: str,
     actor_id: str,
     expected_version: int,
-    confirm_unattached_target: bool = False,
     merged_title: str | None = None,
     merged_content: str | None = None,
     _required_recommendation: RecommendationType | None = None,
@@ -429,154 +710,32 @@ def approve_analysis_candidate(
                 )
 
         now = datetime.now(timezone.utc)
-        source_before = _node_snapshot(source)
-        relation = None
-        merge_history = None
-        if candidate.recommendation == RecommendationType.CREATE_NEW.value:
-            if not _can_be_active(session, source):
-                raise AnalysisCandidateStateError(
-                    "Action/Issue requires a valid ATTACHED_TO parent"
-                )
-            source.graph_state = GraphState.ACTIVE.value
-            source.confirmed_by = actor_id.strip()
-            source.confirmed_at = now
-            source.version += 1
-            _audit(
-                session,
-                candidate=candidate,
-                node=source,
-                change_type="CONFIRM_CREATE",
-                before=source_before,
-                detail={},
-            )
-        elif candidate.recommendation == RecommendationType.LINK.value:
-            if target is None or candidate.relation_type is None:
-                raise AnalysisCandidateStateError(
-                    "LINK Candidate has no target or relation type"
-                )
-            if candidate.relation_type == RelationType.ATTACHED_TO.value:
-                allowed = {
-                    NodeType.ACTION.value: {NodeType.DECISION.value},
-                    NodeType.ISSUE.value: {
-                        NodeType.DECISION.value,
-                        NodeType.ACTION.value,
-                    },
-                }.get(source.node_type, set())
-                if (
-                    target.graph_state != GraphState.ACTIVE.value
-                    or target.node_type not in allowed
-                ):
-                    raise AnalysisCandidateStateError(
-                        "ATTACHED_TO target is not a valid ACTIVE parent"
-                    )
-                relation = _create_relation(
-                    session,
-                    project_id=project_id,
-                    source=source,
-                    target=target,
-                    relation_type=candidate.relation_type,
-                )
-                source.parent_id = target.id
-            elif not _can_be_active(session, source):
-                raise AnalysisCandidateStateError(
-                    "RELATED_TO does not satisfy the parent requirement"
-                )
-            else:
-                relation = _create_relation(
-                    session,
-                    project_id=project_id,
-                    source=source,
-                    target=target,
-                    relation_type=candidate.relation_type,
-                )
-            source.graph_state = GraphState.ACTIVE.value
-            source.confirmed_by = actor_id.strip()
-            source.confirmed_at = now
-            source.version += 1
-            _audit(
-                session,
-                candidate=candidate,
-                node=source,
-                change_type="CONFIRM_LINK",
-                before=source_before,
-                detail={
-                    "targetNodeId": str(target.id),
-                    "relationType": candidate.relation_type,
-                },
-            )
-        elif candidate.recommendation == RecommendationType.MERGE.value:
-            if target is None:
-                raise AnalysisCandidateStateError(
-                    "MERGE Candidate has no target"
-                )
-            if target.node_type != source.node_type:
-                raise AnalysisCandidateStateError(
-                    "MERGE target must have the same Node type"
-                )
-            if (
-                target.graph_state == GraphState.UNATTACHED.value
-                and not confirm_unattached_target
-            ):
-                raise AnalysisCandidateStateError(
-                    "UNATTACHED merge target requires explicit confirmation"
-                )
-            if not _can_be_active(session, target):
-                raise AnalysisCandidateStateError(
-                    "merge target cannot satisfy ACTIVE parent rules"
-                )
-            final_title = (
-                merged_title
-                if merged_title is not None
-                else candidate.suggested_title
-            )
-            final_content = (
-                merged_content
-                if merged_content is not None
-                else candidate.suggested_content
-            )
-            if not final_title.strip():
-                raise NodeValidationError("merged_title must not be blank")
-            target_before = _node_snapshot(target)
-            source_version = source.version
-            target_version = target.version
-            target.title = final_title.strip()
-            target.content = final_content
-            target.graph_state = GraphState.ACTIVE.value
-            target.confirmed_by = actor_id.strip()
-            target.confirmed_at = now
-            target.version += 1
-            source.graph_state = GraphState.MERGED.value
-            source.merged_into_node_id = target.id
-            source.version += 1
-            _stale_embeddings(session, target.id)
-            merge_history = NodeMergeHistory(
-                project_id=project_id,
-                source_node_id=source.id,
-                target_node_id=target.id,
-                analysis_run_id=run.id,
-                candidate_id=candidate.id,
-                approved_by=actor_id.strip(),
-                approved_at=now,
-                source_version=source_version,
-                target_version=target_version,
-                merged_title=target.title,
-                merged_content=target.content,
-            )
-            session.add(merge_history)
-            session.flush()
-            _audit(
-                session,
-                candidate=candidate,
-                node=target,
-                change_type="CONFIRM_MERGE",
-                before=target_before,
-                detail={"sourceNodeId": str(source.id)},
-            )
-        else:
-            raise AnalysisCandidateStateError(
-                f"unsupported recommendation: {candidate.recommendation}"
-            )
-
+        action = RecommendationType(candidate.recommendation)
+        final_title = merged_title
+        final_content = merged_content
+        if action is RecommendationType.MERGE:
+            final_title = final_title or candidate.suggested_title
+            if final_content is None:
+                final_content = candidate.suggested_content
+        applied = _apply_locked_decision(
+            session,
+            project_id=project_id,
+            actor_id=actor_id.strip(),
+            action=action,
+            source=source,
+            target=target,
+            relation_type=candidate.relation_type,
+            merged_title=final_title,
+            merged_content=final_content,
+            analysis_run_id=run.id,
+            candidate_id=candidate.id,
+            audit_request_id=str(run.id),
+            audit_detail={
+                "decisionOrigin": "RECOMMENDATION_APPROVAL",
+                "recommendedAction": candidate.recommendation,
+                "requestedAction": candidate.recommendation,
+            },
+        )
         candidate.status = AnalysisCandidateStatus.APPROVED.value
         candidate.version += 1
         candidate.decided_by = actor_id.strip()
@@ -588,10 +747,433 @@ def approve_analysis_candidate(
             candidate=_candidate_view(candidate),
             source_node_id=str(source.id),
             target_node_id=str(target.id) if target else None,
-            relation_id=str(relation.id) if relation else None,
-            merge_history_id=(
-                str(merge_history.id) if merge_history else None
+            relation_id=(
+                str(applied.relation.id) if applied.relation else None
             ),
+            merge_history_id=(
+                str(applied.merge_history.id)
+                if applied.merge_history
+                else None
+            ),
+        )
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def _decision_request_key(
+    *,
+    project_id: str,
+    source_node_id: uuid.UUID,
+    requested_action: RecommendationType,
+    source_expected_version: int,
+    target_node_id: uuid.UUID | None,
+    target_expected_version: int | None,
+    relation_type: str | None,
+    analysis_run_id: uuid.UUID | None,
+    recommendation_id: uuid.UUID | None,
+    merged_title: str | None,
+    merged_content: str | None,
+) -> str:
+    payload = [
+        "manual-node-decision-v1",
+        project_id,
+        str(source_node_id),
+        requested_action.value,
+        source_expected_version,
+        str(target_node_id) if target_node_id else None,
+        target_expected_version,
+        relation_type,
+        str(analysis_run_id) if analysis_run_id else None,
+        str(recommendation_id) if recommendation_id else None,
+        merged_title,
+        merged_content,
+    ]
+    canonical = json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _manual_result_from_event(
+    event: GraphChangeEvent,
+    *,
+    requested_action: RecommendationType,
+    replayed: bool,
+) -> UserNodeDecisionResult:
+    detail = event.detail or {}
+    return UserNodeDecisionResult(
+        requested_action=requested_action.value,
+        source_node_id=str(detail["decisionSourceNodeId"]),
+        target_node_id=detail.get("targetNodeId"),
+        relation_id=detail.get("relationId"),
+        merge_history_id=detail.get("mergeHistoryId"),
+        graph_change_event_id=str(event.id),
+        replayed=replayed,
+    )
+
+
+def _manual_reference_context(
+    session,
+    *,
+    project_id: str,
+    source: Node,
+    analysis_run_id: uuid.UUID | None,
+    recommendation_id: uuid.UUID | None,
+) -> tuple[NodeAnalysisRun | None, AnalysisCandidate | None]:
+    recommendation = None
+    if recommendation_id is not None:
+        recommendation = session.execute(
+            select(AnalysisCandidate)
+            .where(
+                AnalysisCandidate.id == recommendation_id,
+                AnalysisCandidate.project_id == project_id,
+                AnalysisCandidate.source_node_id == source.id,
+            )
+            .with_for_update()
+        ).scalar_one_or_none()
+        if recommendation is None:
+            raise AnalysisCandidateNotFoundError(
+                f"analysis candidate not found: {recommendation_id}"
+            )
+        if recommendation.status == AnalysisCandidateStatus.APPROVED.value:
+            raise AnalysisCandidateStateError(
+                "an already approved recommendation cannot be overridden"
+            )
+        if recommendation.source_node_version != source.version:
+            raise AnalysisCandidateStateError(
+                "recommendation no longer matches the source Node version"
+            )
+        if recommendation.target_node_id is not None:
+            recommended_target = session.execute(
+                select(Node).where(
+                    Node.id == recommendation.target_node_id,
+                    Node.project_id == project_id,
+                )
+            ).scalar_one_or_none()
+            if (
+                recommended_target is None
+                or recommended_target.version
+                != recommendation.target_node_version
+                or recommended_target.graph_state
+                not in {GraphState.ACTIVE.value, GraphState.UNATTACHED.value}
+                or recommended_target.merged_into_node_id is not None
+            ):
+                raise AnalysisCandidateStateError(
+                    "recommendation target is stale"
+                )
+        if (
+            analysis_run_id is not None
+            and analysis_run_id != recommendation.analysis_run_id
+        ):
+            raise AnalysisCandidateStateError(
+                "analysisRunId and recommendationId do not refer to the same run"
+            )
+        analysis_run_id = recommendation.analysis_run_id
+
+    run = None
+    if analysis_run_id is not None:
+        run = session.execute(
+            select(NodeAnalysisRun)
+            .join(Node, Node.id == NodeAnalysisRun.source_node_id)
+            .where(
+                NodeAnalysisRun.id == analysis_run_id,
+                NodeAnalysisRun.source_node_id == source.id,
+                Node.project_id == project_id,
+            )
+            .with_for_update()
+        ).scalar_one_or_none()
+        if run is None:
+            raise AnalysisRunNotFoundError(
+                f"analysis run not found: {analysis_run_id}"
+            )
+        if (
+            run.source_node_version != source.version
+            or source.current_analysis_run_id != run.id
+            or run.status == AnalysisRunStatus.SUPERSEDED.value
+        ):
+            raise AnalysisCandidateStateError(
+                "analysis Run no longer matches the current source Node"
+            )
+    return run, recommendation
+
+
+def _close_source_review_state(
+    session,
+    *,
+    source: Node,
+    actor_id: str,
+    referenced_run: NodeAnalysisRun | None,
+) -> None:
+    now = datetime.now(timezone.utc)
+    pending_candidates = session.execute(
+        select(AnalysisCandidate)
+        .where(
+            AnalysisCandidate.source_node_id == source.id,
+            AnalysisCandidate.status == AnalysisCandidateStatus.PENDING.value,
+        )
+        .with_for_update()
+    ).scalars().all()
+    for candidate in pending_candidates:
+        candidate.status = AnalysisCandidateStatus.REJECTED.value
+        candidate.version += 1
+        candidate.decided_by = actor_id
+        candidate.decided_at = now
+        candidate.updated_at = now
+
+    run_to_close = referenced_run
+    if run_to_close is None and source.current_analysis_run_id is not None:
+        run_to_close = session.execute(
+            select(NodeAnalysisRun)
+            .where(
+                NodeAnalysisRun.id == source.current_analysis_run_id,
+                NodeAnalysisRun.source_node_id == source.id,
+            )
+            .with_for_update()
+        ).scalar_one_or_none()
+    if (
+        run_to_close is not None
+        and run_to_close.status
+        in {
+            AnalysisRunStatus.PENDING.value,
+            AnalysisRunStatus.RUNNING.value,
+        }
+    ):
+        run_to_close.status = AnalysisRunStatus.SUPERSEDED.value
+        run_to_close.completed_at = now
+        run_to_close.updated_at = now
+
+    jobs = session.execute(
+        select(AnalysisJob)
+        .where(
+            AnalysisJob.node_id == source.id,
+            AnalysisJob.status.in_(("PENDING", "RUNNING")),
+        )
+        .with_for_update()
+    ).scalars().all()
+    for job in jobs:
+        job.status = "FAILED"
+        job.claim_token = None
+        job.failure_code = MANUAL_DECISION_COMPLETED
+        job.last_error = "analysis stopped after a user final decision"
+        job.updated_at = now
+
+
+def decide_node(
+    session_factory,
+    source_node_id: str | uuid.UUID,
+    *,
+    project_id: str,
+    actor_id: str,
+    requested_action: str | RecommendationType,
+    source_expected_version: int,
+    target_node_id: str | uuid.UUID | None = None,
+    target_expected_version: int | None = None,
+    relation_type: str | RelationType | None = None,
+    analysis_run_id: str | uuid.UUID | None = None,
+    recommendation_id: str | uuid.UUID | None = None,
+    merged_title: str | None = None,
+    merged_content: str | None = None,
+) -> UserNodeDecisionResult:
+    """Apply a user's final decision without requiring a model recommendation."""
+
+    if not actor_id or not actor_id.strip():
+        raise NodeValidationError("actor_id must not be empty")
+    try:
+        action = (
+            requested_action
+            if isinstance(requested_action, RecommendationType)
+            else RecommendationType(str(requested_action))
+        )
+    except ValueError as exc:
+        raise NodeValidationError(
+            f"unsupported requested_action: {requested_action}"
+        ) from exc
+    parsed_source_id = _parse_uuid(source_node_id, field="source_node_id")
+    parsed_target_id = (
+        _parse_uuid(target_node_id, field="target_node_id")
+        if target_node_id is not None
+        else None
+    )
+    parsed_run_id = (
+        _parse_uuid(analysis_run_id, field="analysis_run_id")
+        if analysis_run_id is not None
+        else None
+    )
+    parsed_recommendation_id = (
+        _parse_uuid(recommendation_id, field="recommendation_id")
+        if recommendation_id is not None
+        else None
+    )
+    normalized_relation = (
+        relation_type.value
+        if isinstance(relation_type, RelationType)
+        else (str(relation_type) if relation_type is not None else None)
+    )
+    if action is RecommendationType.CREATE_NEW:
+        if (
+            parsed_target_id is not None
+            or target_expected_version is not None
+            or normalized_relation is not None
+        ):
+            raise NodeValidationError(
+                "CREATE_NEW does not accept target or relation fields"
+            )
+    elif action is RecommendationType.LINK:
+        if (
+            parsed_target_id is None
+            or target_expected_version is None
+            or normalized_relation
+            not in {
+                RelationType.ATTACHED_TO.value,
+                RelationType.RELATED_TO.value,
+            }
+        ):
+            raise NodeValidationError(
+                "LINK requires target, target version, and a valid relation type"
+            )
+    elif (
+        parsed_target_id is None
+        or target_expected_version is None
+        or normalized_relation is not None
+    ):
+        raise NodeValidationError(
+            "MERGE requires target and target version without relation type"
+        )
+
+    request_key = _decision_request_key(
+        project_id=project_id,
+        source_node_id=parsed_source_id,
+        requested_action=action,
+        source_expected_version=source_expected_version,
+        target_node_id=parsed_target_id,
+        target_expected_version=target_expected_version,
+        relation_type=normalized_relation,
+        analysis_run_id=parsed_run_id,
+        recommendation_id=parsed_recommendation_id,
+        merged_title=merged_title,
+        merged_content=merged_content,
+    )
+    audit_request_id = f"manual:{request_key}"
+    session = session_factory()
+    try:
+        if session.get_bind().dialect.name == "sqlite":
+            session.execute(text("BEGIN IMMEDIATE"))
+        source = session.execute(
+            select(Node)
+            .where(
+                Node.id == parsed_source_id,
+                Node.project_id == project_id,
+            )
+            .with_for_update()
+        ).scalar_one_or_none()
+        if source is None:
+            raise NodeNotFoundError(f"node not found: {source_node_id}")
+
+        existing_event = session.execute(
+            select(GraphChangeEvent).where(
+                GraphChangeEvent.project_id == project_id,
+                GraphChangeEvent.request_id == audit_request_id,
+            )
+        ).scalar_one_or_none()
+        if existing_event is not None:
+            result = _manual_result_from_event(
+                existing_event,
+                requested_action=action,
+                replayed=True,
+            )
+            session.rollback()
+            return result
+
+        if source.version != source_expected_version:
+            raise NodeVersionConflict(
+                str(source.id),
+                source_expected_version,
+                source.version,
+            )
+        if (
+            source.graph_state != GraphState.UNATTACHED.value
+            or source.merged_into_node_id is not None
+        ):
+            raise NodeStateError(
+                "only a non-merged UNATTACHED source Node can be decided"
+            )
+
+        run, recommendation = _manual_reference_context(
+            session,
+            project_id=project_id,
+            source=source,
+            analysis_run_id=parsed_run_id,
+            recommendation_id=parsed_recommendation_id,
+        )
+        if run is not None:
+            parsed_run_id = run.id
+
+        target = None
+        if parsed_target_id is not None:
+            target = session.execute(
+                select(Node)
+                .where(
+                    Node.id == parsed_target_id,
+                    Node.project_id == project_id,
+                )
+                .with_for_update()
+            ).scalar_one_or_none()
+            if target is None:
+                raise NodeNotFoundError(f"node not found: {target_node_id}")
+            if target.version != target_expected_version:
+                raise NodeVersionConflict(
+                    str(target.id),
+                    target_expected_version,
+                    target.version,
+                )
+
+        recommended_action = (
+            recommendation.recommendation if recommendation is not None else None
+        )
+        applied = _apply_locked_decision(
+            session,
+            project_id=project_id,
+            actor_id=actor_id.strip(),
+            action=action,
+            source=source,
+            target=target,
+            relation_type=normalized_relation,
+            merged_title=merged_title,
+            merged_content=merged_content,
+            analysis_run_id=parsed_run_id,
+            candidate_id=parsed_recommendation_id,
+            audit_request_id=audit_request_id,
+            audit_detail={
+                "decisionOrigin": "MANUAL",
+                "decisionRequestKey": request_key,
+                "decisionSourceNodeId": str(source.id),
+                "requestedAction": action.value,
+                "recommendedAction": recommended_action,
+                "recommendationId": (
+                    str(parsed_recommendation_id)
+                    if parsed_recommendation_id
+                    else None
+                ),
+                "analysisRunId": str(parsed_run_id) if parsed_run_id else None,
+            },
+        )
+        _close_source_review_state(
+            session,
+            source=source,
+            actor_id=actor_id.strip(),
+            referenced_run=run,
+        )
+        session.flush()
+        session.commit()
+        return _manual_result_from_event(
+            applied.graph_change_event,
+            requested_action=action,
+            replayed=False,
         )
     except Exception:
         session.rollback()
@@ -643,7 +1225,6 @@ def approve_merge_existing(
     project_id: str,
     actor_id: str,
     expected_version: int,
-    confirm_unattached_target: bool = False,
     merged_title: str | None = None,
     merged_content: str | None = None,
 ) -> AnalysisCandidateDecisionResult:
@@ -653,7 +1234,6 @@ def approve_merge_existing(
         project_id=project_id,
         actor_id=actor_id,
         expected_version=expected_version,
-        confirm_unattached_target=confirm_unattached_target,
         merged_title=merged_title,
         merged_content=merged_content,
         _required_recommendation=RecommendationType.MERGE,
@@ -661,9 +1241,11 @@ def approve_merge_existing(
 
 
 __all__ = [
+    "UserNodeDecisionResult",
     "approve_analysis_candidate",
     "approve_create_new",
     "approve_link_existing",
     "approve_merge_existing",
+    "decide_node",
     "reject_analysis_candidate",
 ]

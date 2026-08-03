@@ -35,7 +35,6 @@ class SpringNodeRow(BaseModel):
     content: str
     parentId: str | None
     graphState: GraphState
-    lifecycleStatus: str
     version: int
     sourceMeetingId: str
     sourceItemId: str
@@ -176,7 +175,6 @@ class CandidateView(BaseModel):
     suggested_content: str
     suggested_disposition: str
     suggested_reason: str | None = None
-    suggested_lifecycle_status: str | None = None
     suggested_parent_candidate_id: str | None = None
     suggested_parent_node_id: str | None = None
 
@@ -185,7 +183,6 @@ class CandidateView(BaseModel):
     reviewed_title: str | None = None
     reviewed_content: str | None = None
     reviewed_disposition: str | None = None
-    reviewed_lifecycle_status: str | None = None
     reviewed_parent_mode: str
     reviewed_parent_candidate_id: str | None = None
     reviewed_parent_node_id: str | None = None
@@ -195,14 +192,8 @@ class CandidateView(BaseModel):
     effective_title: str
     effective_content: str
     effective_disposition: str
-    #: Lifecycle status the Node will actually receive on initial-review
-    #: completion. None only for UNKNOWN, which cannot become a Node.
-    effective_lifecycle_status: str | None = None
     effective_parent_candidate_id: str | None = None
     effective_parent_node_id: str | None = None
-    #: True when an ACTION carries no usable lifecycle proposal and therefore
-    #: falls back to the default. Surfaced so reviewers can confirm the state.
-    lifecycle_status_needs_review: bool = False
 
     review_status: str
     version: int
@@ -450,4 +441,3 @@ class ApproveMergeExistingCommand(BaseModel):
     sourceExpectedVersion: int = Field(ge=1)
     targetExpectedVersion: int = Field(ge=1)
     analysisRunId: UUID
-    confirmUnattachedTarget: bool = False

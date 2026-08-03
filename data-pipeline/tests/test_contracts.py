@@ -22,23 +22,38 @@ from data_pipeline.contracts import (
     PlanOp,
     RelationType,
     SortKey,
-    default_lifecycle_status,
+    CHANGES_ALLOWED_KEYS,
+    allowed_parent_types,
+    is_allowed_parent_type,
     parent_rule_violation,
-    transition_allowed,
     analysis_run_status_transition_allowed,
     analysis_status_transition_allowed,
 )
 
 
-def test_lifecycle_terminal_blocks_laundering():
-    # COMPLETED/CANCELLED terminal → 어떤 전이도 불가 (경유 우회 차단).
-    assert transition_allowed("ACTION", "TODO", "IN_PROGRESS")
-    assert transition_allowed("ACTION", "IN_PROGRESS", "COMPLETED")
-    assert not transition_allowed("ACTION", "COMPLETED", "IN_PROGRESS")
-    assert not transition_allowed("ACTION", "COMPLETED", "CANCELLED")
-    assert not transition_allowed("ACTION", "CANCELLED", "IN_PROGRESS")
-    # 같은 상태 no-op 은 멱등 허용.
-    assert transition_allowed("ACTION", "COMPLETED", "COMPLETED")
+def test_is_allowed_parent_type_is_the_single_type_rule():
+    """§5.3: Decision 은 root, Action→Decision, Issue→Decision|Action."""
+
+    assert is_allowed_parent_type("DECISION", None)
+    assert not is_allowed_parent_type("DECISION", "DECISION")
+
+    assert is_allowed_parent_type("ACTION", "DECISION")
+    assert not is_allowed_parent_type("ACTION", "ACTION")
+    assert not is_allowed_parent_type("ACTION", "ISSUE")
+    assert not is_allowed_parent_type("ACTION", None)
+
+    assert is_allowed_parent_type("ISSUE", "DECISION")
+    assert is_allowed_parent_type("ISSUE", "ACTION")
+    assert not is_allowed_parent_type("ISSUE", "ISSUE")
+    assert not is_allowed_parent_type("ISSUE", None)
+
+    assert not is_allowed_parent_type("UNKNOWN", "DECISION")
+
+
+def test_allowed_parent_types_matches_the_validator():
+    assert allowed_parent_types("DECISION") == frozenset()
+    assert allowed_parent_types("ACTION") == frozenset({"DECISION"})
+    assert allowed_parent_types("ISSUE") == frozenset({"DECISION", "ACTION"})
 
 
 def test_parent_rules():
@@ -55,10 +70,11 @@ def test_parent_rules():
     assert RelationType.RELATED_TO.value == "RELATED_TO"
 
 
-def test_default_lifecycle_status():
-    assert default_lifecycle_status("DECISION") == "ACTIVE"
-    assert default_lifecycle_status("ACTION") == "TODO"
-    assert default_lifecycle_status("ISSUE") == "OPEN"
+def test_update_action_can_no_longer_carry_a_status():
+    """lifecycle 제거(0007) 이후 UPDATE_ACTION 은 dueDate 만 바꾼다."""
+
+    assert "status" not in CHANGES_ALLOWED_KEYS
+    assert CHANGES_ALLOWED_KEYS == frozenset({"dueDate"})
 
 
 def test_analysis_status_contracts():
@@ -146,9 +162,8 @@ def test_initial_and_final_review_command_contracts_use_uuid_and_versions():
         sourceExpectedVersion=3,
         targetExpectedVersion=7,
         analysisRunId=analysis_id,
-        confirmUnattachedTarget=True,
     )
-    assert merge.confirmUnattachedTarget is True
+    assert merge.targetNodeId == target_id
 
     with pytest.raises(ValidationError):
         CompleteInitialReviewCommand(

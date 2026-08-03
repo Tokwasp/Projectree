@@ -231,6 +231,7 @@ class SqsAudioWorker:
                     self._session_factory,
                     meeting_input={
                         "requestId": request_id,
+                        "recordingHash": request_id.removeprefix("s3-"),
                         "projectId": record.project_id,
                         "externalMeetingId": record.external_meeting_id,
                         "segments": segments,

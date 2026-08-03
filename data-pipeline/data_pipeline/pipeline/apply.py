@@ -25,9 +25,7 @@ from data_pipeline.contracts import (
     NodeType,
     PlanOp,
     UpdatedNode,
-    default_lifecycle_status,
     parent_rule_violation,
-    transition_allowed,
 )
 from data_pipeline.contracts.change_plan import CREATE_OPS
 from data_pipeline.contracts.enums import GraphState
@@ -49,7 +47,6 @@ def _snapshot(node: Node) -> dict:
         "title": node.title,
         "parentId": str(node.parent_id) if node.parent_id else None,
         "graphState": node.graph_state,
-        "lifecycleStatus": node.lifecycle_status,
         "version": node.version,
         "dueDate": node.due_date,
     }
@@ -166,7 +163,6 @@ def apply_change_plan(session: Session, plan: ChangePlan, category_set: Category
                 content=cmd.content or "",
                 parent_id=uuid.UUID(parent_id) if parent_id else None,
                 graph_state=graph_state,
-                lifecycle_status=default_lifecycle_status(ntype),
             )
             session.add(node)
             session.flush()
@@ -200,14 +196,9 @@ def apply_change_plan(session: Session, plan: ChangePlan, category_set: Category
             before = _snapshot(node)
             expected = cmd.expectedVersion
             changes = cmd.changes or {}
-            new_status = changes.get("status")
-            if new_status and not transition_allowed(NodeType.ACTION.value, node.lifecycle_status, new_status):
-                raise ApplyError(f"허용되지 않는 전이({cmd.targetActionId}): {node.lifecycle_status}->{new_status}")
 
             new_version = (expected if expected is not None else node.version) + 1
             values: dict = {"version": new_version}
-            if new_status:
-                values["lifecycle_status"] = new_status
             if "dueDate" in changes:
                 values["due_date"] = changes["dueDate"]
 

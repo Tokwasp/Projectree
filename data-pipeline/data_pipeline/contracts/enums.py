@@ -1,10 +1,11 @@
 """v2.2 계약 열거값 + 상태 전이표 + 부모 규칙.
 
-핵심 분리 (v2.2):
-  - graph_state    : 그래프상 위치/가시성 (ACTIVE/UNATTACHED/EXCLUDED/MERGED/ARCHIVED)
-  - lifecycle_status: 노드 자체의 도메인 상태 (타입별로 다름)
+노드 상태 축은 graph_state 하나다.
+  - graph_state: 그래프상 위치/가시성 (ACTIVE/UNATTACHED/EXCLUDED/MERGED/ARCHIVED)
 
-두 축은 독립이다. 예: Action 이 lifecycle COMPLETED 여도 graph_state 는 ACTIVE 일 수 있다.
+Node 진행 상태는 팀 결정으로 제품에서 제외되었고
+0007 Migration 에서 컬럼까지 제거되었다. 진행 상태를 다시 도입한다면
+graph_state 와 독립된 새 축으로 설계한다.
 """
 
 from __future__ import annotations
@@ -142,24 +143,6 @@ def analysis_run_status_transition_allowed(
     )
 
 
-# --- 타입별 lifecycle_status ---------------------------------------------------
-class DecisionStatus(str, Enum):
-    ACTIVE = "ACTIVE"
-    SUPERSEDED = "SUPERSEDED"
-
-
-class ActionStatus(str, Enum):
-    TODO = "TODO"
-    IN_PROGRESS = "IN_PROGRESS"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
-
-
-class IssueStatus(str, Enum):
-    OPEN = "OPEN"
-    RESOLVED = "RESOLVED"
-
-
 # --- 관계 (AI 추론 아님 — 사용자/후속 파이프라인이 생성) -----------------------
 class RelationType(str, Enum):
     ATTACHED_TO = "ATTACHED_TO"  # confirmed child -> confirmed parent
@@ -199,14 +182,9 @@ class MinutesReason(str, Enum):
 # --- 집합/맵 ------------------------------------------------------------------
 NODE_TYPES = frozenset(v.value for v in NodeType)
 
-LIFECYCLE_STATUSES_BY_TYPE: dict[str, frozenset[str]] = {
-    NodeType.DECISION.value: frozenset(v.value for v in DecisionStatus),
-    NodeType.ACTION.value: frozenset(v.value for v in ActionStatus),
-    NodeType.ISSUE.value: frozenset(v.value for v in IssueStatus),
-}
-
 # UPDATE_ACTION changes 로 바꿀 수 있는 키 (PoC 2차: assignee 는 화자 특정 불가로 MVP 제외).
-CHANGES_ALLOWED_KEYS = frozenset({"status", "dueDate"})
+# "status" 는 Node 진행 상태 제거(0007)와 함께 빠졌다.
+CHANGES_ALLOWED_KEYS = frozenset({"dueDate"})
 
 # type별 허용 판정. UNATTACHED 는 M2 회의 내 판정 공간, UPDATE_ACTION/MINUTES_ONLY 는 M1/M3.
 ALLOWED_RESULTS_BY_TYPE: dict[str, frozenset[str]] = {
@@ -225,61 +203,6 @@ ALLOWED_RESULTS_BY_TYPE: dict[str, frozenset[str]] = {
 GRAPH_RESULTS = frozenset({JudgmentResult.NEW_DECISION.value, JudgmentResult.ATTACH.value})
 
 
-# --- lifecycle 전이표: 상태 세탁 차단 (COMPLETED/CANCELLED terminal) -----------
-# from_status -> 허용되는 to_status 집합. 없는 키(=terminal)는 어떤 전이도 불가.
-LIFECYCLE_TRANSITIONS: dict[str, dict[str, frozenset[str]]] = {
-    NodeType.DECISION.value: {
-        DecisionStatus.ACTIVE.value: frozenset({DecisionStatus.SUPERSEDED.value}),
-        DecisionStatus.SUPERSEDED.value: frozenset(),  # terminal
-    },
-    NodeType.ACTION.value: {
-        ActionStatus.TODO.value: frozenset(
-            {ActionStatus.IN_PROGRESS.value, ActionStatus.COMPLETED.value, ActionStatus.CANCELLED.value}
-        ),
-        ActionStatus.IN_PROGRESS.value: frozenset(
-            {ActionStatus.COMPLETED.value, ActionStatus.CANCELLED.value}
-        ),
-        ActionStatus.COMPLETED.value: frozenset(),   # terminal — 되살리기 금지 (R9)
-        ActionStatus.CANCELLED.value: frozenset(),    # terminal
-    },
-    NodeType.ISSUE.value: {
-        IssueStatus.OPEN.value: frozenset({IssueStatus.RESOLVED.value}),
-        IssueStatus.RESOLVED.value: frozenset({IssueStatus.OPEN.value}),  # 재오픈은 세탁 아님
-    },
-}
-
-TERMINAL_STATUSES: dict[str, frozenset[str]] = {
-    NodeType.ACTION.value: frozenset({ActionStatus.COMPLETED.value, ActionStatus.CANCELLED.value}),
-    NodeType.DECISION.value: frozenset({DecisionStatus.SUPERSEDED.value}),
-    NodeType.ISSUE.value: frozenset(),
-}
-
-
-def default_lifecycle_status(node_type: str) -> str:
-    """새로 생성되는 노드의 초기 lifecycle_status."""
-    return {
-        NodeType.DECISION.value: DecisionStatus.ACTIVE.value,
-        NodeType.ACTION.value: ActionStatus.TODO.value,
-        NodeType.ISSUE.value: IssueStatus.OPEN.value,
-    }[node_type]
-
-
-def lifecycle_status_valid(node_type: str, status: str) -> bool:
-    return status in LIFECYCLE_STATUSES_BY_TYPE.get(node_type, frozenset())
-
-
-def transition_allowed(node_type: str, from_status: str, to_status: str) -> bool:
-    """상태 세탁 차단 규칙. 같은 상태로의 no-op 은 허용(멱등)."""
-    table = LIFECYCLE_TRANSITIONS.get(node_type)
-    if table is None:
-        return False
-    if from_status not in table or not lifecycle_status_valid(node_type, to_status):
-        return False
-    if from_status == to_status:
-        return True
-    return to_status in table[from_status]
-
-
 def result_allowed_for_type(result: str, node_type: str) -> bool:
     return result in ALLOWED_RESULTS_BY_TYPE.get(node_type, frozenset())
 
@@ -291,6 +214,24 @@ _ACTIVE_PARENT_RULES: dict[str, frozenset[str] | None] = {
     NodeType.ACTION.value: frozenset({NodeType.DECISION.value}),
     NodeType.ISSUE.value: frozenset({NodeType.DECISION.value, NodeType.ACTION.value}),
 }
+
+
+def is_allowed_parent_type(child_type: str, parent_type: str | None) -> bool:
+    """타입만 보는 단일 부모 규칙.
+
+    Decision 은 root, Action 은 Decision 만, Issue 는 Decision 또는 Action 을
+    부모로 가진다. project/category 동일성, 부모의 ACTIVE·canonical 여부,
+    단일 부모, self-parent·cycle 금지는 호출부에서 별도로 검증한다.
+    """
+    allowed = _ACTIVE_PARENT_RULES.get(child_type, frozenset())
+    if allowed is None:
+        return parent_type is None
+    return parent_type is not None and parent_type in allowed
+
+
+def allowed_parent_types(child_type: str) -> frozenset[str]:
+    """child_type 이 부모로 가질 수 있는 타입 집합 (root 면 빈 집합)."""
+    return _ACTIVE_PARENT_RULES.get(child_type) or frozenset()
 
 
 def parent_rule_violation(node_type: str, parent_type: str | None, graph_state: str) -> str | None:

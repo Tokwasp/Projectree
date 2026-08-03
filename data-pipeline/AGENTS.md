@@ -6,10 +6,11 @@
 
 항상 다음 순서로 읽는다.
 
-1. `docs/CANDIDATE_NODE_CONFIRMATION_CONTRACT.md`
+1. `docs/contracts/automatic-node-merge.md`
 2. `README.md`
-3. 현재 작업에서 별도 task 문서가 실제로 제공된 경우 해당 문서
-4. 변경 대상 코드와 기존 테스트
+3. 레거시 승인 흐름을 수정할 때만 `docs/CANDIDATE_NODE_CONFIRMATION_CONTRACT.md`
+4. 현재 작업에서 별도 task 문서가 실제로 제공된 경우 해당 문서
+5. 변경 대상 코드와 기존 테스트
 
 문서와 코드가 충돌하면 임의로 추측하지 말고, 현재 task의 완료 조건을 만족하는 최소 변경을 우선한다.
 
@@ -28,18 +29,20 @@
 
 ## 3. 현재 제품 원칙
 
-- LLM 출력은 정답이 아니라 제안이다.
-- 모든 extraction item은 먼저 `PROPOSED` 후보로 저장한다.
-- judgment 결과는 `suggestedDisposition`과 `suggestedParent`일 뿐이다.
-- `MINUTES_ONLY`로 추천된 항목도 삭제하거나 숨기지 않는다.
-- 1차 검토가 끝난 Candidate만 `UNATTACHED Node`로 만들고, 사용자가 최종
-  승인한 결과만 `ACTIVE` 그래프에 반영한다.
-- 생성 파이프라인은 Candidate 1차 검토 완료 전에 `Node`와 정식 `NodeEvidence`를 만들면 안 된다.
-- 1차 검토 완료 후에는 `UNATTACHED` Node와 Evidence만 만들며, 최종 승인 전에는
-  `ACTIVE` 전환이나 `Relation` 생성을 하면 안 된다.
-- Retrieval은 같은 프로젝트의 `ACTIVE`와 `UNATTACHED` Node를 검색하며,
-  현재 검색 Node 자신과 `MERGED`·`EXCLUDED`·`ARCHIVED` Node는 제외한다.
-- Retrieval과 B 모델은 추천만 생성하고 Node·Relation을 직접 변경하지 않는다.
+- LLM 출력은 신뢰 경계 밖의 제안이며 서버 검증과 보수적 안전 게이트를 거친다.
+- Candidate는 A 모델 원본·추적 데이터이며 사용자 승인 대기열이 아니다.
+- 서버가 검증한 Evidence가 없는 자동 Revision은 공개하지 않는다.
+- Decision을 먼저 canonical 확정한 뒤 Action/Issue 부모를 해석한다.
+- 외부 호출 결과를 Graph Mutation Plan에 모으고 최종 그래프는 한 트랜잭션으로 반영한다.
+- 정상 Decision은 `ACTIVE`, 유효한 구조 부모가 있는 Action/Issue도 `ACTIVE`다.
+  필수 부모가 해결되지 않은 Action/Issue만 `UNATTACHED`로 보존한다.
+- 자동 MERGE는 보정된 threshold·margin·동일성·충돌·target version 검사를 모두
+  통과해야 하며, 실패하면 `CREATE_NEW`로 강등한다.
+- 병합은 원본 Node/Revision/Evidence/Relation endpoint를 보존하는 논리 병합이다.
+- Retrieval은 같은 프로젝트의 `ACTIVE`와 `UNATTACHED` Node를 검색하며 현재
+  source와 `MERGED`·`EXCLUDED`·`ARCHIVED`·`DELETED` Node는 제외한다.
+- 사용자 편집은 LLM을 호출하지 않고 새 Revision과 감사 정보를 만든다.
+- 레거시 승인/재분석 API는 운영 제품 흐름에서 사용하지 않는다.
 
 ## 4. 코드베이스 규칙
 
@@ -57,14 +60,11 @@
 
 현재 task 문서에 없는 다음 작업을 한 PR에 섞지 않는다.
 
-- pgvector 설치 및 임베딩 worker
-- Top-K retrieval
-- RAG prompt 입력 연결
-- Clova STT 연동
-- merge/same/follows/reverses/resolved_by 구현 확대
-- HTTP 프레임워크 도입
 - 프론트엔드 UI
-- 프롬프트 재작성
+- Spring 사용자 인증 구현
+- OpenVidu Meeting ID 정책 변경
+- EC2/인프라 배포
+- 자동 MERGE 임계값을 근거 없이 추측해 설정
 
 ## 6. 검증
 

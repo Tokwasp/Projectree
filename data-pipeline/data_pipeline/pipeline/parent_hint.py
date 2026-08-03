@@ -16,6 +16,8 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
+from sqlalchemy import select
+
 from data_pipeline.storage import Node, NodeCandidate
 
 #: Bounded follow of merged_into chains so a hint cannot loop forever.
@@ -53,15 +55,32 @@ def _effective_parent_ids(
     return None, None
 
 
-def _canonical(session, node: Node | None) -> Node | None:
-    """Follow merged_into to the canonical target, bounded."""
+def _canonical(
+    session,
+    node: Node | None,
+    *,
+    project_id: str,
+) -> Node | None:
+    """Follow merged_into to a same-project, same-type canonical target."""
 
     hops = 0
+    visited: set[uuid.UUID] = set()
+    expected_type = node.node_type if node is not None else None
     while node is not None and node.merged_into_node_id is not None:
+        if node.id in visited:
+            return None
+        visited.add(node.id)
         hops += 1
         if hops > _MAX_MERGE_HOPS:
             return None
-        node = session.get(Node, node.merged_into_node_id)
+        node = session.execute(
+            select(Node).where(
+                Node.id == node.merged_into_node_id,
+                Node.project_id == project_id,
+            )
+        ).scalar_one_or_none()
+        if node is not None and node.node_type != expected_type:
+            return None
     return node
 
 
@@ -106,7 +125,11 @@ def resolve_same_meeting_parent_hint(
     else:
         return None
 
-    parent = _canonical(session, parent)
+    parent = _canonical(
+        session,
+        parent,
+        project_id=source_node.project_id,
+    )
     if parent is None:
         return None
     if parent.project_id != source_node.project_id:

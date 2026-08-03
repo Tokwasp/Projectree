@@ -37,6 +37,7 @@ class WorkerSettings:
     upload_processing_timeout_seconds: int
     llm_adapter: str
     embedding_adapter: str
+    b_model_adapter: str
     openvidu_recording_bucket: str
     openvidu_recording_prefix: str
     openvidu_supported_kinds: tuple[str, ...]
@@ -60,6 +61,10 @@ class WorkerSettings:
             if self.embedding_adapter != "fake":
                 raise ValueError(
                     "APP_ENV=test requires EMBEDDING_ADAPTER=fake"
+                )
+            if self.b_model_adapter != "fake":
+                raise ValueError(
+                    "APP_ENV=test requires B_MODEL_ADAPTER=fake"
                 )
 
 
@@ -103,6 +108,7 @@ def load_worker_settings() -> WorkerSettings:
         ),
         llm_adapter=_env("LLM_ADAPTER", "fake").strip().lower(),
         embedding_adapter=_env("EMBEDDING_ADAPTER", "fake").strip().lower(),
+        b_model_adapter=_env("B_MODEL_ADAPTER", "fake").strip().lower(),
         openvidu_recording_bucket=_env("OPENVIDU_RECORDING_BUCKET"),
         openvidu_recording_prefix=openvidu_prefix,
         openvidu_supported_kinds=_csv("OPENVIDU_SUPPORTED_KINDS", "MIXED"),

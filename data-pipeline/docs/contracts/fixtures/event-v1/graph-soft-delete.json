@@ -1,0 +1,17 @@
+{
+  "eventSchemaVersion": 1,
+  "eventId": "00000000-0000-0000-0000-000000000004",
+  "eventType": "PROJECT_GRAPH_CHANGED",
+  "occurredAt": "2026-08-03T01:03:00.000000Z",
+  "projectId": 10,
+  "payload": {
+    "projectId": 10,
+    "graphVersion": 23,
+    "upsertedNodes": [
+      {"nodeId":"10000000-0000-0000-0000-000000000007","nodeVersion":4,"nodeType":"ACTION","category":"BACKEND","title":"Detached child","content":"Parent was deleted","dueDate":null,"graphState":"UNATTACHED","consistencyStatus":"NEEDS_ATTENTION","parentNodeId":null,"mergedIntoNodeId":null,"originType":"LLM_GENERATED","createdAt":"2026-08-03T01:03:00.000000Z","updatedAt":"2026-08-03T01:03:00.000000Z","evidence":[]}
+    ],
+    "deletedNodes": [
+      {"nodeId":"10000000-0000-0000-0000-000000000006","nodeVersion":6,"deletedAt":"2026-08-03T01:03:00.000000Z"}
+    ]
+  }
+}

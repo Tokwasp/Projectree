@@ -1,5 +1,11 @@
 # Candidate 검토 및 Node 확정 계약
 
+- 제품 경로 상태: **레거시 호환 계약**
+- 현재 자동 제품 계약:
+  [`contracts/automatic-node-merge.md`](contracts/automatic-node-merge.md)
+- 운영/스테이징에서는 이 문서의 사용자 1차·최종 승인 API가 기본 비활성이다.
+  기존 호출자 전환과 로컬 회귀 검증을 위해 구현은 당분간 보존한다.
+
 - 상태: **확정**
 - 확정일: 2026-07-30
 - 적용 범위: Candidate 1차 검토, UNATTACHED Node 분석, Retrieval, B 모델 추천, 최종 신규 확정·연결·병합
@@ -107,6 +113,28 @@ Candidate의 `APPROVED`는 다음 의미로만 사용한다.
 Candidate 내용의 1차 검토 완료
 ≠ Node의 최종 확정
 ```
+
+### Decision-first 분석 순서
+
+1차 검토는 모든 승인 Candidate를 UNATTACHED Node로 만들지만 분석 Job은
+다음 순서로 해제한다.
+
+```text
+Decision 존재
+→ Decision만 분석
+→ 모든 Decision 사용자 최종 결정
+→ Action/Issue 분석
+
+Decision 없음
+→ Action/Issue 즉시 분석
+```
+
+Decision의 분석 Run 완료나 추천 Candidate 생성만으로는 Decision 단계가
+완료되지 않는다. source Decision이 사용자의 CREATE_NEW/LINK로 `ACTIVE`가
+되거나 MERGE로 `MERGED`가 되어야 완료다. MERGE된 Decision을 부모로 제안했던
+Action/Issue는 `merged_into_node_id` 계보를 따라 같은 프로젝트의 최종 canonical
+Node를 분석 후보로 사용한다. 단계 해제는 기존 Node별 AnalysisJob 구조를
+유지하며 meeting 잠금과 `AnalysisJob.node_id` UNIQUE로 멱등 처리한다.
 
 ## 5. Node 유형별 구조 규칙
 
@@ -408,22 +436,21 @@ source UNATTACHED Node의 내용을 target Node에 통합한다.
   "mergedContent": "사용자가 승인한 최종 본문",
   "sourceExpectedVersion": 3,
   "targetExpectedVersion": 7,
-  "analysisRunId": "f739132d-2f8b-46a8-9387-a4e328f930e0",
-  "confirmUnattachedTarget": true
+  "analysisRunId": "f739132d-2f8b-46a8-9387-a4e328f930e0"
 }
 ```
 
 서버 검증:
 
 - source는 `UNATTACHED`여야 한다.
-- target은 `ACTIVE` 또는 `UNATTACHED`여야 한다.
+- target은 `ACTIVE` canonical Node여야 한다.
 - source와 target은 같은 프로젝트에 속해야 한다.
 - source와 target은 서로 달라야 한다.
 - source와 target의 Node 유형이 같아야 한다.
 - source와 target의 현재 version이 요청 version과 같아야 한다.
 - source 또는 target이 이미 `MERGED`이면 거부한다.
 - analysisRunId와 현재 source의 analysis_input_hash가 일치해야 한다.
-- target이 UNATTACHED이면 `confirmUnattachedTarget=true`가 필수다.
+- target은 같은 project/category/type의 ACTIVE canonical Node여야 한다.
 - target을 ACTIVE로 만들 때 target의 유형별 구조 규칙도 충족해야 한다.
 
 적용 결과:

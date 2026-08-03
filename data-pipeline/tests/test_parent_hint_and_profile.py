@@ -66,7 +66,6 @@ def _run_attach_meeting(session_factory, *, meeting=MEETING, project=PROJECT):
         "EC2에서 RDS 연결을 구성한다",
         [ev("s2", "제가 EC2에서 RDS 연결 구성하겠습니다")],
     )
-    action["lifecycleStatus"] = "TODO"
     segments = [
         seg("s1", "회의 처리는 EC2로 갑시다"),
         seg("s2", "제가 EC2에서 RDS 연결 구성하겠습니다"),
@@ -127,7 +126,6 @@ def test_attach_judgment_sets_the_same_meeting_parent_hint(session_factory) -> N
             select(NodeCandidate).where(NodeCandidate.source_item_id == "m2")
         ).scalar_one()
         assert action.suggested_parent_candidate_id is not None
-        assert action.suggested_lifecycle_status == "TODO"
 
 
 def test_hint_resolves_after_both_candidates_are_approved(session_factory) -> None:
@@ -375,19 +373,20 @@ def test_profile_prompt_contains_the_new_rules() -> None:
         category_values=["BACKEND", "INFRA"],
         meeting_id="m-x",
     )
-    assert "lifecycleStatus" in rendered
-    assert "IN_PROGRESS" in rendered
+    assert "lifecycleStatus" not in rendered   # removed with the lifecycle domain
     assert "발화 겹침" in rendered            # meeting-noise exclusion
     assert "임의의 고유명사로 확정하지 마라" in rendered  # uncertain tech terms
     assert "다른 팀원의 동의가 없어도 ACTION" in rendered
     assert "{{SEGMENTS_JSON}}" not in rendered
 
 
-def test_lifecycle_flows_from_new_profile_output_to_the_node(session_factory) -> None:
+def test_new_profile_output_still_becomes_a_typed_node(session_factory) -> None:
+    """The profile keeps driving type and parent; only lifecycle is gone."""
+
     _run_attach_meeting(session_factory)
     nodes = _approve_all(session_factory)
-    assert nodes["m2"].lifecycle_status == "TODO"
     assert nodes["m2"].node_type == "ACTION"
+    assert not hasattr(nodes["m2"], "lifecycle_status")
 
 
 def test_identity_judgments_survive_the_new_profile(session_factory) -> None:
@@ -481,6 +480,7 @@ def test_reanalyze_creates_a_fresh_attempt_when_the_target_drifted(
     from datetime import datetime, timezone
 
     retrieval = load_settings().retrieval
+    source = nodes["m2"]
     with session_factory() as session:
         target = seed_node(
             session,
@@ -488,10 +488,10 @@ def test_reanalyze_creates_a_fresh_attempt_when_the_target_drifted(
             source_meeting_id="prior-meeting",
             source_item_id="prior-decision",
             node_type="ACTION",
-            category="INFRA",
+            category=source.category,
             title="기존 RDS 연결 작업",
             content="기존 RDS 연결 작업.",
-            graph_state="UNATTACHED",
+            graph_state="ACTIVE",
             evidence=[{"segmentId": "p1", "quote": "기존 RDS 연결 작업"}],
         )
         session.add(
@@ -509,7 +509,6 @@ def test_reanalyze_creates_a_fresh_attempt_when_the_target_drifted(
         target_id = target.id
         session.commit()
 
-    source = nodes["m2"]
     requested = reanalyze_unattached_node(
         session_factory, source.id, project_id=PROJECT,
         actor_id="tester", expected_version=source.version,

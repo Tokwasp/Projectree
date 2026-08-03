@@ -73,6 +73,9 @@ def _search_postgresql(
     embedding_dimension: int,
     top_k: int,
     min_similarity: float | None,
+    require_category: str | None = None,
+    require_node_type: str | tuple[str, ...] | None = None,
+    graph_states: tuple[str, ...] = _SEARCHABLE_GRAPH_STATES,
 ) -> list[RetrievedNode]:
     threshold_clause = ""
     params: dict[str, object] = {
@@ -90,6 +93,35 @@ def _search_postgresql(
             ">= :min_similarity "
         )
         params["min_similarity"] = min_similarity
+    policy_clause = ""
+    # Filter on the Node projection rather than JOINing node_revision.
+    # NodeRevision is the source of truth, but Node.category/node_type are kept
+    # in lockstep by create_node_revision (proved by
+    # test_node_category_projection_tracks_the_current_revision). An INNER JOIN
+    # on current_revision_id would silently drop legacy Nodes that predate the
+    # revision table, hiding valid MERGE targets.
+    if require_category is not None:
+        policy_clause += "AND n.category = :require_category "
+        params["require_category"] = require_category
+    if require_node_type is not None:
+        types = (
+            (require_node_type,)
+            if isinstance(require_node_type, str)
+            else tuple(require_node_type)
+        )
+        keys = []
+        for index, value in enumerate(types):
+            key = f"require_node_type_{index}"
+            params[key] = value
+            keys.append(f":{key}")
+        policy_clause += "AND n.node_type IN (" + ", ".join(keys) + ") "
+    state_names = tuple(graph_states)
+    state_params = []
+    for index, state in enumerate(state_names):
+        key = f"graph_state_{index}"
+        params[key] = state
+        state_params.append(f":{key}")
+    state_clause = "AND n.deleted_at IS NULL AND n.graph_state IN (" + ", ".join(state_params) + ") "
     statement = text(
         "SELECT n.id AS target_node_id, "
         "n.version AS target_node_version, "
@@ -100,8 +132,9 @@ def _search_postgresql(
         "JOIN node_embedding AS ne ON ne.node_id = n.id "
         "WHERE n.project_id = :project_id "
         "AND n.id <> :source_node_id "
-        "AND n.graph_state IN ('ACTIVE', 'UNATTACHED') "
+        f"{state_clause}"
         "AND n.merged_into_node_id IS NULL "
+        f"{policy_clause}"
         "AND ne.embedding_model = :embedding_model "
         "AND ne.embedding_version = :embedding_version "
         "AND ne.dimension = :embedding_dimension "
@@ -134,14 +167,18 @@ def _search_sqlite(
     embedding_dimension: int,
     top_k: int,
     min_similarity: float | None,
+    require_category: str | None = None,
+    require_node_type: str | tuple[str, ...] | None = None,
+    graph_states: tuple[str, ...] = _SEARCHABLE_GRAPH_STATES,
 ) -> list[RetrievedNode]:
-    rows = session.execute(
+    statement = (
         select(Node, NodeEmbedding)
         .join(NodeEmbedding, NodeEmbedding.node_id == Node.id)
         .where(
             Node.project_id == project_id,
             Node.id != source_node_id,
-            Node.graph_state.in_(_SEARCHABLE_GRAPH_STATES),
+            Node.graph_state.in_(tuple(graph_states)),
+            Node.deleted_at.is_(None),
             Node.merged_into_node_id.is_(None),
             NodeEmbedding.embedding_model == embedding_model,
             NodeEmbedding.embedding_version == embedding_version,
@@ -149,7 +186,17 @@ def _search_sqlite(
             NodeEmbedding.status == _READY_EMBEDDING_STATUS,
             NodeEmbedding.embedding.is_not(None),
         )
-    ).all()
+    )
+    if require_category is not None:
+        statement = statement.where(Node.category == require_category)
+    if require_node_type is not None:
+        types = (
+            (require_node_type,)
+            if isinstance(require_node_type, str)
+            else tuple(require_node_type)
+        )
+        statement = statement.where(Node.node_type.in_(types))
+    rows = session.execute(statement).all()
     candidates = []
     for node, stored in rows:
         similarity = _cosine_similarity(embedding, stored.embedding)
@@ -208,4 +255,143 @@ def search_similar_nodes(
     return results
 
 
-__all__ = ["RetrievedNode", "search_similar_nodes"]
+def _search(session, **arguments) -> list[RetrievedNode]:
+    project_id = arguments["project_id"]
+    _validate_search_options(
+        top_k=arguments["top_k"],
+        min_similarity=arguments["min_similarity"],
+    )
+    if session.get_bind().dialect.name == "postgresql":
+        results = _search_postgresql(session=session, **arguments)
+    else:
+        results = _search_sqlite(session=session, **arguments)
+    if any(row.project_id != project_id for row in results):
+        raise CrossProjectRetrievalError(
+            "Retrieval returned a Node from another project"
+        )
+    return results
+
+
+def search_merge_candidates(
+    session,
+    *,
+    project_id: str,
+    source_node_id: uuid.UUID,
+    embedding: list[float],
+    embedding_model: str,
+    embedding_version: str,
+    embedding_dimension: int,
+    category: str,
+    node_type: str,
+    top_k: int,
+    min_similarity: float | None,
+) -> list[RetrievedNode]:
+    """Automatic-MERGE candidates: same project, category, type; ACTIVE canonical.
+
+    Category and node_type are HARD filters here. A merge folds two Nodes into
+    one identity, so a cross-category or cross-type target is never acceptable.
+    UNATTACHED targets are excluded: only an ACTIVE canonical Node may absorb.
+    """
+
+    return _search(
+        session,
+        project_id=project_id,
+        source_node_id=source_node_id,
+        embedding=embedding,
+        embedding_model=embedding_model,
+        embedding_version=embedding_version,
+        embedding_dimension=embedding_dimension,
+        top_k=top_k,
+        min_similarity=min_similarity,
+        require_category=category,
+        require_node_type=node_type,
+        graph_states=("ACTIVE",),
+    )
+
+
+def search_link_candidates(
+    session,
+    *,
+    project_id: str,
+    source_node_id: uuid.UUID,
+    embedding: list[float],
+    embedding_model: str,
+    embedding_version: str,
+    embedding_dimension: int,
+    category: str,
+    parent_node_type: str,
+    top_k: int,
+    min_similarity: float | None,
+) -> list[RetrievedNode]:
+    """LINK/parent candidates: same project, same category, ACTIVE canonical.
+
+    Category is a Graph partition, not a display tag: a BACKEND Action and a
+    FRONTEND Action for the same feature are separate Nodes and neither may
+    parent the other. The caller still has to check that ``parent_node_type``
+    is legal for the child via ``is_allowed_parent_type``; this only scopes the
+    candidate set.
+    """
+
+    return _search(
+        session,
+        project_id=project_id,
+        source_node_id=source_node_id,
+        embedding=embedding,
+        embedding_model=embedding_model,
+        embedding_version=embedding_version,
+        embedding_dimension=embedding_dimension,
+        top_k=top_k,
+        min_similarity=min_similarity,
+        require_category=category,
+        require_node_type=parent_node_type,
+        graph_states=("ACTIVE",),
+    )
+
+
+def search_scoped_candidates(
+    session,
+    *,
+    project_id: str,
+    source_node_id: uuid.UUID,
+    embedding: list[float],
+    embedding_model: str,
+    embedding_version: str,
+    embedding_dimension: int,
+    category: str,
+    node_types: tuple[str, ...],
+    top_k: int,
+    min_similarity: float | None,
+) -> list[RetrievedNode]:
+    """One candidate set that both MERGE and LINK may legally draw from.
+
+    The manual re-analysis path asks the B model for a single recommendation
+    that may turn out to be MERGE or LINK, so it cannot use either of the
+    purpose-built searches alone. Everything both policies share is still
+    enforced here — same project, same category, ACTIVE canonical — and
+    ``node_types`` is the union of the source's own type (MERGE) and its legal
+    parent types (LINK).
+    """
+
+    return _search(
+        session,
+        project_id=project_id,
+        source_node_id=source_node_id,
+        embedding=embedding,
+        embedding_model=embedding_model,
+        embedding_version=embedding_version,
+        embedding_dimension=embedding_dimension,
+        top_k=top_k,
+        min_similarity=min_similarity,
+        require_category=category,
+        require_node_type=tuple(node_types),
+        graph_states=("ACTIVE",),
+    )
+
+
+__all__ = [
+    "RetrievedNode",
+    "search_link_candidates",
+    "search_merge_candidates",
+    "search_scoped_candidates",
+    "search_similar_nodes",
+]

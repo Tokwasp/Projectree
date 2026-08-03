@@ -1,6 +1,6 @@
 {
   "scenario": "tense_variety",
-  "description": "ACTION lifecycle 4종 + 불명확 시제 1건. 시제 보존 검증 전용.",
+  "description": "서로 다른 시제의 ACTION 4건 + 불명확 발화 1건. 후보 추출 검증 전용.",
   "segments": [
     {"segmentId": "t1", "startMs": 5000, "speakerLabel": "A", "text": "결제 모듈 리팩터링은 제가 다음 주부터 시작하겠습니다."},
     {"segmentId": "t2", "startMs": 10000, "speakerLabel": "B", "text": "로그 수집 파이프라인은 지금 제가 구현하고 있습니다. 절반 정도 진행됐어요."},
@@ -9,12 +9,12 @@
     {"segmentId": "t5", "startMs": 25000, "speakerLabel": "E", "text": "성능 프로파일링 관련해서는 상황을 봐서요."}
   ],
   "required": [
-    {"key": "todo-action", "type": "ACTION", "titleAnyOf": ["결제", "리팩터링"], "lifecycle": "TODO"},
-    {"key": "inprogress-action", "type": "ACTION", "titleAnyOf": ["로그"], "lifecycle": "IN_PROGRESS"},
-    {"key": "completed-action", "type": "ACTION", "titleAnyOf": ["배포 스크립트"], "lifecycle": "COMPLETED"},
-    {"key": "cancelled-action", "type": "ACTION", "titleAnyOf": ["어드민", "레거시"], "lifecycle": "CANCELLED"}
+    {"key": "future-action", "type": "ACTION", "titleAnyOf": ["결제", "리팩터링"]},
+    {"key": "ongoing-action", "type": "ACTION", "titleAnyOf": ["로그"]},
+    {"key": "reported-action", "type": "ACTION", "titleAnyOf": ["배포 스크립트"]},
+    {"key": "withdrawn-action", "type": "ACTION", "titleAnyOf": ["어드민", "레거시"]}
   ],
   "forbiddenTitleKeywords": [],
   "expectedParentEdges": [],
-  "notes": "t5(성능 프로파일링)는 추출되더라도 lifecycle 이 null 이어야 한다."
+  "notes": "t5(성능 프로파일링)는 실행 의지가 불명확하므로 필수 후보가 아니다."
 }

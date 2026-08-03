@@ -37,10 +37,10 @@
     {
       "name": "extraction-candidate-quality-v1",
       "kind": "EXTRACTION",
-      "version": "cq-1.0.1",
+      "version": "cq-1.1.0",
       "changeType": "SEMANTIC",
       "path": "extraction_candidate_quality_v1.md",
-      "sha256": "1d0627f8df3219011e98e5bbb69d13100323e934c53fb753dbce00b293a72710"
+      "sha256": "aee5cb3ab4007d0949c897205a0101832e14a138d875fe775e8e7a22794c1583"
     },
     {
       "name": "judgment-candidate-quality-v1",
@@ -53,10 +53,10 @@
     {
       "name": "b-model-recommendation-v1",
       "kind": "B_MODEL",
-      "version": "b-1.0.0",
+      "version": "b-2.0.0",
       "changeType": "SEMANTIC",
       "path": "b_model_recommendation_v1.md",
-      "sha256": "b0faed33a45ccf0c8c59fbcd63b669f5904f356236e843649056cc1c56e59047"
+      "sha256": "554f868a7aba73aa15ecde0e3314a23cde68dc403eef284ea00a4a25097f610c"
     }
   ]
 }

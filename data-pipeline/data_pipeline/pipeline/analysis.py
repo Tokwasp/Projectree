@@ -23,14 +23,17 @@ from data_pipeline.contracts import (
     RetrievalStageStatus,
     analysis_run_status_transition_allowed,
     analysis_status_transition_allowed,
+    allowed_parent_types,
 )
 from data_pipeline.retrieval import (
+    CurrentRevisionEmbeddingError,
     EmbeddingClient,
     EmbeddingGenerationError,
     EmbeddingValidationError,
     build_embedding_text,
     embedding_text_hash,
-    search_similar_nodes,
+    load_current_revision_embedding_input,
+    search_scoped_candidates,
     validate_embedding,
 )
 from data_pipeline.storage.models import (
@@ -76,18 +79,26 @@ def build_analysis_input_hash(
 ) -> str:
     """Hash only Retrieval inputs, in the contract-defined deterministic order."""
 
-    evidence = sorted(
-        (row.segment_id, row.quote)
-        for row in node.evidence
+    return _build_analysis_input_hash_from_embedding_text(
+        build_embedding_text(node),
+        retrieval_config_version=retrieval_config_version,
+        embedding_model=embedding_model,
+        embedding_version=embedding_version,
     )
+
+
+def _build_analysis_input_hash_from_embedding_text(
+    embedding_text: str,
+    *,
+    retrieval_config_version: str,
+    embedding_model: str,
+    embedding_version: str,
+) -> str:
+    embedding_parts = json.loads(embedding_text)
     canonical = json.dumps(
         [
             ANALYSIS_INPUT_HASH_VERSION,
-            node.node_type,
-            node.category,
-            node.title,
-            node.content,
-            evidence,
+            *embedding_parts,
             retrieval_config_version,
             embedding_model,
             embedding_version,
@@ -96,6 +107,17 @@ def build_analysis_input_hash(
         separators=(",", ":"),
     )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _embedding_text_for_analysis(session, *, node: Node) -> str:
+    """Prefer the immutable current Revision; retain legacy compatibility."""
+
+    try:
+        return load_current_revision_embedding_input(session, node=node).text
+    except CurrentRevisionEmbeddingError as exc:
+        if exc.reason != "NO_CURRENT_REVISION":
+            raise
+        return build_embedding_text(node)
 
 
 def _run_view(run: NodeAnalysisRun) -> AnalysisRunView:
@@ -198,8 +220,8 @@ def _node_status_for_run(run_status: str) -> AnalysisStatus:
     }[run_status]
 
 
-def reanalyze_unattached_node(
-    session_factory,
+def reanalyze_unattached_node_in_session(
+    session,
     node_id: str | uuid.UUID,
     *,
     project_id: str,
@@ -207,7 +229,7 @@ def reanalyze_unattached_node(
     expected_version: int,
     retrieval_config_version: str | None = None,
 ) -> ReanalyzeUnattachedNodeResult:
-    """Create or reuse an analysis run; no Retrieval/model work occurs here."""
+    """Create or reuse an analysis run in the caller-owned transaction."""
 
     try:
         parsed_id = (
@@ -229,7 +251,6 @@ def reanalyze_unattached_node(
             "retrieval_config_version must not be empty"
         )
 
-    session = session_factory()
     try:
         node = (
             session.execute(
@@ -261,8 +282,8 @@ def reanalyze_unattached_node(
                 node.version,
             )
 
-        input_hash = build_analysis_input_hash(
-            node,
+        input_hash = _build_analysis_input_hash_from_embedding_text(
+            _embedding_text_for_analysis(session, node=node),
             retrieval_config_version=config_version,
             embedding_model=retrieval_settings.embedding_model,
             embedding_version=retrieval_settings.embedding_version,
@@ -296,7 +317,7 @@ def reanalyze_unattached_node(
                     _prepare_node_for_pending(node)
                 else:
                     _set_node_status(node, desired_status)
-            session.commit()
+            session.flush()
             return ReanalyzeUnattachedNodeResult(
                 run=_run_view(active),
                 node_analysis_status=desired_status,
@@ -335,7 +356,7 @@ def reanalyze_unattached_node(
                     _prepare_node_for_pending(node)
                 else:
                     _set_node_status(node, desired_status)
-            session.commit()
+            session.flush()
             return ReanalyzeUnattachedNodeResult(
                 run=_run_view(latest),
                 node_analysis_status=desired_status,
@@ -361,12 +382,39 @@ def reanalyze_unattached_node(
         node.current_analysis_run_id = run.id
         node.analysis_input_hash = input_hash
         _prepare_node_for_pending(node)
-        session.commit()
+        session.flush()
         return ReanalyzeUnattachedNodeResult(
             run=_run_view(run),
             node_analysis_status=AnalysisStatus.PENDING,
             created=True,
         )
+    except Exception:
+        raise
+
+
+def reanalyze_unattached_node(
+    session_factory,
+    node_id: str | uuid.UUID,
+    *,
+    project_id: str,
+    actor_id: str,
+    expected_version: int,
+    retrieval_config_version: str | None = None,
+) -> ReanalyzeUnattachedNodeResult:
+    """Create or reuse an analysis run; no Retrieval/model work occurs here."""
+
+    session = session_factory()
+    try:
+        result = reanalyze_unattached_node_in_session(
+            session,
+            node_id,
+            project_id=project_id,
+            actor_id=actor_id,
+            expected_version=expected_version,
+            retrieval_config_version=retrieval_config_version,
+        )
+        session.commit()
+        return result
     except Exception:
         session.rollback()
         raise
@@ -626,7 +674,9 @@ def _missing_completion_results(
     node: Node,
 ) -> list[str]:
     settings = load_settings().retrieval
-    text_hash = embedding_text_hash(build_embedding_text(node))
+    text_hash = embedding_text_hash(
+        _embedding_text_for_analysis(session, node=node)
+    )
     embedding = _embedding_for_run(session, run=run, node=node)
     missing = []
     if not _embedding_matches_run(
@@ -851,7 +901,7 @@ def execute_analysis_retrieval(
             )
             session.rollback()
             return result
-        text_to_embed = build_embedding_text(node)
+        text_to_embed = _embedding_text_for_analysis(session, node=node)
         text_hash = embedding_text_hash(text_to_embed)
         stored_embedding = _embedding_for_run(
             session,
@@ -930,7 +980,7 @@ def execute_analysis_retrieval(
             raise AnalysisRunStateError(
                 "analysis run changed while embedding was generated"
             )
-        current_text = build_embedding_text(node)
+        current_text = _embedding_text_for_analysis(session, node=node)
         current_text_hash = embedding_text_hash(current_text)
         if current_text_hash != text_hash:
             raise AnalysisRunStateError(
@@ -956,7 +1006,13 @@ def execute_analysis_retrieval(
         embedding_row.embedded_at = datetime.now(timezone.utc)
         session.flush()
 
-        candidates = search_similar_nodes(
+        # One candidate list feeds both the MERGE and the LINK recommendation,
+        # so it is scoped to everything either of them may legally reach:
+        # same project, same category (Category is a Graph partition), ACTIVE
+        # canonical targets, and a type that is either the source's own type
+        # (MERGE) or a legal parent type (LINK). Without this the B model can
+        # be handed a candidate that no downstream gate would ever accept.
+        candidates = search_scoped_candidates(
             session,
             project_id=project_id,
             source_node_id=node.id,
@@ -964,6 +1020,11 @@ def execute_analysis_retrieval(
             embedding_model=run.embedding_model or "",
             embedding_version=run.embedding_version or "",
             embedding_dimension=settings.embedding_dim,
+            category=node.category,
+            node_types=(
+                node.node_type,
+                *sorted(allowed_parent_types(node.node_type)),
+            ),
             top_k=settings.node_top_k,
             min_similarity=settings.min_similarity,
         )

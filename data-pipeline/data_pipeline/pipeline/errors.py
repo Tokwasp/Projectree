@@ -73,6 +73,10 @@ class NodeStateError(NodeReviewError):
     pass
 
 
+class DependentAnalysisBlockedError(NodeStateError):
+    """Action/Issue analysis must wait for every Decision to be final."""
+
+
 class NodeValidationError(NodeReviewError):
     pass
 
@@ -145,3 +149,31 @@ class TranscriptSegmentConflictError(RuntimeError):
 
 class LegacyGraphMutationDisabledError(RuntimeError):
     """Legacy graph mutation entry points are quarantined from product flows."""
+
+
+class AutomaticGraphError(RuntimeError):
+    """Base error for the automatic graph and post-edit workflow."""
+
+
+class GraphIntegrityError(AutomaticGraphError):
+    """Stored graph ownership, merge lineage, or canonical form is corrupted."""
+
+
+class GraphMutationValidationError(AutomaticGraphError):
+    """A requested graph mutation is invalid and must be rolled back."""
+
+
+class GenerationRunNotFoundError(AutomaticGraphError):
+    pass
+
+
+class GenerationRunStateError(AutomaticGraphError):
+    pass
+
+
+class EvidenceValidationError(AutomaticGraphError):
+    """An Evidence span cannot be proven against the stored normalized segment."""
+
+
+class MergeNotReversibleError(GraphMutationValidationError):
+    """A merge cannot be undone safely (for example, a dependent merge exists)."""

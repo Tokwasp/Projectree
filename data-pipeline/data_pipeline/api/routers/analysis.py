@@ -20,6 +20,8 @@ from data_pipeline.api.schemas import (
     MergeApprovalRequest,
     ReanalyzeRequest,
     ReanalyzeResponse,
+    UserNodeDecisionRequest,
+    UserNodeDecisionResponse,
 )
 from data_pipeline.api.services import (
     build_analysis_status,
@@ -30,7 +32,7 @@ from data_pipeline.pipeline import (
     approve_create_new,
     approve_link_existing,
     approve_merge_existing,
-    reanalyze_unattached_node,
+    decide_node,
     reject_analysis_candidate,
 )
 
@@ -79,22 +81,59 @@ def reanalyze_node(
 ) -> ReanalyzeResponse:
     """Register a fresh analysis run and queue it; the worker does the work."""
 
-    requested = reanalyze_unattached_node(
+    queued = queue_analysis_for_node(
         session_factory,
-        node_id,
         project_id=project_id,
+        node_id=uuid.UUID(str(node_id)),
         actor_id=actor_id,
         expected_version=payload.expectedVersion,
-    )
-    queued = queue_analysis_for_node(
-        session_factory, project_id=project_id, node_id=uuid.UUID(str(node_id))
     )
     return ReanalyzeResponse(
         nodeId=str(node_id),
         status="ANALYSIS_PENDING",
-        analysisRunId=str(requested.run.analysis_run_id),
-        created=requested.created,
-        queuedAnalysisJobCount=queued,
+        analysisRunId=str(queued.requested.run.analysis_run_id),
+        created=queued.requested.created,
+        queuedAnalysisJobCount=queued.queued_count,
+    )
+
+
+@router.post(
+    "/nodes/{node_id}/decisions",
+    response_model=UserNodeDecisionResponse,
+)
+def decide_node_endpoint(
+    node_id: Identifier,
+    payload: UserNodeDecisionRequest,
+    project_id: str = Depends(get_project_id),
+    actor_id: str = Depends(get_actor_id),
+    session_factory=Depends(get_session_factory),
+) -> UserNodeDecisionResponse:
+    """Apply the user's final graph decision, with or without a recommendation."""
+
+    result = decide_node(
+        session_factory,
+        node_id,
+        project_id=project_id,
+        actor_id=actor_id,
+        requested_action=payload.requestedAction,
+        source_expected_version=payload.sourceExpectedVersion,
+        target_node_id=payload.targetNodeId,
+        target_expected_version=payload.targetExpectedVersion,
+        relation_type=payload.relationType,
+        analysis_run_id=payload.analysisRunId,
+        recommendation_id=payload.recommendationId,
+        merged_title=payload.mergedTitle,
+        merged_content=payload.mergedContent,
+    )
+    return UserNodeDecisionResponse(
+        status="APPLIED",
+        requestedAction=result.requested_action,
+        sourceNodeId=result.source_node_id,
+        targetNodeId=result.target_node_id,
+        relationId=result.relation_id,
+        mergeHistoryId=result.merge_history_id,
+        graphChangeEventId=result.graph_change_event_id,
+        replayed=result.replayed,
     )
 
 
@@ -178,7 +217,6 @@ def approve_merge(
         project_id=project_id,
         actor_id=actor_id,
         expected_version=payload.expectedVersion,
-        confirm_unattached_target=payload.confirmUnattachedTarget,
         merged_title=payload.mergedTitle,
         merged_content=payload.mergedContent,
     )

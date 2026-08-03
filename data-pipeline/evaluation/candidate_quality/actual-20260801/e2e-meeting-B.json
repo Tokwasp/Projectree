@@ -13,7 +13,6 @@
           "segmentId": "b1"
         }
       ],
-      "lifecycleStatus": null,
       "predictedCategory": "INFRA"
     },
     {
@@ -27,7 +26,6 @@
           "segmentId": "b2"
         }
       ],
-      "lifecycleStatus": "IN_PROGRESS",
       "predictedCategory": "INFRA"
     }
   ],
@@ -46,9 +44,5 @@
   "storedDispositions": {
     "m1": "NEW_DECISION",
     "m2": "ATTACH"
-  },
-  "storedLifecycles": {
-    "m1": null,
-    "m2": "IN_PROGRESS"
   }
 }

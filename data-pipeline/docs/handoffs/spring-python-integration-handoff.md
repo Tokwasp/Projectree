@@ -1,7 +1,14 @@
 # Spring ↔ Python 연동 인수인계
 
 **대상**: Spring 담당자
-**Python 측 상태**: 검토 API·비동기 분석·Outbox 구현 완료. **Spring 코드는 수정하지 않았다.**
+**Python 측 상태**: 자동 Graph 생성·직접 편집 API·Outbox 구현 완료.
+**Spring 코드는 수정하지 않았다.**
+
+> 2026-08-02 변경: 아래 1차/최종 검토 화면 흐름은 레거시 호환 설명이다.
+> 신규 제품 흐름은 SQS Worker가 Candidate 이후 Decision-first Graph Plan을 자동
+> 반영한다. Spring은 사용자 승인을 중계하는 대신 GenerationRun/Graph를 조회하고
+> 사용자의 직접 Node·Relation 수정, MERGE/UNMERGE 요청을 전달한다. 기준 계약은
+> [`automatic-node-merge.md`](../contracts/automatic-node-merge.md)다.
 
 관련 문서
 - [`python-review-api-contract.md`](../contracts/python-review-api-contract.md) — REST 계약
@@ -82,21 +89,45 @@ class MeetingContextResolver(Protocol):
 
 ---
 
-## 3. Python API 인증 — 미확정
+## 3. Python API 인증
 
-**현재 인증이 없다.** `X-Project-Id` 헤더를 그대로 신뢰한다.
+운영/스테이징 Python API는 `INTERNAL_API_TOKEN`과 같은
+`X-Internal-Service-Token`을 요구하며 모든 데이터 조회·변경에서
+`X-Project-Id` 소유권을 함께 검증한다.
 
-→ **Python API를 내부망에 두고 Spring만 접근 가능하게 해야 한다.**
+→ 토큰과 별개로 **Python API를 내부망에 두고 Spring만 접근 가능하게 해야 한다.**
 
 결정 필요:
-- 서비스 간 인증 방식 (mTLS / 공유 시크릿 헤더 / 네트워크 격리만)
+- 운영 secret 배포·회전 방식(현재 공유 시크릿 헤더)
 - Spring이 사용자 세션에서 `projectId`를 검증한 뒤 전달하는 구조가 맞는지
 
-Python 측 적용 지점은 `data_pipeline/api/dependencies.py::get_project_id` **한 곳**이다.
+Python 측 검증 지점은 `data_pipeline/api/dependencies.py`다.
 
 ---
 
-## 4. 검토 화면 API 목록
+## 4. 현재 Graph API 목록
+
+모든 경로는 `/api/v1` 기준이며 mutation은 body의 `expectedVersion` 계열로
+낙관적 잠금을 수행한다.
+
+| 기능 | Method | Path |
+|---|---|---|
+| 자동 실행 상태 | GET | `/generation-runs/{runId}` |
+| Node 목록 | GET | `/nodes?graphState=ACTIVE,UNATTACHED` |
+| Node 상세·canonical evidence | GET | `/nodes/{nodeId}` |
+| 사용자 Node 생성 | POST | `/nodes` |
+| 사용자 Node 수정 | PATCH | `/nodes/{nodeId}` |
+| Node soft delete | DELETE | `/nodes/{nodeId}` |
+| 논리 병합 | POST | `/nodes/{sourceId}/merge` |
+| 병합 해제 | POST | `/merge-operations/{operationId}/unmerge` |
+| 재병합 | POST | `/merge-operations/{operationId}/remerge` |
+| Relation 생성 | POST | `/relations` |
+| Relation 교체 | PATCH | `/relations/{relationId}` |
+| Relation 종료 | DELETE | `/relations/{relationId}` |
+
+---
+
+## 5. 레거시 검토 화면 API 목록
 
 | 화면 | Method | Path |
 |---|---|---|
@@ -121,7 +152,7 @@ Python 측 적용 지점은 `data_pipeline/api/dependencies.py::get_project_id` 
 
 ---
 
-## 5. 상태 흐름
+## 6. 레거시 상태 흐름
 
 ```text
 Candidate.review_status : PENDING → APPROVED | REJECTED
@@ -181,33 +212,11 @@ Spring 은 수신한 eventId 를 저장하고, 이미 처리한 eventId 는 무�
 
 ---
 
-## 7. ACTION 상태 전달 (Spring 화면 반영 필요)
+## 7. Node 진행 상태 제거
 
-기존에는 모든 ACTION Node가 `TODO`로 생성됐다. 이제 회의 발언의 시제가 Node까지 전달된다.
-
-```text
-"하겠습니다"          → TODO
-"진행 중입니다"       → IN_PROGRESS
-"했습니다/확인했습니다" → COMPLETED
-"취소했습니다"        → CANCELLED
-```
-
-`CandidateView`의 새 필드:
-
-| 필드 | 화면에서의 용도 |
-|---|---|
-| `suggested_lifecycle_status` | LLM 제안 (없으면 `null`) |
-| `reviewed_lifecycle_status` | 검토자 override |
-| `effective_lifecycle_status` | **Node에 실제 들어갈 값** — 이걸 표시 |
-| `lifecycle_status_needs_review` | `true`면 "상태 확인 필요" 배지 권장 |
-
-수정: `PATCH /api/v1/candidates/{id}` body에 `lifecycleStatus`.
-**ACTION에만 허용**되며 DECISION/ISSUE에 지정하면 422.
-
-> 현재 동결된 LTS 프롬프트는 `lifecycleStatus`를 **아직 내지 않는다**(AGENTS.md가 프롬프트
-> 변경을 금지). 따라서 당분간 `suggested_lifecycle_status`는 `null`이고
-> `lifecycle_status_needs_review`가 `true`이며, 검토자가 화면에서 지정하는 흐름이 된다.
-> 저장·전달 경로는 이미 완성되어 있으므로, 새 프롬프트 프로파일이 값을 채우면 즉시 동작한다.
+Node 진행 상태 도메인은 제품 계약에서 제거됐다. Candidate/Node/API/Event에
+진행 상태 필드를 보내거나 저장하지 않는다. 회의별 Evidence와 원문 시간 순서로
+변경 맥락을 확인한다.
 
 ---
 
@@ -223,7 +232,7 @@ Spring 은 수신한 eventId 를 저장하고, 이미 처리한 eventId 는 무�
 [ ] eventId 중복 제거 테이블 구현
 [ ] Outbox endpoint 멱등성 보장
 [ ] PIPELINE_FAILED 수신 시 실패 UI 정의
-[ ] 검토 화면에 effective_lifecycle_status / lifecycle_status_needs_review 반영
+[ ] 제거된 Node 진행 상태 필드를 Spring DTO와 화면에서도 사용하지 않는지 확인
 [ ] 최종 승인 시 expectedVersion 전달 (409 처리 포함)
 [ ] ACTION/ISSUE를 ACTIVE로 만들려면 confirmed parent 필요함을 UI에 반영
 [ ] meetings/* S3 IAM 권한 부여 (음성 수집 차단 요소)
@@ -246,8 +255,7 @@ Spring 은 수신한 eventId 를 저장하고, 이미 처리한 eventId 는 무�
 3. **승인 순서 안내**: 같은 회의에서 DECISION(부모 후보)을 먼저 최종 승인하면
    ACTION/ISSUE 자식의 LINK(ATTACHED_TO) 승인이 가능해진다.
 4. final-review 목록은 이제 **현재 분석 run의 후보만** 반환한다(재분석 후 옛 후보 자동 제외).
-5. `candidate-quality-v1` 프로필 활성화 시 후보 목록의 `suggested_lifecycle_status`가
-   실제 값(TODO/IN_PROGRESS/COMPLETED/CANCELLED)으로 채워진다 — 검토 화면에 표시할 것.
+5. `candidate-quality-v1` 프로필도 Node 진행 상태를 출력하지 않는다.
 6. 1차 검토 화면: `request.warnings`의 `DEMOTED:<itemId>:<rule>` 항목을 노출하면
    "왜 이 항목이 회의록 전용으로 내려갔는지"를 사용자가 알 수 있다.
 

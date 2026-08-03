@@ -98,9 +98,6 @@ def patch_candidate(
         title=payload.title if "title" in supplied else UNSET,
         content=payload.content if "content" in supplied else UNSET,
         disposition=payload.disposition if "disposition" in supplied else UNSET,
-        lifecycle_status=(
-            payload.lifecycleStatus if "lifecycleStatus" in supplied else UNSET
-        ),
         parent_mode=payload.parentMode,
         parent_candidate_id=payload.parentCandidateId,
         parent_node_id=payload.parentNodeId,

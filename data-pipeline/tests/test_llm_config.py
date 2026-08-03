@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import sys
-from types import SimpleNamespace
-
 import pytest
 
 from data_pipeline.llm import LLMSettings, OpenAIChatClient, load_llm_settings
@@ -55,14 +52,13 @@ def test_openai_client_receives_gms_key_and_base_url(monkeypatch):
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=FakeOpenAI))
     settings = LLMSettings(
         gms_key="test-gms-key",
         openai_base_url="https://gms.example/v1",
         model="gpt-test",
     )
 
-    OpenAIChatClient(settings)
+    OpenAIChatClient(settings, client_factory=FakeOpenAI)
 
     assert captured["api_key"] == "test-gms-key"
     assert captured["base_url"] == "https://gms.example/v1"

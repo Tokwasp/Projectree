@@ -86,8 +86,8 @@ PIPELINE_PROFILES: dict[str, PipelineProfile] = {
         judgment_adapter_kind="IDENTITY",
         status="CANDIDATE",
     ),
-    # candidate-quality-v1: the m2 pair plus ACTION lifecycleStatus from tense,
-    # meeting-noise exclusion, uncertain-tech-term preservation, and the
+    # candidate-quality-v1: the m2 pair plus meeting-noise exclusion,
+    # uncertain-tech-term preservation, and the
     # "personal work declarations survive" rule. Opt-in via
     # PIPELINE_PROMPT_PROFILE; poc-lts stays the default.
     "candidate-quality-v1": PipelineProfile(

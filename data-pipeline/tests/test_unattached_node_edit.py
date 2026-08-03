@@ -4,6 +4,7 @@ import uuid
 
 import pytest
 
+from data_pipeline.retrieval.embedding import EMBEDDING_CONTRACT_VERSION
 from data_pipeline.contracts import Lineage
 from data_pipeline.pipeline import (
     NodeStateError,
@@ -85,7 +86,7 @@ def test_edit_unattached_node_invalidates_analysis_and_is_idempotent(
         session.add(
             NodeEmbedding(
                 node_id=node.id,
-                embedding_version="v1",
+                embedding_version=EMBEDDING_CONTRACT_VERSION,
                 embedding_model="text-embedding-3-small",
                 dimension=1536,
                 embedded_text_hash="a" * 64,
@@ -115,7 +116,7 @@ def test_edit_unattached_node_invalidates_analysis_and_is_idempotent(
             NodeEmbedding,
             {
                 "node_id": uuid.UUID(node_id),
-                "embedding_version": "v1",
+                "embedding_version": EMBEDDING_CONTRACT_VERSION,
             },
         )
         assert candidate.suggested_title == "Redis 캐시 결정"
@@ -240,7 +241,7 @@ def test_edit_unattached_node_rejects_active_node(session_factory):
         )
 
 
-def test_edit_unattached_node_type_change_resets_lifecycle(session_factory):
+def test_edit_unattached_node_type_change_marks_analysis_stale(session_factory):
     node_id, _, _ = _initial_node(
         session_factory,
         meeting_id="M-UNATTACHED-TYPE",
@@ -258,5 +259,4 @@ def test_edit_unattached_node_type_change_resets_lifecycle(session_factory):
     assert result.node.node_type.value == "ACTION"
     with session_factory() as session:
         node = session.get(Node, uuid.UUID(node_id))
-        assert node.lifecycle_status == "TODO"
         assert node.analysis_status == "STALE"

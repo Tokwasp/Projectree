@@ -49,7 +49,9 @@ SQS 수신
 → bucket/key/versionId 또는 eTag 멱등 claim
 → S3 임시 다운로드
 → Transcriber
-→ run_meeting()
+→ run_meeting() Candidate 생성
+→ Decision-first Embedding/Retrieval/B 모델
+→ 원자적 Graph Mutation Plan 반영
 → audio_upload_event COMPLETED
 → SQS DeleteMessage
 ```
@@ -66,6 +68,7 @@ $env:APP_ENV = "test"
 $env:STT_ADAPTER = "fake"
 $env:LLM_ADAPTER = "fake"
 $env:EMBEDDING_ADAPTER = "fake"
+$env:B_MODEL_ADAPTER = "fake"
 $env:AWS_REGION = "ap-northeast-2"
 $env:SQS_QUEUE_URL = "<test queue URL>"
 $env:S3_ALLOWED_BUCKETS = "<test bucket name>"
@@ -90,7 +93,44 @@ LLM 추출·판단 및 evidence 검증에는 정규화된 `text`를 사용하고
 원문·정규화문·적용 규칙/위치·사전 버전/SHA-256을 함께 저장한다. 같은 입력의 중복 실행
 판별 해시에도 동일한 정규화 결과와 사전 정보를 포함한다.
 
-## Candidate 1차 검토 경계
+## 현재 제품 흐름: 자동 Node 생성·연결·병합
+
+SQS Worker는 A 모델 Candidate를 추적 데이터로 보존한 뒤 사용자 승인 API를
+기다리지 않고 자동 Graph Plan을 실행한다.
+
+```text
+Evidence 서버 검증
+→ Decision 우선 분석 및 canonical 확정
+→ Action/Issue 분석과 부모 해석
+→ MERGE 안전 게이트 및 target version 재검사
+→ Node + Revision + Evidence + Relation + MergeOperation 원자 반영
+→ GRAPH_GENERATION_COMPLETED Outbox
+```
+
+정상 배치된 Node는 `ACTIVE`이며, 유효한 구조 부모를 찾지 못한 Action/Issue만
+`UNATTACHED`다. 병합은 source 원본과 Relation endpoint를 보존하는 논리
+병합이며 조회 때 canonical endpoint를 계산한다. 운영 MERGE 임계값이 비어 있으면
+MERGE만 `CREATE_NEW`로 안전하게 강등된다. 상세 계약은
+[`docs/contracts/automatic-node-merge.md`](docs/contracts/automatic-node-merge.md)다.
+
+FastAPI 제품 경로는 그래프 조회·사용자 직접 편집·논리 병합/해제다. 사용자
+편집은 새 Revision을 만들며 LLM을 다시 호출하지 않는다. 운영/스테이징에서는
+`INTERNAL_API_TOKEN`이 필수이고 기존 Candidate 승인 API는 기본 비활성이다.
+
+## 회의록 정본과 조회
+
+회의록 본문은 그래프 실행 통계인 `GenerationRun.result_summary`와 분리된
+`meeting_summary`에 versioned immutable 문서로 저장한다. 저장과
+`MEETING_SUMMARY_READY` Outbox는 한 트랜잭션이며 Spring은 이벤트의 `apiPath` 또는
+`GET /api/v1/meetings/{meetingId}/summary`로 조회한다. 현재는 deterministic
+`FakeMeetingSummaryGenerator`만 검증했고 실제 GMS 호출은 credit 정책으로
+차단되어 있다. 상세 계약은
+[`docs/contracts/meeting-summary-contract.md`](docs/contracts/meeting-summary-contract.md)다.
+
+## 레거시 호환: Candidate 1차 검토 경계
+
+아래 흐름은 이전 호출자 전환과 회귀 테스트를 위해 유지하는 호환 경로다. 자동
+SQS 제품 흐름에서는 호출하지 않는다.
 
 신규 흐름에서는 `complete_initial_review()`가 Candidate의 사용자 검토값으로
 `graph_state=UNATTACHED`, `analysis_status=PENDING` Node와 Evidence만 생성한다.
@@ -98,12 +138,29 @@ LLM이 추천한 부모가 있더라도 이 단계에서는 `parent_id`나 Relat
 확정 계약은 [`docs/CANDIDATE_NODE_CONFIRMATION_CONTRACT.md`](docs/CANDIDATE_NODE_CONFIRMATION_CONTRACT.md)에
 정리되어 있다.
 
+분석 Job은 Decision-first 순서로 해제된다.
+
+```text
+1차 검토 완료
+→ Decision이 있으면 Decision만 analysis_job 등록
+→ 모든 Decision이 사용자 최종 결정(ACTIVE 또는 MERGED)
+→ 같은 meeting의 대기 중 Action/Issue analysis_job 등록
+
+Decision이 없는 meeting
+→ Action/Issue analysis_job 즉시 등록
+```
+
+마지막 Decision의 기존 추천 승인 API와 사용자 직접 결정 API 모두 같은
+`release_pending_dependent_nodes_if_ready()` 후처리를 사용한다. Decision이
+MERGE되면 같은 회의의 부모 hint는 `merged_into_node_id` 계보를 따라 최종
+canonical Node를 사용한다.
+
 기존 `process_request()`, `apply_change_plan()`, `approve_candidate()`,
 `bulk_approve_candidates()`는 ACTIVE Node나 Relation을 직접 만들 수 있으므로 기본 실행이
 차단되어 있다. 과거 동작의 회귀 테스트에서만 pytest 실행 중 전용 환경변수로 열 수 있으며,
 신규 애플리케이션 코드에서는 이 경로를 호출하지 않는다.
 
-## UNATTACHED Node 수정과 분석 무효화
+## 레거시 호환: UNATTACHED Node 수정과 분석 무효화
 
 `edit_unattached_node()`는 최종 승인 전인 `UNATTACHED` Node의 유형·카테고리·제목·본문·Evidence를
 수정한다. 실제 값이 바뀌면 Node `version`을 1 증가시키고 `analysis_status=STALE`,
@@ -115,7 +172,7 @@ Evidence에는 원문 위치와 출처로 계산한 안정적인 `evidence_key`�
 중복 레코드가 생기지 않는다. `NodeEvidence.source_candidate_id`는 추가하지 않고 Node와 Candidate의
 기존 연결로 출처를 추적한다.
 
-## 분석 실행 경계
+## 레거시 호환: 분석 실행 경계
 
 `reanalyze_unattached_node()`는 현재 Node version과 결정적으로 계산한 `analysis_input_hash`를 기준으로
 분석 실행을 생성한다. 이 함수 자체는 Embedding, Retrieval, B 모델을 호출하지 않는다.
@@ -182,6 +239,8 @@ similarity 하한은 `RETRIEVAL_NODE_TOP_K`, `RETRIEVAL_MIN_SIMILARITY`로 설�
 - FastAPI 검토 API, durable Analysis Worker, Outbox Publisher
 - GMS/OpenAI 호환 Embedding·B 모델 adapter
 - S3 ObjectCreated → SQS → Clova/Fake STT → Candidate 생성 Worker
+- Decision-first 자동 Graph Plan, immutable Revision/Evidence, 논리 MERGE/UNMERGE
+- Graph 조회·사용자 직접 Node/Relation 편집 내부 API와 service token 경계
 - Alembic schema, PostgreSQL 16 + pgvector, SQLite 오프라인 테스트 호환
 
 아직 구현되지 않은 범위:
@@ -231,7 +290,15 @@ $env:DATABASE_URL = "postgresql+psycopg://pipeline:pipeline@localhost:5432/pipel
 ```
 
 `docker compose ps`가 `healthy`,
-`alembic current`가 `0004_runtime_pipeline (head)`인지 확인한다.
+`alembic current`가 `0009_graph_event_contract_v1 (head)`인지 확인한다.
+
+실제 배포 설정 예시는 루트 `.env.example`, 외부 호출이 완전히 차단된
+개발/CI 예시는 `env/fake/.env.example.fake`를 사용한다. 두 파일을 섞지 않는다.
+
+Spring 재동기화용 Python 내부 조회는
+`GET /internal/projects/{projectId}/graph-snapshot`이다. 전체 Event v1과
+Category cascade/Soft Delete 계약은 `docs/contracts/python-event-contract-v1.md`,
+`docs/contracts/graph-category-and-soft-delete.md`를 따른다.
 `GET /health/ready`도 실제 DB의 Alembic revision이 이 head와 다르면 503을 반환한다.
 
 `docker compose up`만 사용하고 `Ctrl+C`를 누르면 PostgreSQL도 정지한다. 개발 중에는
@@ -272,20 +339,55 @@ Alembic head를 적용한 뒤 삭제한다. 원본 URL의 데이터베이스는 
 반드시 별도로 만든 폐기 가능한 DB만 지정한다. 일반 개발 DB인 `pipeline`을
 `TEST_POSTGRESQL_URL`로 지정하지 않는다.
 
+기존 ACTIVE/UNATTACHED Node의 current Revision을 기준으로 Retrieval
+Embedding을 점검·재생성하는 운영 절차는
+[`docs/operations/node-embedding-backfill.md`](docs/operations/node-embedding-backfill.md)를
+따른다. 도구는 기본 dry-run이며 실제 반영에는 `--apply`가 필요하다.
+
+## 제한된 실제 GMS Fatal-Safety Smoke
+
+이 검사는 S3·SQS·Clova만 건너뛰고, 합성 Transcript 이후의 운영
+`run_automatic_meeting()` 경로를 그대로 실행한다. Candidate LLM 2단계,
+Candidate별 Embedding, Node별 B-model, Retrieval, Graph 원자 적용, Outbox,
+Fake Meeting Summary 완료 장벽을 테스트 전용 PostgreSQL에서 확인한다. batch나
+사전 생성 결과 replay로 운영 판단을 대체하지 않는다.
+
+기본 테스트에서는 실제 Provider가 계속 차단된다. 아래 전용 명령에서만 두 안전
+플래그와 하드 예산을 함께 사용한다. `.env`의 credential 값은 출력하거나 산출물에
+기록하지 않는다.
+
+```powershell
+$env:NO_EXTERNAL_AI_CALLS = "1"
+$env:ALLOW_GMS_FATAL_SMOKE = "1"
+
+.\.venv\Scripts\python.exe scripts\gms_fatal_smoke.py `
+  --env-file .env `
+  --max-candidate-calls 2 `
+  --max-b-model-calls 4 `
+  --max-embedding-items 9 `
+  --max-http-requests 15 `
+  --no-provider-retry `
+  --cleanup-db
+```
+
+결과는 `outputs/gms-fatal-smoke/<RUN_ID>/`와 같은 이름의 ZIP에 기록된다.
+격리 DB 이름은 항상 `gms_smoke_*`이며 성공·실패 모두 종료 시 삭제한다. 기존
+`pipeline` DB에는 테스트 데이터를 쓰지 않는다.
+
 ## 디렉터리
 ```
 data-pipeline/
 ├── data_pipeline/
-│   ├── api/            # FastAPI 검토·상태·최종 승인 HTTP 경계
-│   ├── analysis_worker/# Embedding → Retrieval → B 모델 비동기 실행
+│   ├── api/            # FastAPI Graph 조회·사용자 직접 편집 내부 경계
+│   ├── analysis_worker/# 레거시 승인 흐름용 비동기 분석 호환 Worker
 │   ├── outbox_publisher/# Spring 통지 relay
 │   ├── worker/         # S3/SQS 음성 입력 Worker
 │   ├── stt/            # Fake/Clova Transcriber
 │   ├── b_model/        # B 모델 port와 GMS adapter
 │   ├── retrieval/      # Embedding adapter와 pgvector 검색
 │   ├── contracts/      # Pydantic DTO와 상태 계약
-│   ├── pipeline/       # 생성·검토·분석·최종 승인 use case
-│   ├── storage/        # SQLAlchemy 모델 + Alembic 정본 PG(0004 단일 runtime revision)
+│   ├── pipeline/       # 자동 Graph Plan·Revision·병합 및 레거시 use case
+│   ├── storage/        # SQLAlchemy 모델 + Alembic 정본 PostgreSQL
 │   └── normalization/  # STT 기술용어 사전·규칙·service
 ├── docs/
 │   ├── contracts/      # API·Outbox·SQS/OpenVidu 데이터 계약
@@ -306,7 +408,7 @@ data-pipeline/
 | 2 | 후보 allowlist (기존 노드 참조는 후보 목록에만) | `validation/judgments.py` |
 | 3 | 부모 유효성 (Decision root / Action→Decision / Issue→Decision·Action) | `contracts/enums.py`, `validation/judgments.py` |
 | 4 | evidence (segmentId 실존 + 부분 문자열 + 최소 10자 + 오프셋 역산) | `validation/evidence.py` |
-| 5 | lifecycle 전이표 — 상태 세탁 차단 (COMPLETED/CANCELLED terminal) | `contracts/enums.py` |
+| 5 | Category Graph partition — 교차 Category MERGE·부모 LINK 차단 | `contracts/enums.py`, `retrieval/search.py` |
 | 6 | 순차 적용 (정렬 키 evidence 최초 startMs→segmentId→itemId, LLM 배열 순서 금지) | `validation/judgments.py`, `contracts/change_plan.py` |
 | 7 | 기술적 중복 사전 감지 (UNIQUE 자연키 + 제목·근거 시그니처) | `pipeline/apply.py` |
 | 8 | Change Plan 원자 적용 (부분 성공 없음, 실패 시 전체 롤백) | `pipeline/apply.py`, `service.py` |
@@ -348,7 +450,11 @@ data-pipeline/
 설계 문서를 확보해 M1 스코프 항목을 전부 대조 반영했다.
 - **일치**: D1′ 상태 모델 분리, §3 부모 규칙, §2 UNIQUE 키, D1‴ parent_id 단일 진실,
   D2′ Plan 원자 적용, M4 관계 모델(SAME/REVERSES/FOLLOWS/RESOLVED_BY × PROPOSED/CONFIRMED/REJECTED),
-  §5 단순화(command 테이블 없음·advisory lock 없음·범용 outbox·임베딩 v1 고정), 검색 설정값 분리.
+  §5 단순화(command 테이블 없음·advisory lock 없음·범용 outbox·임베딩 계약 버전 고정), 검색 설정값 분리.
+  임베딩 계약은 현재 `v2-no-category`다. Category는 Embedding 의미에서 제외되어
+  Category만 바꾸는 수정은 벡터를 STALE로 만들지 않고 제공자 호출도 발생시키지
+  않는다. Category는 메타데이터·화면·MERGE 검색 범위·B 모델 입력에서는 그대로
+  쓰인다. 자세한 내용은 [docs/operations/node-embedding-backfill.md](docs/operations/node-embedding-backfill.md).
 - **문서에 맞춰 정정**: R4′ node_embedding PK(node_id, embedding_version)+embedded_text_hash/status,
   D1″ transcript_segment(sequence_no·text_hash) / node_evidence(quote_start·quote_end·evidence_type·source_meeting_id),
   §5 outbox 타입(EMBEDDING_REQUESTED / MEETING_PROCESSING_COMPLETED / GRAPH_CHANGED),

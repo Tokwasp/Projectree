@@ -13,15 +13,6 @@
   이미 완료했다고 보고한 작업도 ACTION으로 추출한다(완료했다는 이유로 빼지 마라).
 - ISSUE: 위험·문제·제약·미해결 사항. 기술적 우려, 결론 안 난 문제, 보류된 논의도 포함.
 
-## ACTION 진행 상태 (lifecycleStatus) — ACTION에만
-발화의 **시제**를 근거로 아래 중 하나를 기입한다. 시제를 바꾸지 마라.
-- "하겠습니다", "할게요", "예정" → "TODO"
-- "하고 있습니다", "진행 중입니다" → "IN_PROGRESS"
-- "했습니다", "확인했습니다", "만들어 놨습니다", "완료했습니다" → "COMPLETED"
-- "취소했습니다", "하지 않기로 했습니다" → "CANCELLED"
-- 시제가 불명확하면 null.
-DECISION·ISSUE에는 lifecycleStatus를 넣지 말고 null로 둔다.
-
 ## 제외 대상 — 다음은 항목으로 만들지 마라
 - 인사·감사·잡담·출석·일정 조율 등 프로젝트 무관 대화.
 - 단순 재질문과 "다시 말해 달라" 같은 진행 요청.
@@ -66,7 +57,6 @@ JSON 객체 하나만. 설명·마크다운·코드펜스 없이.
     {"id": "m1", "type": "DECISION|ACTION|ISSUE",
      "predictedCategory": "<위 목록 중 하나>",
      "title": "한 문장 제목(확인된 표준 용어)", "content": "1~2문장 설명",
-     "lifecycleStatus": "TODO|IN_PROGRESS|COMPLETED|CANCELLED|null",
      "evidence": [{"segmentId": "실존 세그먼트 ID", "quote": "원문의 연속 부분 문자열(10자 이상)"}]}
   ]
 }

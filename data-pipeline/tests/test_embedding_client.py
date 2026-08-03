@@ -60,6 +60,40 @@ def test_returns_a_validated_vector() -> None:
     assert _embed(_client(_ok())) == [0.1] * DIM
 
 
+def test_detailed_result_preserves_provider_usage_without_raw_response() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={
+                "x-request-id": "request-123",
+                "x-ratelimit-remaining-requests": "9",
+            },
+            json={
+                "data": [{"embedding": [0.1] * DIM}],
+                "usage": {
+                    "prompt_tokens": 12,
+                    "total_tokens": 12,
+                    "credits": 3.5,
+                },
+            },
+        )
+
+    result = _client(handler).embed_detailed(
+        text="hello",
+        model="text-embedding-3-small",
+        dimensions=DIM,
+    )
+
+    assert result.vector == [0.1] * DIM
+    assert result.usage.input_tokens == 12
+    assert result.usage.total_tokens == 12
+    assert result.usage.credit == 3.5
+    assert result.usage.source == "PROVIDER_REPORTED"
+    assert result.request_id == "request-123"
+    assert result.rate_limit == {"x-ratelimit-remaining-requests": "9"}
+    assert result.retry_count == 0
+
+
 def test_sends_bearer_auth_model_and_dimensions() -> None:
     seen: dict = {}
 

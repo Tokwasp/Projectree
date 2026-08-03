@@ -1,6 +1,7 @@
 # Python Outbox 이벤트 계약
 
-**schemaVersion**: `v2.2`
+**현재 자동 Graph schemaVersion**: `auto-graph-v1`
+**회의록/레거시 흐름 schemaVersion**: `v2.2`
 **전달 보장**: **at-least-once** — Exactly-once가 **아니다**.
 
 ---
@@ -11,7 +12,7 @@
 상태는 바뀌었는데 통지가 유실되거나, 통지는 갔는데 상태가 롤백되는 상황을 없앤다.
 
 ```text
-Node 생성 + analysis_job 등록 + outbox_event INSERT
+Graph Mutation Plan 반영 + outbox_event INSERT
         ↓  (셋 다 같은 DB 트랜잭션)
       COMMIT
         ↓
@@ -25,11 +26,11 @@ Node 생성 + analysis_job 등록 + outbox_event INSERT
 ```json
 {
   "eventId": "3f1c9a2e-0d44-4a1b-9c77-2b6e8a5d1f30",
-  "eventType": "FINAL_REVIEW_READY",
-  "aggregateType": "node",
+  "eventType": "GRAPH_GENERATION_COMPLETED",
+  "aggregateType": "generation_run",
   "aggregateId": "8458e748-f38e-4ead-874c-ad12f7fa3978",
   "projectId": "168a9037-485a-4145-a93f-a651fd1a254c",
-  "schemaVersion": "v2.2",
+  "schemaVersion": "auto-graph-v1",
   "occurredAt": "2026-07-31T09:05:00.123456+00:00",
   "payload": { }
 }
@@ -38,8 +39,8 @@ Node 생성 + analysis_job 등록 + outbox_event INSERT
 | 필드 | 타입 | 설명 |
 |---|---|---|
 | `eventId` | UUID | `outbox_event.id`. **중복 제거 키** |
-| `eventType` | string | 아래 5종 |
-| `aggregateType` | string | `meeting` \| `node` |
+| `eventType` | string | 현재 2종 + 레거시 호환 이벤트 |
+| `aggregateType` | string | 현재 `generation_run`, 레거시 `meeting` \| `node` |
 | `aggregateId` | string | 해당 aggregate 식별자 |
 | `projectId` | string | 프로젝트 범위 |
 | `schemaVersion` | string | `v2.2` |
@@ -52,6 +53,19 @@ Node 생성 + analysis_job 등록 + outbox_event INSERT
 
 ## 3. Event types
 
+### 현재 자동 Graph
+
+| eventType | aggregateType | 발생 시점 |
+|---|---|---|
+| `GRAPH_GENERATION_COMPLETED` | `generation_run` | 전체 Graph Plan과 같은 트랜잭션으로 반영 완료 |
+| `GRAPH_GENERATION_FAILED` | `generation_run` | 그래프를 부분 공개하지 않고 실행 실패를 영속화 |
+
+완료 payload는 `generationRunId`, `projectId`, `externalMeetingId`, 상태,
+생성·병합·관계·UNATTACHED 개수와 warnings를 포함한다. 실패 payload는 원문이나
+secret 없이 `failureCode`, `errorType`만 포함한다.
+
+### 레거시 승인 흐름
+
 | eventType | aggregateType | 발생 시점 |
 |---|---|---|
 | `INITIAL_REVIEW_READY` | `meeting` | 1차 검토 완료 처리 후, 분석 큐잉과 같은 트랜잭션 |
@@ -60,7 +74,17 @@ Node 생성 + analysis_job 등록 + outbox_event INSERT
 | `PIPELINE_COMPLETED` | `node` | 최종 승인으로 그래프 반영 완료 (예약됨) |
 | `PIPELINE_FAILED` | `node` | 분석이 재시도 한도를 넘겨 영구 실패 |
 
-필요 이상으로 이벤트를 늘리지 않았다.
+아래 5종은 이전 Candidate 승인 호출자 전환을 위해 유지한다.
+
+### 회의록
+
+| eventType | aggregateType | 발생 시점 |
+|---|---|---|
+| `MEETING_SUMMARY_READY` | `meeting_summary` | versioned 회의록 정본과 같은 트랜잭션으로 저장 완료 |
+
+payload에는 `meetingSummaryId`, `projectId`, `externalMeetingId`,
+`summaryVersion`, `status=READY`, `apiPath`만 포함하며 전체 회의록 본문이나
+transcript를 넣지 않는다. 상세 계약은 `meeting-summary-contract.md`를 따른다.
 
 ### payload 예시
 

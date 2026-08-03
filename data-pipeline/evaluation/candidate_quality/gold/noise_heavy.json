@@ -11,8 +11,8 @@
     {"segmentId": "n7", "startMs": 35000, "speakerLabel": "A", "text": "오늘 고생 많으셨습니다. 다음 주에 뵙겠습니다."}
   ],
   "required": [
-    {"key": "refresh-decision", "type": "DECISION", "titleAnyOf": ["리프레시", "토큰"], "lifecycle": null},
-    {"key": "refresh-store-action", "type": "ACTION", "titleAnyOf": ["리프레시", "저장소"], "lifecycle": "TODO"}
+    {"key": "refresh-decision", "type": "DECISION", "titleAnyOf": ["리프레시", "토큰"]},
+    {"key": "refresh-store-action", "type": "ACTION", "titleAnyOf": ["리프레시", "저장소"]}
   ],
   "forbiddenTitleKeywords": ["마이크 음량", "잘 들리", "다시 한 번", "감사합니다", "고생 많"],
   "expectedParentEdges": [

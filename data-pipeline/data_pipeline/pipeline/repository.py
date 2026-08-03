@@ -14,8 +14,6 @@ from sqlalchemy.orm import Session, selectinload
 from data_pipeline.contracts.enums import (
     GraphState,
     NodeType,
-    default_lifecycle_status,
-    lifecycle_status_valid,
 )
 from data_pipeline.storage.models import (
     Meeting,
@@ -74,24 +72,6 @@ def _candidate_node_type(value: object) -> str:
     normalized = str(value or "").upper()
     return normalized if normalized in _ALLOWED_CANDIDATE_NODE_TYPES else "UNKNOWN"
 
-
-def _candidate_lifecycle_status(item: dict) -> str | None:
-    """Preserve an ACTION's tense-derived lifecycle state from extraction.
-
-    Returns None for non-ACTION items and for anything the model did not emit or
-    emitted outside the ActionStatus enum, so the review layer falls back to the
-    existing default instead of persisting an invented state.
-    """
-
-    if _candidate_node_type(item.get("type")) != NodeType.ACTION.value:
-        return None
-    raw = item.get("lifecycleStatus")
-    if not isinstance(raw, str):
-        return None
-    normalized = raw.strip().upper()
-    if not lifecycle_status_valid(NodeType.ACTION.value, normalized):
-        return None
-    return normalized
 
 
 def _bounded_category(value: object) -> str | None:
@@ -327,7 +307,6 @@ def create_generation_candidates(
             suggested_content=str(item.get("content") or ""),
             suggested_disposition=str(judgment.get("result")),
             suggested_reason=judgment.get("reason"),
-            suggested_lifecycle_status=_candidate_lifecycle_status(item),
             review_status="PENDING",
         )
         session.add(row)
@@ -407,7 +386,6 @@ def seed_node(
     title: str,
     content: str = "",
     parent_id: str | None = None,
-    lifecycle_status: str | None = None,
     graph_state: str = GraphState.ACTIVE.value,
     version: int = 1,
     due_date: str | None = None,
@@ -423,7 +401,6 @@ def seed_node(
         content=content,
         parent_id=uuid.UUID(parent_id) if parent_id else None,
         graph_state=graph_state,
-        lifecycle_status=lifecycle_status or default_lifecycle_status(node_type),
         version=version,
         due_date=due_date,
     )

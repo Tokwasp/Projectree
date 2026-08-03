@@ -34,6 +34,7 @@ from data_pipeline.storage import (
 )
 
 from .test_unattached_node_edit import _initial_node
+from data_pipeline.retrieval.embedding import EMBEDDING_CONTRACT_VERSION
 
 DIMENSION = 1536
 
@@ -98,7 +99,7 @@ def _target(
     session.add(
         NodeEmbedding(
             node_id=node.id,
-            embedding_version="v1",
+            embedding_version=EMBEDDING_CONTRACT_VERSION,
             embedding_model="text-embedding-3-small",
             dimension=DIMENSION,
             embedded_text_hash="target-hash",
@@ -188,7 +189,7 @@ def test_embedding_is_stored_and_same_run_is_idempotent(session_factory):
             NodeEmbedding,
             {
                 "node_id": uuid.UUID(node_id),
-                "embedding_version": "v1",
+                "embedding_version": EMBEDDING_CONTRACT_VERSION,
             },
         )
         assert stored.status == "READY"
@@ -275,7 +276,7 @@ def test_retrieval_filters_scope_state_self_threshold_and_top_k(
                 graph_state="UNATTACHED",
                 vector=_vector(0.8, 0.6),
             )
-            _target(
+            third_eligible = _target(
                 session,
                 project_id="proj-01",
                 source_item_id="third-eligible",
@@ -329,7 +330,7 @@ def test_retrieval_filters_scope_state_self_threshold_and_top_k(
             )
             merged.graph_state = "MERGED"
             merged.merged_into_node_id = closest.id
-            expected_ids = [str(closest.id), str(unattached.id)]
+            expected_ids = [str(closest.id), str(third_eligible.id)]
             session.commit()
 
         result = execute_analysis_retrieval(
@@ -344,7 +345,7 @@ def test_retrieval_filters_scope_state_self_threshold_and_top_k(
         ] == expected_ids
         assert [
             row.similarity for row in result.retrieval_results
-        ] == pytest.approx([1.0, 0.8])
+        ] == pytest.approx([1.0, 0.6])
         assert [row.rank for row in result.retrieval_results] == [1, 2]
     finally:
         load_settings.cache_clear()
@@ -369,7 +370,7 @@ def test_equal_similarity_uses_node_uuid_as_stable_tie_break(
             session,
             project_id="proj-01",
             source_item_id="tie-b",
-            graph_state="UNATTACHED",
+            graph_state="ACTIVE",
             vector=_vector(1.0),
         )
         expected = sorted([str(first.id), str(second.id)])
@@ -400,7 +401,7 @@ def test_retrieval_failure_rolls_back_embedding_and_results(
         raise RetrievalExecutionError("offline retrieval failure")
 
     monkeypatch.setattr(
-        "data_pipeline.pipeline.analysis.search_similar_nodes",
+        "data_pipeline.pipeline.analysis.search_scoped_candidates",
         fail_search,
     )
     with pytest.raises(RetrievalExecutionError):
@@ -435,7 +436,7 @@ def test_cross_project_retrieval_leak_fails_and_rolls_back(
         raise CrossProjectRetrievalError("cross-project candidate")
 
     monkeypatch.setattr(
-        "data_pipeline.pipeline.analysis.search_similar_nodes",
+        "data_pipeline.pipeline.analysis.search_scoped_candidates",
         leak_cross_project,
     )
     with pytest.raises(CrossProjectRetrievalError):
@@ -586,7 +587,7 @@ def test_embedding_invalidation_is_changed_only_and_project_scoped(
             session.add(
                 NodeEmbedding(
                     node_id=target.id,
-                    embedding_version="v1",
+                    embedding_version=EMBEDDING_CONTRACT_VERSION,
                     embedding_model="text-embedding-3-small",
                     dimension=DIMENSION,
                     embedded_text_hash="ready-hash",
@@ -611,7 +612,7 @@ def test_embedding_invalidation_is_changed_only_and_project_scoped(
             NodeEmbedding,
             {
                 "node_id": uuid.UUID(node_id),
-                "embedding_version": "v1",
+                "embedding_version": EMBEDDING_CONTRACT_VERSION,
             },
         )
         assert source_embedding.status == "READY"
@@ -630,14 +631,14 @@ def test_embedding_invalidation_is_changed_only_and_project_scoped(
             NodeEmbedding,
             {
                 "node_id": uuid.UUID(node_id),
-                "embedding_version": "v1",
+                "embedding_version": EMBEDDING_CONTRACT_VERSION,
             },
         )
         other_embedding = session.get(
             NodeEmbedding,
             {
                 "node_id": other_id,
-                "embedding_version": "v1",
+                "embedding_version": EMBEDDING_CONTRACT_VERSION,
             },
         )
         assert source_embedding.status == "STALE"
@@ -653,7 +654,7 @@ def test_embedding_invalidation_rolls_back_with_node_edit(session_factory):
         session.add(
             NodeEmbedding(
                 node_id=uuid.UUID(node_id),
-                embedding_version="v1",
+                embedding_version=EMBEDDING_CONTRACT_VERSION,
                 embedding_model="text-embedding-3-small",
                 dimension=DIMENSION,
                 embedded_text_hash="ready-hash",
@@ -686,7 +687,7 @@ def test_embedding_invalidation_rolls_back_with_node_edit(session_factory):
             NodeEmbedding,
             {
                 "node_id": uuid.UUID(node_id),
-                "embedding_version": "v1",
+                "embedding_version": EMBEDDING_CONTRACT_VERSION,
             },
         )
         assert node.title == "Redis 캐시 결정"
@@ -740,7 +741,7 @@ def test_database_rejects_duplicate_embedding_and_retrieval_target(
         session.add(
             NodeEmbedding(
                 node_id=uuid.UUID(node_id),
-                embedding_version="v1",
+                embedding_version=EMBEDDING_CONTRACT_VERSION,
                 embedding_model="text-embedding-3-small",
                 dimension=DIMENSION,
                 embedded_text_hash="same-input-hash",
@@ -754,7 +755,7 @@ def test_database_rejects_duplicate_embedding_and_retrieval_target(
             session.add(
                 NodeEmbedding(
                     node_id=uuid.UUID(node_id),
-                    embedding_version="v1",
+                    embedding_version=EMBEDDING_CONTRACT_VERSION,
                     embedding_model="text-embedding-3-small",
                     dimension=DIMENSION,
                     embedded_text_hash="same-input-hash",
@@ -847,7 +848,7 @@ def test_stale_embedding_is_regenerated_through_operating_service(
             NodeEmbedding,
             {
                 "node_id": uuid.UUID(node_id),
-                "embedding_version": "v1",
+                "embedding_version": EMBEDDING_CONTRACT_VERSION,
             },
         ).embedded_text_hash
 
@@ -882,7 +883,7 @@ def test_stale_embedding_is_regenerated_through_operating_service(
             NodeEmbedding,
             {
                 "node_id": uuid.UUID(node_id),
-                "embedding_version": "v1",
+                "embedding_version": EMBEDDING_CONTRACT_VERSION,
             },
         )
         assert embedding.status == "READY"

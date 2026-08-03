@@ -7,6 +7,11 @@ from threading import Barrier
 import pytest
 from sqlalchemy import event
 
+from data_pipeline.retrieval.embedding import (
+    EMBEDDING_CONTRACT_VERSION,
+    build_embedding_text_from_parts,
+    embedding_text_hash,
+)
 from data_pipeline.pipeline import (
     AnalysisCandidateNotFoundError,
     AnalysisCandidateStateError,
@@ -33,6 +38,7 @@ from data_pipeline.storage import (
     NodeAnalysisRun,
     NodeEmbedding,
     NodeMergeHistory,
+    NodeRevision,
     Relation,
 )
 
@@ -138,7 +144,6 @@ def _action_run_with_parent(session_factory, *, meeting_id: str):
     with session_factory() as session:
         source = session.get(Node, uuid.UUID(source_id))
         source.node_type = "ACTION"
-        source.lifecycle_status = "TODO"
         parent = _target(
             session,
             project_id="proj-01",
@@ -667,6 +672,39 @@ def test_action_requires_attached_parent_and_attached_link_activates(
         assert source.parent_id == parent_id
 
 
+def test_cross_category_parent_link_is_refused_at_approval(session_factory):
+    source_id, run_id, parent_id = _action_run_with_parent(
+        session_factory,
+        meeting_id="M-ACTION-CROSS-CATEGORY-PARENT",
+    )
+    with session_factory() as session:
+        source = session.get(Node, source_id)
+        parent = session.get(Node, parent_id)
+        parent.category = (
+            "INFRA" if source.category != "INFRA" else "BACKEND"
+        )
+        session.commit()
+
+    result, _ = _execute_decision(
+        session_factory,
+        run_id=run_id,
+        decision=_decision("LINK", parent_id, "ATTACHED_TO"),
+    )
+    with pytest.raises(AnalysisCandidateStateError):
+        approve_link_existing(
+            session_factory,
+            result.candidate.candidate_id,
+            project_id="proj-01",
+            actor_id="approver",
+            expected_version=1,
+        )
+
+    with session_factory() as session:
+        source = session.get(Node, source_id)
+        assert source.graph_state == "UNATTACHED"
+        assert source.parent_id is None
+
+
 def test_approve_reject_race_has_one_terminal_winner(session_factory):
     source_id, run_id, _ = _run_with_retrieval(
         session_factory,
@@ -773,7 +811,7 @@ def test_link_approval_keeps_ready_embedding(session_factory):
         assert session.get(Node, source_id).graph_state == "ACTIVE"
         embedding = session.get(
             NodeEmbedding,
-            {"node_id": source_id, "embedding_version": "v1"},
+            {"node_id": source_id, "embedding_version": EMBEDDING_CONTRACT_VERSION},
         )
         assert embedding.status == "READY"
         assert session.query(Relation).count() == 1
@@ -805,16 +843,73 @@ def test_merge_approval_stales_target_embedding_and_keeps_lineage(
         target = session.get(Node, target_id)
         target_embedding = session.get(
             NodeEmbedding,
-            {"node_id": target_id, "embedding_version": "v1"},
+            {"node_id": target_id, "embedding_version": EMBEDDING_CONTRACT_VERSION},
         )
         assert source.graph_state == "MERGED"
         assert source.merged_into_node_id == target_id
+        source_embedding = session.get(
+            NodeEmbedding,
+            {"node_id": source_id, "embedding_version": EMBEDDING_CONTRACT_VERSION},
+        )
+        assert source_embedding.status == "STALE"
         assert target.graph_state == "ACTIVE"
         assert target_embedding.status == "STALE"
+        revision = session.get(NodeRevision, target.current_revision_id)
+        assert revision.title == "사용자가 검토할 최종 제목"
+        assert revision.content == "사용자가 검토할 최종 본문"
         assert session.query(NodeMergeHistory).count() == 1
 
 
-def test_unattached_merge_target_requires_explicit_confirmation(
+def test_merge_with_unchanged_target_meaning_keeps_embedding_ready(
+    session_factory,
+):
+    _, run_id, target_id = _run_with_retrieval(
+        session_factory,
+        meeting_id="M-APPROVE-MERGE-SAME-MEANING",
+    )
+    result, _ = _execute_decision(
+        session_factory,
+        run_id=run_id,
+        decision=_decision("MERGE", target_id),
+    )
+    with session_factory() as session:
+        target = session.get(Node, target_id)
+        title, content = target.title, target.content
+        embedding = session.get(
+            NodeEmbedding,
+            {"node_id": target_id, "embedding_version": EMBEDDING_CONTRACT_VERSION},
+        )
+        embedding.embedded_text_hash = embedding_text_hash(
+            build_embedding_text_from_parts(
+                node_type=target.node_type,
+                title=target.title,
+                content=target.content,
+                evidence_pairs=[],
+            )
+        )
+        session.commit()
+
+    approve_merge_existing(
+        session_factory,
+        result.candidate.candidate_id,
+        project_id="proj-01",
+        actor_id="approver",
+        expected_version=1,
+        merged_title=title,
+        merged_content=content,
+    )
+
+    with session_factory() as session:
+        target = session.get(Node, target_id)
+        embedding = session.get(
+            NodeEmbedding,
+            {"node_id": target_id, "embedding_version": EMBEDDING_CONTRACT_VERSION},
+        )
+        assert embedding.status == "READY"
+        assert session.get(NodeRevision, target.current_revision_id).title == title
+
+
+def test_unattached_merge_target_is_excluded_before_approval(
     session_factory,
 ):
     source_id, run_id, target_id = _run_with_retrieval(
@@ -827,27 +922,12 @@ def test_unattached_merge_target_requires_explicit_confirmation(
         run_id=run_id,
         decision=_decision("MERGE", target_id),
     )
-    with pytest.raises(AnalysisCandidateStateError):
-        approve_analysis_candidate(
-            session_factory,
-            result.candidate.candidate_id,
-            project_id="proj-01",
-            actor_id="approver",
-            expected_version=1,
-        )
-    approved = approve_merge_existing(
-        session_factory,
-        result.candidate.candidate_id,
-        project_id="proj-01",
-        actor_id="approver",
-        expected_version=1,
-        confirm_unattached_target=True,
-    )
-
-    assert approved.merge_history_id is not None
+    # The current contract admits only ACTIVE canonical MERGE targets, so an
+    # UNATTACHED target is removed before a pending approval candidate exists.
+    assert result.candidate is None
     with session_factory() as session:
-        assert session.get(Node, source_id).graph_state == "MERGED"
-        assert session.get(Node, target_id).graph_state == "ACTIVE"
+        assert session.get(Node, source_id).graph_state == "UNATTACHED"
+        assert session.get(Node, target_id).graph_state == "UNATTACHED"
 
 
 def test_approval_failure_rolls_back_candidate_node_and_embedding(
@@ -884,9 +964,84 @@ def test_approval_failure_rolls_back_candidate_node_and_embedding(
         )
         embedding = session.get(
             NodeEmbedding,
-            {"node_id": target_id, "embedding_version": "v1"},
+            {"node_id": target_id, "embedding_version": EMBEDDING_CONTRACT_VERSION},
         )
         assert source.graph_state == "UNATTACHED"
         assert candidate.status == "PENDING"
         assert embedding.status == "READY"
         assert session.query(NodeMergeHistory).count() == 0
+
+
+def test_cross_category_merge_is_refused_at_approval(session_factory):
+    """MERGE folds two Nodes into one identity, which cannot span categories.
+
+    Every Retrieval path scopes MERGE by category. This test mutates the target
+    after Retrieval to prove the apply transaction independently rejects a
+    stale or forged cross-category candidate.
+    """
+
+    source_id, run_id, target_id = _run_with_retrieval(
+        session_factory,
+        meeting_id="M-MERGE-CROSS-CATEGORY",
+    )
+    with session_factory() as session:
+        source = session.get(Node, source_id)
+        target = session.get(Node, target_id)
+        assert target.category == source.category  # guard is the only difference
+        target.category = "INFRA" if source.category != "INFRA" else "BACKEND"
+        session.commit()
+
+    result, _ = _execute_decision(
+        session_factory,
+        run_id=run_id,
+        decision=_decision("MERGE", target_id),
+    )
+
+    with pytest.raises(AnalysisCandidateStateError):
+        approve_merge_existing(
+            session_factory,
+            result.candidate.candidate_id,
+            project_id="proj-01",
+            actor_id="approver",
+            expected_version=1,
+            merged_title="병합된 제목",
+            merged_content="병합된 본문",
+        )
+
+    with session_factory() as session:
+        source = session.get(Node, source_id)
+        candidate = session.get(
+            AnalysisCandidate,
+            uuid.UUID(result.candidate.candidate_id),
+        )
+        assert source.graph_state == "UNATTACHED"   # not absorbed
+        assert candidate.status == "PENDING"        # still decidable
+        assert session.query(NodeMergeHistory).count() == 0
+
+
+def test_same_category_merge_still_succeeds(session_factory):
+    """The new guard must not block the ordinary same-category MERGE."""
+
+    source_id, run_id, target_id = _run_with_retrieval(
+        session_factory,
+        meeting_id="M-MERGE-SAME-CATEGORY",
+    )
+    result, _ = _execute_decision(
+        session_factory,
+        run_id=run_id,
+        decision=_decision("MERGE", target_id),
+    )
+    approved = approve_merge_existing(
+        session_factory,
+        result.candidate.candidate_id,
+        project_id="proj-01",
+        actor_id="approver",
+        expected_version=1,
+        merged_title="병합된 제목",
+        merged_content="병합된 본문",
+    )
+
+    assert approved.candidate.status.value == "APPROVED"
+    with session_factory() as session:
+        assert session.get(Node, source_id).graph_state == "MERGED"
+        assert session.query(NodeMergeHistory).count() == 1

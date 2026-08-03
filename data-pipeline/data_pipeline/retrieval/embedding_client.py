@@ -33,6 +33,25 @@ class EmbeddingResponseError(EmbeddingGenerationError):
 
 
 @dataclass(frozen=True)
+class EmbeddingUsage:
+    input_tokens: int | None
+    output_tokens: int | None
+    total_tokens: int | None
+    credit: float | None
+    source: str
+
+
+@dataclass(frozen=True)
+class EmbeddingCallResult:
+    vector: list[float]
+    usage: EmbeddingUsage
+    latency_ms: int
+    request_id: str | None
+    retry_count: int
+    rate_limit: dict[str, str]
+
+
+@dataclass(frozen=True)
 class EmbeddingClientSettings:
     # repr=False keeps GMS_KEY out of the auto-generated dataclass repr, which
     # would otherwise leak it into tracebacks and any log of these settings.
@@ -109,6 +128,19 @@ class GmsEmbeddingClient:
         model: str,
         dimensions: int,
     ) -> Sequence[float]:
+        return self.embed_detailed(
+            text=text,
+            model=model,
+            dimensions=dimensions,
+        ).vector
+
+    def embed_detailed(
+        self,
+        *,
+        text: str,
+        model: str,
+        dimensions: int,
+    ) -> EmbeddingCallResult:
         if not text.strip():
             raise EmbeddingResponseError("embedding input text must not be blank")
         payload = {
@@ -119,10 +151,18 @@ class GmsEmbeddingClient:
         if dimensions:
             payload["dimensions"] = dimensions
 
-        data = self._post_with_retry(payload)
+        started = time.monotonic()
+        data, metadata = self._post_with_retry_detailed(payload)
         vector = self._extract_vector(data)
-        # Reuses the existing validator: numeric, exact dimension, finite, non-zero.
-        return validate_embedding(vector, expected_dimension=dimensions)
+        validated = validate_embedding(vector, expected_dimension=dimensions)
+        return EmbeddingCallResult(
+            vector=validated,
+            usage=self._extract_usage(data),
+            latency_ms=max(0, int((time.monotonic() - started) * 1000)),
+            request_id=metadata["request_id"],
+            retry_count=metadata["retry_count"],
+            rate_limit=metadata["rate_limit"],
+        )
 
     # -- internals -------------------------------------------------------
     def _client(self):
@@ -133,9 +173,16 @@ class GmsEmbeddingClient:
                 transport=self._transport,
                 timeout=self.settings.timeout_seconds,
             )
+        from data_pipeline.provider_safety import assert_external_ai_client_allowed
+
+        assert_external_ai_client_allowed("embedding")
         return httpx.Client(timeout=self.settings.timeout_seconds)
 
     def _post_with_retry(self, payload: dict) -> dict:
+        data, _ = self._post_with_retry_detailed(payload)
+        return data
+
+    def _post_with_retry_detailed(self, payload: dict) -> tuple[dict, dict]:
         import httpx
 
         attempts = self.settings.retry_count + 1
@@ -158,12 +205,29 @@ class GmsEmbeddingClient:
             else:
                 if response.status_code < 400:
                     try:
-                        return response.json()
+                        data = response.json()
                     except ValueError as exc:
                         # A non-JSON 2xx body is a contract violation, not transient.
                         raise EmbeddingResponseError(
                             "embedding response is not valid JSON"
                         ) from exc
+                    return data, {
+                        "request_id": (
+                            response.headers.get("x-request-id")
+                            or response.headers.get("request-id")
+                        ),
+                        "retry_count": attempt - 1,
+                        "rate_limit": {
+                            key: value
+                            for key in (
+                                "x-ratelimit-limit-requests",
+                                "x-ratelimit-remaining-requests",
+                                "x-ratelimit-reset-requests",
+                                "retry-after",
+                            )
+                            if (value := response.headers.get(key)) is not None
+                        },
+                    }
                 if response.status_code not in RETRYABLE_STATUS_CODES:
                     raise EmbeddingTransportError(
                         "embedding request rejected with a non-retryable status "
@@ -198,6 +262,49 @@ class GmsEmbeddingClient:
             )
         return vector
 
+    @staticmethod
+    def _extract_usage(data: object) -> EmbeddingUsage:
+        usage = data.get("usage") if isinstance(data, dict) else None
+        if not isinstance(usage, dict):
+            return EmbeddingUsage(None, None, None, None, "UNAVAILABLE")
+
+        def integer(*names: str) -> int | None:
+            for name in names:
+                value = usage.get(name)
+                if isinstance(value, int) and value >= 0:
+                    return value
+            return None
+
+        input_tokens = integer("input_tokens", "prompt_tokens")
+        output_tokens = integer("output_tokens", "completion_tokens")
+        total_tokens = integer("total_tokens")
+        credit_value = usage.get("credit", usage.get("credits"))
+        credit = (
+            float(credit_value)
+            if isinstance(credit_value, (int, float))
+            else None
+        )
+        source = (
+            "PROVIDER_REPORTED"
+            if any(
+                value is not None
+                for value in (
+                    input_tokens,
+                    output_tokens,
+                    total_tokens,
+                    credit,
+                )
+            )
+            else "UNAVAILABLE"
+        )
+        return EmbeddingUsage(
+            input_tokens,
+            output_tokens,
+            total_tokens,
+            credit,
+            source,
+        )
+
 
 def build_embedding_client(adapter: str | None = None):
     """Select the embedding adapter. Unknown names fail loudly."""
@@ -214,8 +321,10 @@ def build_embedding_client(adapter: str | None = None):
 __all__ = [
     "RETRYABLE_STATUS_CODES",
     "EmbeddingClientSettings",
+    "EmbeddingCallResult",
     "EmbeddingResponseError",
     "EmbeddingTransportError",
+    "EmbeddingUsage",
     "GmsEmbeddingClient",
     "build_embedding_client",
     "load_embedding_client_settings",

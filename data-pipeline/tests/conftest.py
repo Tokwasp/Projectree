@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import shutil
 import tempfile
 import uuid
 
@@ -21,6 +22,29 @@ from data_pipeline.config import load_settings
 from data_pipeline.storage.db import make_engine, make_session_factory
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def no_external_ai_provider_environment(monkeypatch):
+    """Make an accidental real provider client fail before network access."""
+
+    monkeypatch.setenv("APP_ENV", "test")
+    monkeypatch.setenv("STT_ADAPTER", "fake")
+    monkeypatch.setenv("LLM_ADAPTER", "fake")
+    monkeypatch.setenv("EMBEDDING_ADAPTER", "fake")
+    monkeypatch.setenv("B_MODEL_ADAPTER", "fake")
+    monkeypatch.setenv("NO_EXTERNAL_AI_CALLS", "1")
+    for name in (
+        "GMS_KEY",
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "GMS_BASE_URL",
+        "B_MODEL_BASE_URL",
+        "B_MODEL_API_KEY",
+        "EMBEDDING_BASE_URL",
+        "EMBEDDING_API_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
 
 
 def _run_alembic_upgrade(db_url: str) -> None:
@@ -68,8 +92,30 @@ def _drop_isolated_postgresql_database(
     admin_engine.dispose()
 
 
+@pytest.fixture(scope="session")
+def sqlite_template_path(tmp_path_factory) -> pathlib.Path:
+    """Build Alembic head once, then copy the empty DB per SQLite test.
+
+    Every test still receives a physically independent database.  Re-running
+    the complete migration chain hundreds of times made ``pytest -q`` appear
+    stalled even though no test, lock, poll, or retry exceeded 60 seconds.
+    """
+
+    template = tmp_path_factory.mktemp("sqlite-template") / "head.db"
+    previous_database_url = os.environ.get("DATABASE_URL")
+    try:
+        _run_alembic_upgrade(f"sqlite:///{template}")
+    finally:
+        if previous_database_url is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = previous_database_url
+        load_settings.cache_clear()
+    return template
+
+
 @pytest.fixture()
-def session_factory():
+def session_factory(sqlite_template_path):
     override = os.environ.get("DATABASE_URL_TEST")
     tmp = None
     admin_engine = None
@@ -88,9 +134,11 @@ def session_factory():
         else:
             tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
             tmp.close()
+            shutil.copyfile(sqlite_template_path, tmp.name)
             db_url = f"sqlite:///{tmp.name}"
 
-        _run_alembic_upgrade(db_url)
+        if override:
+            _run_alembic_upgrade(db_url)
         engine = make_engine(db_url)
         yield make_session_factory(engine)
     finally:

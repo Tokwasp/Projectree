@@ -16,8 +16,6 @@ from data_pipeline.contracts import (
     CandidateView,
     GraphState,
     NodeType,
-    default_lifecycle_status,
-    lifecycle_status_valid,
 )
 from data_pipeline.storage.models import (
     CandidateReviewEvent,
@@ -78,40 +76,11 @@ def _effective_parent(
     raise CandidateValidationError(f"invalid reviewed_parent_mode: {mode}")
 
 
-def resolve_lifecycle_status(node_type: str, proposed: str | None) -> str | None:
-    """Pick the lifecycle status a Node created from a Candidate should carry.
-
-    ACTION keeps the reviewed/suggested state when it is a legal ActionStatus;
-    anything unknown or missing falls back to the pre-existing default rather
-    than inventing a state. DECISION and ISSUE ignore the proposal entirely so
-    an ACTION-shaped value can never leak onto them.
-
-    Returns None for UNKNOWN, which has no lifecycle at all. Such candidates are
-    rejected by _validate_initial_review_shape before a Node is ever built, but
-    _effective() also feeds read-only views, which must not raise.
-    """
-
-    if node_type == NodeType.ACTION.value:
-        if proposed and lifecycle_status_valid(node_type, proposed):
-            return proposed
-        return default_lifecycle_status(node_type)
-    if node_type in {NodeType.DECISION.value, NodeType.ISSUE.value}:
-        return default_lifecycle_status(node_type)
-    return None
-
-
 def _effective(candidate: NodeCandidate) -> dict[str, Any]:
     parent_candidate_id, parent_node_id = _effective_parent(candidate)
     node_type = candidate.reviewed_node_type or candidate.suggested_node_type
-    proposed_lifecycle = (
-        candidate.reviewed_lifecycle_status
-        if candidate.reviewed_lifecycle_status is not None
-        else candidate.suggested_lifecycle_status
-    )
     return {
         "type": node_type,
-        "lifecycle_status": resolve_lifecycle_status(node_type, proposed_lifecycle),
-        "proposed_lifecycle_status": proposed_lifecycle,
         "category": candidate.reviewed_category or candidate.suggested_category,
         "title": (
             candidate.reviewed_title
@@ -146,7 +115,6 @@ def _candidate_view(candidate: NodeCandidate) -> CandidateView:
         suggested_content=candidate.suggested_content,
         suggested_disposition=candidate.suggested_disposition,
         suggested_reason=candidate.suggested_reason,
-        suggested_lifecycle_status=candidate.suggested_lifecycle_status,
         suggested_parent_candidate_id=(
             str(candidate.suggested_parent_candidate_id)
             if candidate.suggested_parent_candidate_id
@@ -162,7 +130,6 @@ def _candidate_view(candidate: NodeCandidate) -> CandidateView:
         reviewed_title=candidate.reviewed_title,
         reviewed_content=candidate.reviewed_content,
         reviewed_disposition=candidate.reviewed_disposition,
-        reviewed_lifecycle_status=candidate.reviewed_lifecycle_status,
         reviewed_parent_mode=candidate.reviewed_parent_mode or "INHERIT",
         reviewed_parent_candidate_id=(
             str(candidate.reviewed_parent_candidate_id)
@@ -179,11 +146,6 @@ def _candidate_view(candidate: NodeCandidate) -> CandidateView:
         effective_title=effective["title"],
         effective_content=effective["content"],
         effective_disposition=effective["disposition"],
-        effective_lifecycle_status=effective["lifecycle_status"],
-        lifecycle_status_needs_review=(
-            effective["type"] == NodeType.ACTION.value
-            and not effective["proposed_lifecycle_status"]
-        ),
         effective_parent_candidate_id=(
             str(effective["parent_candidate_id"])
             if effective["parent_candidate_id"]
@@ -461,7 +423,6 @@ def edit_candidate(
     title: str | object = _UNSET,
     content: str | object = _UNSET,
     disposition: str | object = _UNSET,
-    lifecycle_status: str | None | object = _UNSET,
     parent_mode: str | None = None,
     parent_candidate_id: str | uuid.UUID | None = None,
     parent_node_id: str | uuid.UUID | None = None,
@@ -476,11 +437,6 @@ def edit_candidate(
         parent_candidate_id=parent_candidate_id,
         parent_node_id=parent_node_id,
     )
-    lifecycle_requested = lifecycle_status is not _UNSET
-    if lifecycle_requested:
-        values["reviewed_lifecycle_status"] = (
-            None if lifecycle_status is None else str(lifecycle_status)
-        )
     session = session_factory()
     try:
         candidate = get_candidate_for_review(
@@ -501,24 +457,6 @@ def edit_candidate(
                 raise CandidateValidationError(
                     f"category is not active: {reviewed_category}"
                 )
-        if lifecycle_requested:
-            # Validate against the type this edit results in, not the stored one,
-            # so changing type and lifecycle in one call stays consistent.
-            resulting_type = values.get(
-                "reviewed_node_type",
-                candidate.reviewed_node_type or candidate.suggested_node_type,
-            )
-            proposed = values["reviewed_lifecycle_status"]
-            if proposed is not None:
-                if resulting_type != NodeType.ACTION.value:
-                    raise CandidateValidationError(
-                        "lifecycle_status may only be set on ACTION candidates; "
-                        f"this candidate is {resulting_type}"
-                    )
-                if not lifecycle_status_valid(resulting_type, proposed):
-                    raise CandidateValidationError(
-                        f"invalid lifecycle_status for ACTION: {proposed}"
-                    )
         is_same = all(getattr(candidate, key) == value for key, value in values.items())
         if candidate.version != expected_version:
             if is_same:
@@ -751,7 +689,6 @@ def _node_snapshot(node: Node) -> dict:
             if node.merged_into_node_id
             else None
         ),
-        "lifecycleStatus": node.lifecycle_status,
         "version": node.version,
     }
 
@@ -837,10 +774,6 @@ def complete_initial_review(
                 parent_id=None,
                 graph_state=GraphState.UNATTACHED.value,
                 analysis_status="PENDING",
-                lifecycle_status=(
-                    effective["lifecycle_status"]
-                    or default_lifecycle_status(effective["type"])
-                ),
                 initial_reviewed_by=actor_id,
                 initial_reviewed_at=reviewed_at,
             )
@@ -1138,10 +1071,6 @@ def bulk_approve_candidates(
                         else GraphState.ACTIVE.value
                     ),
                     analysis_status="PENDING",
-                    lifecycle_status=(
-                    effective["lifecycle_status"]
-                    or default_lifecycle_status(effective["type"])
-                ),
                     initial_reviewed_by=actor_id,
                     initial_reviewed_at=approved_at,
                     confirmed_by=(

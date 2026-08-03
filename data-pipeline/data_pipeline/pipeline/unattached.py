@@ -17,7 +17,6 @@ from data_pipeline.contracts import (
     UnattachedEvidenceInput,
     UnattachedNodeEditResult,
     UnattachedNodeView,
-    default_lifecycle_status,
 )
 from data_pipeline.storage.evidence import (
     build_evidence_key,
@@ -247,10 +246,6 @@ def edit_unattached_node(
             if normalized_type not in _NODE_TYPES:
                 raise NodeValidationError(f"invalid node_type: {normalized_type}")
             scalar_values["node_type"] = normalized_type
-            if normalized_type != node.node_type:
-                scalar_values["lifecycle_status"] = default_lifecycle_status(
-                    normalized_type
-                )
         if category is not _UNSET:
             normalized_category = str(category)
             category_row = session.get(Category, normalized_category)

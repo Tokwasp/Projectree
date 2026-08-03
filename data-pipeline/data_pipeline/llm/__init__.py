@@ -73,17 +73,25 @@ def load_llm_settings(*, env_file: str | Path | None = None, require_api_key: bo
 class OpenAIChatClient:
     """GMS OpenAI 호환 채팅 클라이언트. json_object 강제."""
 
-    def __init__(self, settings: LLMSettings) -> None:
+    def __init__(self, settings: LLMSettings, *, client_factory=None) -> None:
         if not settings.gms_key:
             raise RuntimeError("GMS_KEY is required")
         if not settings.openai_base_url:
             raise RuntimeError("OPENAI_BASE_URL is required")
         if not settings.model:
             raise RuntimeError("OPENAI_MODEL is required")
-        from openai import OpenAI
+        if client_factory is None:
+            from data_pipeline.provider_safety import (
+                assert_external_ai_client_allowed,
+            )
+
+            assert_external_ai_client_allowed("candidate-or-summary-llm")
+            from openai import OpenAI
+
+            client_factory = OpenAI
 
         self.settings = settings
-        self._client = OpenAI(
+        self._client = client_factory(
             api_key=settings.gms_key, base_url=settings.openai_base_url,
             timeout=settings.timeout_seconds, max_retries=settings.retry_count,
         )

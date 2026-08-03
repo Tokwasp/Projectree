@@ -22,6 +22,7 @@ PENDING = "PENDING"
 RUNNING = "RUNNING"
 SUCCEEDED = "SUCCEEDED"
 FAILED = "FAILED"
+MANUAL_DECISION_COMPLETED = "MANUAL_DECISION_COMPLETED"
 
 #: A RUNNING row whose worker died is reclaimed after this long.
 DEFAULT_CLAIM_TIMEOUT_SECONDS = 1800
@@ -260,6 +261,7 @@ def _owned(session, job_id: uuid.UUID, claim_token: uuid.UUID) -> AnalysisJob | 
 
 __all__ = [
     "FAILED",
+    "MANUAL_DECISION_COMPLETED",
     "PENDING",
     "RUNNING",
     "SUCCEEDED",

@@ -13,7 +13,11 @@ from data_pipeline.storage import make_engine, make_session_factory
 from data_pipeline.stt import build_transcriber
 
 from .config import WorkerSettings, load_worker_settings
-from .fakes import FakeMeetingChatClient
+from .fakes import (
+    FakeBModelClient,
+    FakeEmbeddingClient,
+    FakeMeetingChatClient,
+)
 from .meeting_context import (
     MeetingContextResolver,
     UnavailableMeetingContextResolver,
@@ -120,15 +124,52 @@ def build_worker_runtime(
     import os
 
     from data_pipeline.pipeline import run_meeting
+    from data_pipeline.pipeline.automatic_graph import (
+        AutoMergePolicy,
+        run_automatic_meeting,
+    )
     from data_pipeline.prompts import get_pipeline_profile
 
     profile_name = os.getenv("PIPELINE_PROMPT_PROFILE", "").strip()
     if profile_name:
-        meeting_runner = functools.partial(
+        candidate_runner = functools.partial(
             run_meeting, prompt_profile=get_pipeline_profile(profile_name)
         )
     else:
-        meeting_runner = run_meeting
+        candidate_runner = run_meeting
+
+    if settings.embedding_adapter == "fake":
+        embedding_client = FakeEmbeddingClient()
+    else:
+        from data_pipeline.retrieval.embedding_client import (
+            build_embedding_client,
+        )
+
+        embedding_client = build_embedding_client(settings.embedding_adapter)
+    if settings.b_model_adapter == "fake":
+        b_model_client = FakeBModelClient()
+        b_model_name = "fake-b-model"
+    else:
+        from data_pipeline.b_model.client import build_b_model_client
+
+        b_model_client = build_b_model_client(settings.b_model_adapter)
+        b_model_name = (
+            os.getenv("B_MODEL_NAME", "").strip()
+            or os.getenv("OPENAI_MODEL", "").strip()
+            or "configured-b-model"
+        )
+    meeting_runner = functools.partial(
+        run_automatic_meeting,
+        meeting_runner=candidate_runner,
+        embedding_client=embedding_client,
+        b_model_client=b_model_client,
+        retrieval_settings=app_settings.retrieval,
+        merge_policy=AutoMergePolicy(
+            min_similarity=app_settings.retrieval.auto_merge_min_similarity,
+            min_margin=app_settings.retrieval.auto_merge_min_margin,
+        ),
+        b_model=b_model_name,
+    )
 
     worker = SqsAudioWorker(
         meeting_runner=meeting_runner,

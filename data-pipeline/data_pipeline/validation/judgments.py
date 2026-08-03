@@ -5,7 +5,6 @@
   2. 후보 allowlist        — 기존 노드 참조(attachTo/targetActionId)는 후보 목록에만
   3. 부모 유효성           — m* attach 의 부모 타입/상태(ACTION→새 DECISION, ISSUE→새 DECISION|ATTACH ACTION)
   4. evidence (evidence.py) — 실존/부분 문자열/최소 10자. 무효 evidence 항목은 그래프 반영 불가 → 강등
-  5. lifecycle 전이표       — UPDATE_ACTION 의 status 전이는 전이표 통과해야(상태 세탁 차단)
   6. 순차 적용             — evidence 최초 startMs→segmentId→itemId 순서로 running 상태 갱신(LLM 배열 순서 금지)
 그리고 커버리지(모든 itemId 정확히 1회, 누락은 MINUTES_ONLY 로 채움) + 허용 판정/필드 규칙.
 
@@ -22,7 +21,6 @@ from data_pipeline.contracts.enums import (
     JudgmentResult,
     NodeType,
     result_allowed_for_type,
-    transition_allowed,
 )
 
 from .evidence import SegmentInfo, resolve_item_evidence
@@ -126,7 +124,7 @@ def validate_judgments(
     items: list[dict],
     raw_judgments: list[dict],
     decision_candidate_ids: set[str],
-    action_candidate_status: dict[str, str],
+    action_candidate_ids: set[str],
     segments: dict[str, SegmentInfo],
 ) -> ValidationResult:
     item_type = {str(it.get("id")): str(it.get("type")).upper() for it in items}
@@ -184,8 +182,8 @@ def validate_judgments(
         if not res["valid"]:
             invalid_evidence.append({"itemId": iid, "problems": res["problems"]})
 
-    # 순차 적용을 위한 running 액션 상태 (규칙 6). 후보 액션 상태로 초기화.
-    action_status = dict(action_candidate_status)
+    # UPDATE_ACTION 이 참조할 수 있는 기존 Action id allowlist (규칙 2).
+    action_ids = set(action_candidate_ids)
 
     # 1차: 독립 규칙 + UPDATE 순차 적용 + 기존-id allowlist. seq_order 로 순회.
     for iid in seq_order:
@@ -209,21 +207,15 @@ def validate_judgments(
 
         if result == _UPDATE:
             target = str(judgment.get("targetActionId"))
-            new_status = (judgment.get("changes") or {}).get("status")
-            if target not in action_status:  # 규칙 2
+            if target not in action_ids:  # 규칙 2
                 demote(iid, "UPDATE_TARGET_NOT_IN_CANDIDATES")
                 continue
-            if new_status is not None:  # 규칙 5: 전이표 (상태 세탁 차단)
-                if not transition_allowed(NodeType.ACTION.value, action_status[target], new_status):
-                    demote(iid, f"ILLEGAL_TRANSITION:{action_status[target]}->{new_status}")
-                    continue
-                action_status[target] = new_status  # 규칙 6: running 상태 갱신
         elif result == _ATTACH:
             target = str(judgment.get("attachTo"))
             if target in item_type:
                 continue  # m* → 2차 fixpoint 에서 검증
             # 기존 노드 참조 (규칙 2 allowlist).
-            if target in action_status:
+            if target in action_ids:
                 if ntype != NodeType.ISSUE.value:  # 기존 액션에는 ISSUE 만 붙는다
                     demote(iid, "ACTION_ATTACH_TO_EXISTING_ACTION")
             elif target in decision_candidate_ids:

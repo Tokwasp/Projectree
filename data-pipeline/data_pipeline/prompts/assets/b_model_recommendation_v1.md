@@ -19,13 +19,22 @@
 5. `sameMeetingSuggestedParent: true`가 붙은 후보는 같은 회의의 판단 단계가 source의
    상위로 제안했던 노드다. **강한 참고 신호**로 취급하되, 내용이 실제로 상하 관계를
    지지할 때만 `LINK`+`ATTACHED_TO`로 판정하라. 자동으로 따르지 마라.
-   단, `ATTACHED_TO`의 target은 `graphState`가 `ACTIVE`인 후보만 유효하다.
-   상위 제안 후보가 아직 `UNATTACHED`면 `ATTACHED_TO`로 판정하지 말고 `CREATE_NEW`를
-   선택한 뒤 reason에 그 상위 후보와의 관계를 언급하라(최종 연결은 사용자 승인 후 가능).
+   기존 그래프 후보의 `ATTACHED_TO` target은 `graphState=ACTIVE`여야 한다.
+   단, `graphState=PLANNED`인 같은 회의 후보는 이번 원자적 Graph Plan 안에서 먼저
+   생성·병합될 노드이므로 유효한 상위 후보로 판단할 수 있다.
 6. 판단 근거가 부족하면 CREATE_NEW를 선택하라. 잘못된 병합이 누락보다 나쁘다.
 7. `suggestedTitle`/`suggestedContent`: MERGE면 병합된 통합 서술, LINK/CREATE_NEW면
    source의 제목·내용을 다듬어 유지(의미 변경 금지).
 8. `reason`은 어떤 후보와 왜 그 관계인지(또는 왜 독립인지) 1~3문장. 근거 없는 추정 금지.
+9. `MERGE`를 선택하면 `metadata.identityBasis`의 아래 항목을 모두 boolean으로 채운다.
+   사실로 확인되지 않은 항목은 `false`다.
+   - 모든 타입: `same_subject`, `same_outcome_or_task`, `same_scope`,
+     `same_time_or_scope`
+   - ACTION 추가: `same_owner_if_required`
+10. `MERGE`를 선택하면 `metadata.conflictsChecked`에 실제로 비교한 충돌 항목을 하나
+    이상 기록한다. 각 항목은 `{"field": "...", "result": "NO_CONFLICT|MATCH|PASS|SAME|NONE"}`
+    형식이다. 제목이 비슷하다는 사실만으로 모든 항목을 통과시키지 마라.
+11. `CREATE_NEW`와 `LINK`의 `metadata`는 빈 객체여도 된다.
 
 ## 입력 데이터 취급
 {{INJECTION_GUARD}}
@@ -49,5 +58,16 @@ JSON 객체 하나만. 설명·마크다운·코드펜스 없이.
   "suggestedTitle": "한 문장 제목",
   "suggestedContent": "1~2문장 설명",
   "reason": "판정 근거 1~3문장",
-  "metadata": {}
+  "metadata": {
+    "identityBasis": {
+      "same_subject": true,
+      "same_outcome_or_task": true,
+      "same_scope": true,
+      "same_time_or_scope": true,
+      "same_owner_if_required": true
+    },
+    "conflictsChecked": [
+      {"field": "scope", "result": "NO_CONFLICT"}
+    ]
+  }
 }

@@ -83,9 +83,9 @@ def test_normal_path_creates_graph_and_events(session_factory):
         assert by_item["m1"].parent_id is None
         assert by_item["m2"].parent_id == by_item["m1"].id
         assert by_item["m3"].parent_id == by_item["m2"].id
-        assert by_item["m1"].lifecycle_status == "ACTIVE"
-        assert by_item["m2"].lifecycle_status == "TODO"
-        assert by_item["m3"].lifecycle_status == "OPEN"
+        assert all(
+            not hasattr(node, "lifecycle_status") for node in by_item.values()
+        )
 
         # v2.2 스키마 충실도: outbox 이벤트 타입, evidence 오프셋 역산, 세그먼트 sequence_no/hash.
         outbox = s.query(OutboxEvent).one()
@@ -115,139 +115,6 @@ def test_idempotency_duplicate_and_reject(session_factory):
 
 
 # --- 3. 상태 세탁 강등 -------------------------------------------------------
-def test_state_laundering_demoted(session_factory):
-    with session_scope(session_factory) as s:
-        d = seed_node(s, project_id=PROJECT, source_meeting_id="M0", source_item_id="d1",
-                      node_type="DECISION", category="BACKEND", title="컨슈머 구조 결정")
-        a = seed_node(s, project_id=PROJECT, source_meeting_id="M0", source_item_id="a1",
-                      node_type="ACTION", category="BACKEND", title="컨슈머 구현",
-                      parent_id=str(d.id), lifecycle_status="COMPLETED", version=1)
-        d_id, a_id = str(d.id), str(a.id)
-
-    payload = request_payload(
-        meeting_id="M-LAUNDER",
-        segments=[seg("s1", "그 컨슈머 작업을 다시 진행 상태로 되돌립시다.", 1000)],
-        items=[item("m1", "ACTION", "컨슈머 재개", "완료된 작업을 재개.",
-                    [ev("s1", "그 컨슈머 작업을 다시 진행 상태로 되돌립시다.")])],
-        judgments=[judgment("m1", "UPDATE_ACTION", targetActionId=a_id, changes={"status": "IN_PROGRESS"})],
-        candidates={"decisions": [{"decisionId": d_id, "title": "컨슈머 구조 결정",
-                                   "actions": [{"actionId": a_id, "status": "COMPLETED"}]}]},
-    )
-    res = process_request(session_factory, payload)
-    assert res.status == "COMPLETED"
-    assert any(d.rule.startswith("ILLEGAL_TRANSITION") for d in res.demoted)
-    assert {m.itemId for m in res.minutesOnly} == {"m1"}
-    with session_factory() as s:
-        a_now = s.get(Node, uuid.UUID(a_id))
-        assert a_now.lifecycle_status == "COMPLETED" and a_now.version == 1  # 세탁 차단
-
-
-# --- 4. 순차 적용 (evidence 시각 순서) ---------------------------------------
-def test_sequential_apply_orders_by_evidence_time(session_factory):
-    with session_scope(session_factory) as s:
-        d = seed_node(s, project_id=PROJECT, source_meeting_id="M0", source_item_id="d1",
-                      node_type="DECISION", category="BACKEND", title="큐 아키텍처 결정")
-        a = seed_node(s, project_id=PROJECT, source_meeting_id="M0", source_item_id="a1",
-                      node_type="ACTION", category="BACKEND", title="컨슈머 구현",
-                      parent_id=str(d.id), lifecycle_status="IN_PROGRESS", version=1)
-        d_id, a_id = str(d.id), str(a.id)
-
-    # 배열 순서는 [늦은 mF, 이른 mC] 이지만 evidence 시각은 mC(2000) < mF(8000).
-    payload = request_payload(
-        meeting_id="M-SEQ",
-        segments=[seg("sC", "컨슈머 구현은 방금 완료했습니다.", 2000),
-                  seg("sF", "이제 후속으로 모니터링 대시보드를 만들죠.", 8000)],
-        items=[
-            item("mF", "ACTION", "모니터링 대시보드 구축", "완료 이후 후속 작업.",
-                 [ev("sF", "이제 후속으로 모니터링 대시보드를 만들죠.")]),
-            item("mC", "ACTION", "컨슈머 구현 완료", "컨슈머 구현 완료 처리.",
-                 [ev("sC", "컨슈머 구현은 방금 완료했습니다.")]),
-        ],
-        judgments=[
-            judgment("mF", "ATTACH", attachTo=d_id),
-            judgment("mC", "UPDATE_ACTION", targetActionId=a_id, changes={"status": "COMPLETED"}),
-        ],
-        candidates={"decisions": [{"decisionId": d_id, "title": "큐 아키텍처 결정",
-                                   "actions": [{"actionId": a_id, "status": "IN_PROGRESS"}]}]},
-    )
-    res = process_request(session_factory, payload)
-    assert res.status == "COMPLETED"
-    assert res.detail["appliedOrder"] == ["mC", "mF"]  # LLM 배열 순서(mF,mC) 아님
-    with session_factory() as s:
-        a_now = s.get(Node, uuid.UUID(a_id))
-        assert a_now.lifecycle_status == "COMPLETED" and a_now.version == 2
-        assert {n.source_item_id for n in s.query(Node).filter_by(source_meeting_id="M-SEQ")} == {"mF"}
-
-
-# --- 5. optimistic lock ------------------------------------------------------
-def test_optimistic_lock_stale_apply_level(session_factory):
-    with session_scope(session_factory) as s:
-        d = seed_node(s, project_id=PROJECT, source_meeting_id="M0", source_item_id="d1",
-                      node_type="DECISION", category="BACKEND", title="결정")
-        a = seed_node(s, project_id=PROJECT, source_meeting_id="M0", source_item_id="a1",
-                      node_type="ACTION", category="BACKEND", title="구현", parent_id=str(d.id),
-                      lifecycle_status="IN_PROGRESS", version=1)
-        a_id = str(a.id)
-
-    plan = ChangePlan(
-        planId="p", projectId=PROJECT, externalMeetingId="M-LOCK", requestId="r",
-        lineage=Lineage(),
-        commands=[Command(op=PlanOp.UPDATE_ACTION, itemId="m1",
-                          sortKey=SortKey(startMs=0, segmentId="s", itemId="m1"),
-                          targetActionId=a_id, changes={"status": "COMPLETED"}, expectedVersion=1)],
-    )
-    # 반영 사이에 version 이 바뀐 상황: 다른 세션에서 v2 로 올린다.
-    with session_scope(session_factory) as s:
-        n = s.get(Node, uuid.UUID(a_id))
-        n.version = 2
-
-    session = session_factory()
-    try:
-        with pytest.raises(StaleVersionError):
-            apply_change_plan(session, plan, CS)
-        session.rollback()
-    finally:
-        session.close()
-
-    with session_factory() as s:
-        a_now = s.get(Node, uuid.UUID(a_id))
-        assert a_now.version == 2 and a_now.lifecycle_status == "IN_PROGRESS"  # 미반영
-        assert s.query(GraphChangeEvent).count() == 0
-
-
-def test_optimistic_lock_stale_service_level(session_factory, monkeypatch):
-    import data_pipeline.pipeline.service as svc
-
-    with session_scope(session_factory) as s:
-        d = seed_node(s, project_id=PROJECT, source_meeting_id="M0", source_item_id="d1",
-                      node_type="DECISION", category="BACKEND", title="결정")
-        a = seed_node(s, project_id=PROJECT, source_meeting_id="M0", source_item_id="a1",
-                      node_type="ACTION", category="BACKEND", title="구현", parent_id=str(d.id),
-                      lifecycle_status="IN_PROGRESS", version=1)
-        d_id, a_id = str(d.id), str(a.id)
-
-    real = svc.get_node
-
-    def fake(session, nid):  # plan 빌드 시점 expectedVersion 을 실제와 다르게(오래된 값) 보고
-        n = real(session, nid)
-        return types.SimpleNamespace(version=n.version + 5) if n is not None else None
-
-    monkeypatch.setattr(svc, "get_node", fake)
-    payload = request_payload(
-        meeting_id="M-LOCK2",
-        segments=[seg("s1", "그 작업은 이제 완료되었습니다 확인.", 1000)],
-        items=[item("m1", "ACTION", "구현 완료", "완료 처리.", [ev("s1", "그 작업은 이제 완료되었습니다 확인.")])],
-        judgments=[judgment("m1", "UPDATE_ACTION", targetActionId=a_id, changes={"status": "COMPLETED"})],
-        candidates={"decisions": [{"decisionId": d_id, "title": "결정",
-                                   "actions": [{"actionId": a_id, "status": "IN_PROGRESS"}]}]},
-    )
-    res = process_request(session_factory, payload)
-    assert res.status == "STALE"
-    with session_factory() as s:
-        assert s.get(Node, uuid.UUID(a_id)).version == 1  # 롤백 — 미반영
-
-
-# --- 6. 원자성 롤백 ----------------------------------------------------------
 def test_atomicity_rollback_on_partial_failure(session_factory):
     # c1(정상 CREATE) 이후 c2(존재하지 않는 UPDATE 대상)가 실패 → 전체 롤백.
     plan = ChangePlan(

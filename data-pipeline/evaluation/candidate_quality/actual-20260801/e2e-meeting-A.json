@@ -13,7 +13,6 @@
           "segmentId": "a2"
         }
       ],
-      "lifecycleStatus": null,
       "predictedCategory": "INFRA"
     },
     {
@@ -27,7 +26,6 @@
           "segmentId": "a3"
         }
       ],
-      "lifecycleStatus": null,
       "predictedCategory": "INFRA"
     },
     {
@@ -41,7 +39,6 @@
           "segmentId": "a4"
         }
       ],
-      "lifecycleStatus": "TODO",
       "predictedCategory": "INFRA"
     },
     {
@@ -55,7 +52,6 @@
           "segmentId": "a5"
         }
       ],
-      "lifecycleStatus": "COMPLETED",
       "predictedCategory": "INFRA"
     }
   ],
@@ -86,11 +82,5 @@
     "m1": "ATTACH",
     "m3": "ATTACH",
     "m4": "UNATTACHED"
-  },
-  "storedLifecycles": {
-    "m2": null,
-    "m1": null,
-    "m3": "TODO",
-    "m4": "COMPLETED"
   }
 }

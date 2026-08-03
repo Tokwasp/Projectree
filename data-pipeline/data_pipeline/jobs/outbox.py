@@ -13,7 +13,7 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Protocol
 
 from sqlalchemy import select
@@ -35,6 +35,7 @@ ANALYSIS_QUEUED = "ANALYSIS_QUEUED"
 FINAL_REVIEW_READY = "FINAL_REVIEW_READY"
 PIPELINE_COMPLETED = "PIPELINE_COMPLETED"
 PIPELINE_FAILED = "PIPELINE_FAILED"
+MEETING_SUMMARY_READY = "MEETING_SUMMARY_READY"
 
 PIPELINE_EVENT_TYPES = frozenset(
     {
@@ -43,6 +44,7 @@ PIPELINE_EVENT_TYPES = frozenset(
         FINAL_REVIEW_READY,
         PIPELINE_COMPLETED,
         PIPELINE_FAILED,
+        MEETING_SUMMARY_READY,
     }
 )
 
@@ -66,6 +68,38 @@ class OutboxMessage:
         return json.dumps(self.as_dict(), ensure_ascii=False, default=str)
 
     def as_dict(self) -> dict:
+        if self.schema_version == "1":
+            occurred_at = self.occurred_at
+            if occurred_at.tzinfo is None:
+                occurred_at = occurred_at.replace(tzinfo=timezone.utc)
+            occurred_at = occurred_at.astimezone(timezone.utc)
+            project_id: str | int = self.project_id
+            canonical_numeric = (
+                self.project_id == "0"
+                or (
+                    self.project_id.isdigit()
+                    and not self.project_id.startswith("0")
+                )
+                or (
+                    self.project_id.startswith("-")
+                    and self.project_id[1:].isdigit()
+                    and self.project_id[1:2] not in {"", "0"}
+                )
+            )
+            if canonical_numeric:
+                parsed = int(self.project_id)
+                if -(2**63) <= parsed <= 2**63 - 1:
+                    project_id = parsed
+            return {
+                "eventSchemaVersion": 1,
+                "eventId": self.event_id,
+                "eventType": self.event_type,
+                "occurredAt": occurred_at.isoformat(timespec="microseconds").replace(
+                    "+00:00", "Z"
+                ),
+                "projectId": project_id,
+                "payload": self.payload,
+            }
         return {
             "eventId": self.event_id,
             "eventType": self.event_type,
@@ -372,6 +406,7 @@ __all__ = [
     "PENDING",
     "PIPELINE_COMPLETED",
     "PIPELINE_EVENT_TYPES",
+    "MEETING_SUMMARY_READY",
     "PIPELINE_FAILED",
     "PUBLISHED",
     "PUBLISHING",

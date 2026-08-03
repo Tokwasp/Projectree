@@ -69,6 +69,14 @@ class BModelClientSettings:
         return f"{self.base_url.rstrip('/')}/chat/completions"
 
 
+@dataclass(frozen=True)
+class BModelCallResult:
+    decision: dict[str, Any]
+    usage: dict[str, int | float]
+    latency_ms: int
+    retry_count: int
+
+
 def load_b_model_client_settings() -> BModelClientSettings:
     """Read settings from the environment.
 
@@ -124,6 +132,19 @@ class GmsBModelClient:
         retrieval_candidates: list[dict[str, Any]],
         model: str,
     ) -> dict[str, Any]:
+        return self.recommend_detailed(
+            source_node=source_node,
+            retrieval_candidates=retrieval_candidates,
+            model=model,
+        ).decision
+
+    def recommend_detailed(
+        self,
+        *,
+        source_node: dict[str, Any],
+        retrieval_candidates: list[dict[str, Any]],
+        model: str,
+    ) -> BModelCallResult:
         prompt = render_b_model_prompt(
             source_node=source_node,
             retrieval_candidates=retrieval_candidates,
@@ -136,10 +157,16 @@ class GmsBModelClient:
         if self.settings.temperature is not None:
             payload["temperature"] = self.settings.temperature
 
-        data = self._post_with_retry(payload)
+        started = time.monotonic()
+        data, metadata = self._post_with_retry_detailed(payload)
         decision = self._extract_decision(data)
         self._check_target_membership(decision, retrieval_candidates)
-        return decision
+        return BModelCallResult(
+            decision=decision,
+            usage=self._extract_usage(data),
+            latency_ms=max(0, int((time.monotonic() - started) * 1000)),
+            retry_count=metadata["retry_count"],
+        )
 
     # -- internals -------------------------------------------------------
     def _client(self):
@@ -149,9 +176,16 @@ class GmsBModelClient:
             return httpx.Client(
                 transport=self._transport, timeout=self.settings.timeout_seconds
             )
+        from data_pipeline.provider_safety import assert_external_ai_client_allowed
+
+        assert_external_ai_client_allowed("b-model")
         return httpx.Client(timeout=self.settings.timeout_seconds)
 
     def _post_with_retry(self, payload: dict) -> dict:
+        data, _ = self._post_with_retry_detailed(payload)
+        return data
+
+    def _post_with_retry_detailed(self, payload: dict) -> tuple[dict, dict]:
         import httpx
 
         attempts = self.settings.retry_count + 1
@@ -174,11 +208,12 @@ class GmsBModelClient:
             else:
                 if response.status_code < 400:
                     try:
-                        return response.json()
+                        data = response.json()
                     except ValueError as exc:
                         raise BModelResponseError(
                             "B-model response is not valid JSON"
                         ) from exc
+                    return data, {"retry_count": attempt - 1}
                 if response.status_code not in RETRYABLE_STATUS_CODES:
                     raise BModelTransportError(
                         "B-model request rejected with a non-retryable status "
@@ -195,6 +230,26 @@ class GmsBModelClient:
                 self._sleep(self.settings.retry_backoff_seconds * attempt)
 
         raise last_error or BModelTransportError("B-model request failed")
+
+    @staticmethod
+    def _extract_usage(data: object) -> dict[str, int | float]:
+        usage = data.get("usage") if isinstance(data, dict) else None
+        if not isinstance(usage, dict):
+            return {}
+        allowed = {
+            "prompt_tokens",
+            "completion_tokens",
+            "total_tokens",
+            "input_tokens",
+            "output_tokens",
+            "credit",
+            "credits",
+        }
+        return {
+            key: value
+            for key, value in usage.items()
+            if key in allowed and isinstance(value, (int, float))
+        }
 
     @staticmethod
     def _extract_decision(data: object) -> dict[str, Any]:
@@ -237,6 +292,7 @@ __all__ = [
     "B_MODEL_PROMPT_ASSET_NAME",
     "RETRYABLE_STATUS_CODES",
     "BModelClientSettings",
+    "BModelCallResult",
     "BModelResponseError",
     "BModelTransportError",
     "GmsBModelClient",

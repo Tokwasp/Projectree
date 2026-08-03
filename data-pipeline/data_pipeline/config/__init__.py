@@ -22,10 +22,12 @@ class RetrievalSettings:
     node_top_k: int = 5
     min_similarity: float | None = None
     embedding_model: str = "text-embedding-3-small"
-    embedding_version: str = "v1"
+    embedding_version: str = "node-embedding-v2-no-category"
     embedding_dim: int = 1536
     text_extension: str = "pg_bigm"
     config_version: str = "retrieval-v1"
+    auto_merge_min_similarity: float | None = None
+    auto_merge_min_margin: float | None = None
 
 
 @dataclass(frozen=True)
@@ -56,6 +58,7 @@ class ApiSettings:
     """HTTP safety limits enforced by the internal FastAPI service."""
 
     max_request_body_bytes: int = 1_048_576
+    internal_service_token: str = ""
 
 
 @dataclass(frozen=True)
@@ -113,11 +116,33 @@ def load_settings() -> Settings:
         node_top_k=int(_env("RETRIEVAL_NODE_TOP_K", "5")),
         min_similarity=_optional_float_env("RETRIEVAL_MIN_SIMILARITY"),
         embedding_model=_env("RETRIEVAL_EMBEDDING_MODEL", "text-embedding-3-small"),
-        embedding_version=_env("RETRIEVAL_EMBEDDING_VERSION", "v1"),
+        embedding_version=_env(
+            "RETRIEVAL_EMBEDDING_VERSION", "node-embedding-v2-no-category"
+        ),
         embedding_dim=int(_env("RETRIEVAL_EMBEDDING_DIM", "1536")),
         text_extension=_env("RETRIEVAL_TEXT_EXTENSION", "pg_bigm"),
         config_version=_env("RETRIEVAL_CONFIG_VERSION", "retrieval-v1"),
+        auto_merge_min_similarity=_optional_float_env(
+            "AUTO_MERGE_MIN_SIMILARITY"
+        ),
+        auto_merge_min_margin=_optional_float_env(
+            "AUTO_MERGE_MIN_MARGIN"
+        ),
     )
+    if (
+        retrieval.auto_merge_min_similarity is not None
+        and not 0.0 <= retrieval.auto_merge_min_similarity <= 1.0
+    ):
+        raise ValueError(
+            "AUTO_MERGE_MIN_SIMILARITY must be between 0.0 and 1.0"
+        )
+    if (
+        retrieval.auto_merge_min_margin is not None
+        and not 0.0 <= retrieval.auto_merge_min_margin <= 2.0
+    ):
+        raise ValueError(
+            "AUTO_MERGE_MIN_MARGIN must be between 0.0 and 2.0"
+        )
     database = DatabaseSettings(
         pool_size=int(_env("DB_POOL_SIZE", "5")),
         max_overflow=int(_env("DB_MAX_OVERFLOW", "5")),
@@ -141,7 +166,8 @@ def load_settings() -> Settings:
     api = ApiSettings(
         max_request_body_bytes=int(
             _env("API_MAX_REQUEST_BODY_BYTES", "1048576")
-        )
+        ),
+        internal_service_token=_env("INTERNAL_API_TOKEN", ""),
     )
     if api.max_request_body_bytes < 1024:
         raise ValueError("API_MAX_REQUEST_BODY_BYTES must be at least 1024")

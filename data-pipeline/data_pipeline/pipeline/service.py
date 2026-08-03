@@ -71,17 +71,23 @@ def _segment_info(payload: dict) -> dict[str, SegmentInfo]:
     }
 
 
-def _candidate_allowlists(candidates: dict) -> tuple[set[str], dict[str, str]]:
+def _candidate_allowlists(candidates: dict) -> tuple[set[str], set[str]]:
+    """Referenceable existing-Node ids, by type.
+
+    Only membership matters: with Node progress removed there is no candidate
+    Action state left to carry into judgment validation.
+    """
+
     decision_ids = {
         d.get("decisionId") for d in candidates.get("decisions", []) if d.get("decisionId")
     }
-    action_status = {
-        a.get("actionId"): a.get("status", "IN_PROGRESS")
+    action_ids = {
+        a.get("actionId")
         for d in candidates.get("decisions", [])
         for a in d.get("actions", [])
         if a.get("actionId")
     }
-    return decision_ids, action_status
+    return decision_ids, action_ids
 
 
 @dataclass(frozen=True)
@@ -301,13 +307,13 @@ def finalize_generation_candidates(
 
         items = payload.get("items", [])
         candidates = payload.get("candidates", {}) or {}
-        decision_ids, action_status = _candidate_allowlists(candidates)
+        decision_ids, action_ids = _candidate_allowlists(candidates)
         segments_info = _segment_info(payload)
         validation = validate_judgments(
             items=items,
             raw_judgments=payload.get("judgments", []),
             decision_candidate_ids=decision_ids,
-            action_candidate_status=action_status,
+            action_candidate_ids=action_ids,
             segments=segments_info,
         )
         rows = create_generation_candidates(
@@ -320,7 +326,7 @@ def finalize_generation_candidates(
             raw_judgments=raw_judgments,
             validated_judgments=validation.judgments,
             segments=segments_info,
-            allowed_existing_node_ids=decision_ids | set(action_status),
+            allowed_existing_node_ids=decision_ids | action_ids,
         )
 
         completed_at = datetime.now(timezone.utc)
@@ -543,13 +549,13 @@ def process_request(
         items = payload.get("items", [])
         raw_judgments = payload.get("judgments", [])
         candidates = payload.get("candidates", {}) or {}
-        decision_ids, action_status = _candidate_allowlists(candidates)
+        decision_ids, action_ids = _candidate_allowlists(candidates)
         segments_info = _segment_info(payload)
         validation = validate_judgments(
             items=items,
             raw_judgments=raw_judgments,
             decision_candidate_ids=decision_ids,
-            action_candidate_status=action_status,
+            action_candidate_ids=action_ids,
             segments=segments_info,
         )
 

@@ -1,8 +1,9 @@
-"""FastAPI review API and the Candidate ACTION lifecycle carried through it."""
+"""FastAPI review API contract tests."""
 
 from __future__ import annotations
 
 import json
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -55,7 +56,7 @@ def client(session_factory):
     app.dependency_overrides.clear()
 
 
-def _run_meeting(session_factory, *, lifecycle: str | None = None, meeting=MEETING):
+def _run_meeting(session_factory, *, meeting=MEETING):
     """Persist one ACTION and one DECISION candidate via the real chain."""
 
     from data_pipeline.pipeline import run_meeting
@@ -67,8 +68,6 @@ def _run_meeting(session_factory, *, lifecycle: str | None = None, meeting=MEETI
         "CORS 설정을 적용한다",
         [ev("s1", "그다음에 CORS 설정하고")],
     )
-    if lifecycle is not None:
-        action["lifecycleStatus"] = lifecycle
     decision = item(
         "m2",
         "DECISION",
@@ -387,141 +386,27 @@ def test_approve_creates_an_unattached_node(client, session_factory) -> None:
         assert node.graph_state == "UNATTACHED"
 
 
-# ------------------------------------------------------- ACTION lifecycle ---
-
-
-@pytest.mark.parametrize(
-    "lifecycle", ["TODO", "IN_PROGRESS", "COMPLETED", "CANCELLED"]
-)
-def test_extracted_lifecycle_survives_to_the_node(
-    client, session_factory, lifecycle: str
+def test_candidate_and_node_payloads_have_no_lifecycle_fields(
+    client,
+    session_factory,
 ) -> None:
-    """Before this change every ACTION Node was created as TODO."""
-
-    _run_meeting(session_factory, lifecycle=lifecycle)
+    _run_meeting(session_factory)
     candidate = _action_candidate(client)
-    assert candidate["suggested_lifecycle_status"] == lifecycle
-    assert candidate["effective_lifecycle_status"] == lifecycle
+    assert not any("lifecycle" in key.lower() for key in candidate)
 
-    client.post(
+    approved = client.post(
         f"/api/v1/candidates/{candidate['candidate_id']}/approve",
         headers=HEADERS,
         json={"expectedVersion": candidate["version"]},
     )
-
+    assert approved.status_code == 200
     with session_factory() as session:
-        node = session.execute(
-            select(Node).where(Node.source_item_id == "m1")
-        ).scalar_one()
-        assert node.lifecycle_status == lifecycle
-
-
-def test_missing_lifecycle_falls_back_to_todo_and_flags_review(
-    client, session_factory
-) -> None:
-    _run_meeting(session_factory, lifecycle=None)
-    candidate = _action_candidate(client)
-
-    assert candidate["suggested_lifecycle_status"] is None
-    assert candidate["effective_lifecycle_status"] == "TODO"
-    assert candidate["lifecycle_status_needs_review"] is True
-
-
-def test_an_unparsable_lifecycle_is_ignored_rather_than_stored(
-    client, session_factory
-) -> None:
-    _run_meeting(session_factory, lifecycle="ALMOST_DONE")
-    candidate = _action_candidate(client)
-
-    assert candidate["suggested_lifecycle_status"] is None
-    assert candidate["effective_lifecycle_status"] == "TODO"
-
-
-def test_reviewer_override_wins_over_the_suggestion(client, session_factory) -> None:
-    _run_meeting(session_factory, lifecycle="TODO")
-    candidate = _action_candidate(client)
-
-    patched = client.patch(
-        f"/api/v1/candidates/{candidate['candidate_id']}",
-        headers=HEADERS,
-        json={
-            "expectedVersion": candidate["version"],
-            "lifecycleStatus": "COMPLETED",
-        },
-    )
-    assert patched.status_code == 200
-    view = patched.json()["candidates"][0]
-    assert view["reviewed_lifecycle_status"] == "COMPLETED"
-    assert view["effective_lifecycle_status"] == "COMPLETED"
-
-    client.post(
-        f"/api/v1/candidates/{candidate['candidate_id']}/approve",
-        headers=HEADERS,
-        json={},
-    )
-    with session_factory() as session:
-        node = session.execute(
-            select(Node).where(Node.source_item_id == "m1")
-        ).scalar_one()
-        assert node.lifecycle_status == "COMPLETED"
-
-
-def test_lifecycle_cannot_be_set_on_a_decision(client, session_factory) -> None:
-    """An ACTION status must never leak onto a DECISION."""
-
-    _run_meeting(session_factory)
-    listed = client.get(
-        f"/api/v1/meetings/{MEETING}/candidates", headers=HEADERS
-    ).json()["candidates"]
-    decision = next(c for c in listed if c["suggested_type"] == "DECISION")
-
-    response = client.patch(
-        f"/api/v1/candidates/{decision['candidate_id']}",
-        headers=HEADERS,
-        json={
-            "expectedVersion": decision["version"],
-            "lifecycleStatus": "COMPLETED",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["error"]["code"] == "VALIDATION_FAILED"
-
-
-def test_decision_keeps_its_own_default_lifecycle(client, session_factory) -> None:
-    _run_meeting(session_factory)
-    listed = client.get(
-        f"/api/v1/meetings/{MEETING}/candidates", headers=HEADERS
-    ).json()["candidates"]
-    decision = next(c for c in listed if c["suggested_type"] == "DECISION")
-    assert decision["effective_lifecycle_status"] == "ACTIVE"
-
-    client.post(
-        f"/api/v1/candidates/{decision['candidate_id']}/approve",
-        headers=HEADERS,
-        json={},
-    )
-    with session_factory() as session:
-        node = session.execute(
-            select(Node).where(Node.source_item_id == "m2")
-        ).scalar_one()
-        assert node.lifecycle_status == "ACTIVE"
-
-
-def test_patch_rejects_an_invalid_lifecycle_value(client, session_factory) -> None:
-    _run_meeting(session_factory)
-    candidate = _action_candidate(client)
-
-    response = client.patch(
-        f"/api/v1/candidates/{candidate['candidate_id']}",
-        headers=HEADERS,
-        json={"expectedVersion": candidate["version"], "lifecycleStatus": "NOPE"},
-    )
-
-    assert response.status_code == 422
-
-
-# ------------------------------------------- initial review -> async stage ---
+        node = session.get(
+            Node,
+            uuid.UUID(approved.json()["createdNodeIds"][0]),
+        )
+        assert node is not None
+        assert not hasattr(node, "lifecycle_status")
 
 
 def test_initial_review_complete_returns_202_and_queues_jobs(
@@ -540,12 +425,14 @@ def test_initial_review_complete_returns_202_and_queues_jobs(
     assert body["status"] == "ANALYSIS_PENDING"
     assert body["reviewedCandidateCount"] == 2
     assert body["createdNodeCount"] == 2
-    assert body["queuedAnalysisJobCount"] == 2
+    assert body["queuedAnalysisJobCount"] == 1
 
     with session_factory() as session:
         jobs = session.execute(select(AnalysisJob)).scalars().all()
-        assert len(jobs) == 2
+        assert len(jobs) == 1
         assert {job.status for job in jobs} == {"PENDING"}
+        queued_node = session.get(Node, jobs[0].node_id)
+        assert queued_node.node_type == "DECISION"
 
 
 def test_initial_review_complete_emits_outbox_events(
@@ -562,7 +449,7 @@ def test_initial_review_complete_emits_outbox_events(
     with session_factory() as session:
         events = session.execute(select(OutboxEvent)).scalars().all()
         types = [event.event_type for event in events]
-        assert types.count("ANALYSIS_QUEUED") == 2
+        assert types.count("ANALYSIS_QUEUED") == 1
         assert types.count("INITIAL_REVIEW_READY") == 1
         assert {event.status for event in events} == {"PENDING"}
 
@@ -585,7 +472,7 @@ def test_initial_review_complete_is_idempotent(client, session_factory) -> None:
     assert second.status_code == 202
     assert second.json()["queuedAnalysisJobCount"] == 0
     with session_factory() as session:
-        assert len(session.execute(select(AnalysisJob)).scalars().all()) == 2
+        assert len(session.execute(select(AnalysisJob)).scalars().all()) == 1
 
 
 def test_initial_review_rejects_duplicate_candidate_ids(client) -> None:
@@ -648,7 +535,7 @@ def test_pipeline_status_reports_stages(client, session_factory) -> None:
         f"/api/v1/meetings/{MEETING}/pipeline-status", headers=HEADERS
     ).json()
     assert after["pipelineStage"] == "ANALYZING"
-    assert after["analysisJobCounts"]["PENDING"] == 2
+    assert after["analysisJobCounts"]["PENDING"] == 1
 
 
 def test_analysis_status_lists_jobs(client, session_factory) -> None:
@@ -666,7 +553,7 @@ def test_analysis_status_lists_jobs(client, session_factory) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ANALYZING"
-    assert len(body["jobs"]) == 2
+    assert len(body["jobs"]) == 1
 
 
 def test_analysis_status_for_an_unqueued_meeting(client) -> None:

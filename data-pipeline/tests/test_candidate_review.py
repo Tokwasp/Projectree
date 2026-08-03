@@ -988,7 +988,6 @@ def test_regenerated_same_source_item_candidates_each_create_their_own_node(
             title="중복 candidate 출처",
             content="",
             graph_state="ACTIVE",
-            lifecycle_status="ACTIVE",
         )
         session.add(duplicate)
         with pytest.raises(IntegrityError):

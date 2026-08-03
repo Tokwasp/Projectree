@@ -7,8 +7,9 @@ without a client.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from data_pipeline.api.schemas import (
     AnalysisCandidateView,
@@ -18,13 +19,29 @@ from data_pipeline.api.schemas import (
     InitialReviewCompleteResponse,
     PipelineStatusResponse,
 )
+from data_pipeline.contracts import (
+    AnalysisRunStatus,
+    ReanalyzeUnattachedNodeResult,
+)
 from data_pipeline.jobs import (
     ANALYSIS_QUEUED,
     INITIAL_REVIEW_READY,
+    MANUAL_DECISION_COMPLETED,
     emit_outbox_event,
     enqueue_analysis_job,
 )
-from data_pipeline.pipeline import complete_initial_review, list_candidates
+from data_pipeline.pipeline import (
+    complete_initial_review,
+    list_candidates,
+    release_pending_dependent_nodes_if_ready,
+)
+from data_pipeline.pipeline.analysis import (
+    reanalyze_unattached_node_in_session,
+)
+from data_pipeline.pipeline.decision_first import (
+    assert_node_analysis_phase_allowed,
+)
+from data_pipeline.pipeline.errors import NodeNotFoundError
 from data_pipeline.storage import (
     AnalysisCandidate,
     AnalysisJob,
@@ -33,6 +50,12 @@ from data_pipeline.storage import (
     NodeCandidate,
     Request,
 )
+
+
+@dataclass(frozen=True)
+class QueueAnalysisForNodeResult:
+    requested: ReanalyzeUnattachedNodeResult
+    queued_count: int
 
 
 def complete_meeting_initial_review(
@@ -98,31 +121,98 @@ def complete_meeting_initial_review(
 def _queue_analysis_for_meeting(
     session_factory, *, project_id: str, meeting_id: str
 ) -> int:
-    """Enqueue one job per un-queued UNATTACHED Node, plus the outbox events."""
+    """Release the meeting's currently eligible Decision-first phase."""
 
     session = session_factory()
     try:
-        nodes = session.execute(
-            select(Node)
-            .outerjoin(AnalysisJob, AnalysisJob.node_id == Node.id)
-            .where(
-                Node.project_id == project_id,
-                Node.source_meeting_id == meeting_id,
-                Node.graph_state == "UNATTACHED",
-                Node.merged_into_node_id.is_(None),
-                AnalysisJob.id.is_(None),
-            )
-        ).scalars().all()
-
-        if not nodes:
+        released = release_pending_dependent_nodes_if_ready(
+            session,
+            project_id=project_id,
+            meeting_id=meeting_id,
+        )
+        if released.queued_count == 0:
             session.rollback()
             return 0
 
-        for node in nodes:
+        # One meeting-level event so Spring can move the review screen on.
+        emit_outbox_event(
+            session,
+            event_type=INITIAL_REVIEW_READY,
+            aggregate_type="meeting",
+            aggregate_id=meeting_id,
+            project_id=project_id,
+            payload={
+                "meetingId": meeting_id,
+                "queuedNodeCount": released.queued_count,
+                "analysisPhase": released.phase,
+            },
+        )
+        session.commit()
+        return released.queued_count
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def queue_analysis_for_node(
+    session_factory,
+    *,
+    project_id: str,
+    node_id: uuid.UUID,
+    actor_id: str,
+    expected_version: int,
+) -> QueueAnalysisForNodeResult:
+    """Guard, request, and enqueue one Node analysis atomically."""
+
+    session = session_factory()
+    try:
+        # Read only immutable routing fields first. The phase guard acquires the
+        # meeting lock before reanalyze_unattached_node_in_session locks the
+        # dependent Node, preventing inversion with final approval's
+        # meeting-lock-then-dependent-job insertion.
+        node = session.execute(
+            select(Node).where(Node.id == node_id, Node.project_id == project_id)
+        ).scalar_one_or_none()
+        if node is None:
+            session.rollback()
+            raise NodeNotFoundError(f"node not found: {node_id}")
+
+        # The meeting lock and phase decision happen before a Run, Job, Outbox,
+        # or Node analysis-status mutation is allowed.
+        assert_node_analysis_phase_allowed(session, node)
+        requested = reanalyze_unattached_node_in_session(
+            session,
+            node.id,
+            project_id=project_id,
+            actor_id=actor_id,
+            expected_version=expected_version,
+        )
+
+        should_queue = requested.run.status in {
+            AnalysisRunStatus.PENDING,
+            AnalysisRunStatus.RUNNING,
+        }
+        existing_job = session.execute(
+            select(AnalysisJob)
+            .where(
+                AnalysisJob.node_id == node.id,
+                AnalysisJob.project_id == project_id,
+            )
+            .with_for_update()
+        ).scalar_one_or_none()
+        already_active = (
+            existing_job is not None
+            and existing_job.node_version == node.version
+            and existing_job.status in {"PENDING", "RUNNING"}
+        )
+        queued_count = 0
+        if should_queue and not already_active:
             enqueue_analysis_job(
                 session,
                 project_id=project_id,
-                external_meeting_id=meeting_id,
+                external_meeting_id=node.source_meeting_id,
                 node_id=node.id,
                 node_version=node.version,
             )
@@ -132,61 +222,19 @@ def _queue_analysis_for_meeting(
                 aggregate_type="node",
                 aggregate_id=str(node.id),
                 project_id=project_id,
-                payload={"meetingId": meeting_id, "nodeId": str(node.id)},
+                payload={
+                    "meetingId": node.source_meeting_id,
+                    "nodeId": str(node.id),
+                    "analysisRunId": requested.run.analysis_run_id,
+                    "trigger": "REANALYZE",
+                },
             )
-
-        # One meeting-level event so Spring can move the review screen on.
-        emit_outbox_event(
-            session,
-            event_type=INITIAL_REVIEW_READY,
-            aggregate_type="meeting",
-            aggregate_id=meeting_id,
-            project_id=project_id,
-            payload={"meetingId": meeting_id, "queuedNodeCount": len(nodes)},
-        )
+            queued_count = 1
         session.commit()
-        return len(nodes)
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-
-
-def queue_analysis_for_node(
-    session_factory, *, project_id: str, node_id: uuid.UUID
-) -> int:
-    """Enqueue (or revive) the job for a single Node, with its outbox event."""
-
-    session = session_factory()
-    try:
-        node = session.execute(
-            select(Node).where(Node.id == node_id, Node.project_id == project_id)
-        ).scalar_one_or_none()
-        if node is None:
-            session.rollback()
-            return 0
-        enqueue_analysis_job(
-            session,
-            project_id=project_id,
-            external_meeting_id=node.source_meeting_id,
-            node_id=node.id,
-            node_version=node.version,
+        return QueueAnalysisForNodeResult(
+            requested=requested,
+            queued_count=queued_count,
         )
-        emit_outbox_event(
-            session,
-            event_type=ANALYSIS_QUEUED,
-            aggregate_type="node",
-            aggregate_id=str(node.id),
-            project_id=project_id,
-            payload={
-                "meetingId": node.source_meeting_id,
-                "nodeId": str(node.id),
-                "trigger": "REANALYZE",
-            },
-        )
-        session.commit()
-        return 1
     except Exception:
         session.rollback()
         raise
@@ -243,6 +291,22 @@ def build_pipeline_status(
                 .group_by(AnalysisJob.status)
             ).all()
         )
+        effective_job_counts = dict(
+            session.execute(
+                select(AnalysisJob.status, func.count())
+                .where(
+                    AnalysisJob.project_id == project_id,
+                    AnalysisJob.external_meeting_id == meeting_id,
+                    or_(
+                        AnalysisJob.status != "FAILED",
+                        AnalysisJob.failure_code.is_(None),
+                        AnalysisJob.failure_code
+                        != MANUAL_DECISION_COMPLETED,
+                    ),
+                )
+                .group_by(AnalysisJob.status)
+            ).all()
+        )
 
     return PipelineStatusResponse(
         meetingId=meeting_id,
@@ -252,7 +316,7 @@ def build_pipeline_status(
         candidateCounts={str(k): int(v) for k, v in candidate_counts.items()},
         nodeCounts={str(k): int(v) for k, v in node_counts.items()},
         analysisJobCounts={str(k): int(v) for k, v in job_counts.items()},
-        pipelineStage=_stage(candidate_counts, job_counts),
+        pipelineStage=_stage(candidate_counts, effective_job_counts),
     )
 
 
@@ -296,14 +360,23 @@ def build_analysis_status(
             for job in jobs
         ]
 
-    statuses = {view.status for view in views}
+    effective_statuses = {
+        job.status
+        for job in jobs
+        if not (
+            job.status == "FAILED"
+            and job.failure_code == MANUAL_DECISION_COMPLETED
+        )
+    }
     if not views:
         overall = "NOT_QUEUED"
-    elif statuses & {"PENDING", "RUNNING"}:
+    elif not effective_statuses:
+        overall = "REVIEW_COMPLETED"
+    elif effective_statuses & {"PENDING", "RUNNING"}:
         overall = "ANALYZING"
-    elif statuses == {"SUCCEEDED"}:
+    elif effective_statuses == {"SUCCEEDED"}:
         overall = "FINAL_REVIEW_PENDING"
-    elif "FAILED" in statuses:
+    elif "FAILED" in effective_statuses:
         overall = "FAILED"
     else:
         overall = "ANALYZING"

@@ -1,15 +1,16 @@
 # Python 서버 실행 및 배포
 
-프로세스는 **4개**이며 각각 독립적으로 기동/중지된다.
+제품 자동 흐름의 필수 프로세스는 **3개**이며 각각 독립적으로 기동/중지된다.
 
 ```text
-python -m data_pipeline.worker             # OpenVidu/S3 SQS 수집 워커
-python -m data_pipeline.api                # 검토 REST API (FastAPI)
-python -m data_pipeline.analysis_worker    # 임베딩·Retrieval·B 모델
+python -m data_pipeline.worker             # S3/SQS→STT→자동 Graph Plan
+python -m data_pipeline.api                # Graph 조회·직접 편집 API
 python -m data_pipeline.outbox_publisher   # Outbox relay
 ```
 
-네 프로세스는 같은 PostgreSQL을 공유한다. API와 워커는 서로를 HTTP로 호출하지 않는다.
+`data_pipeline.analysis_worker`는 이전 사용자 승인 흐름의 호환 프로세스이며
+운영 자동 제품 경로에는 필요하지 않다. 프로세스는 같은 PostgreSQL을 공유한다.
+API와 워커는 서로를 HTTP로 호출하지 않는다.
 
 ---
 
@@ -33,7 +34,7 @@ python -m venv .venv
 ## 2. DB 마이그레이션
 
 ```powershell
-.venv\Scripts\python.exe -m alembic upgrade head   # 현재 head: 0004_runtime_pipeline
+.venv\Scripts\python.exe -m alembic upgrade head   # 현재 head: 0009_graph_event_contract_v1
 .venv\Scripts\python.exe -m alembic current
 .venv\Scripts\python.exe -m alembic check
 ```
@@ -65,6 +66,8 @@ python -m data_pipeline.api
 | `API_RELOAD` | (off) | 개발용만 |
 | `API_MAX_REQUEST_BODY_BYTES` | `1048576` | Content-Length·chunked body 공통 제한 |
 | `API_GRACEFUL_SHUTDOWN_SECONDS` | `20` | 진행 중 요청 대기 |
+| `INTERNAL_API_TOKEN` | — | 운영/스테이징 필수 service token |
+| `ENABLE_LEGACY_REVIEW_API` | `false`(운영) | 이전 승인 API 호환용 |
 | `LOG_LEVEL` | `INFO` | |
 
 ### Health check
@@ -100,7 +103,8 @@ API는 모든 응답에 `X-Request-Id`를 반환한다. Spring이 128자 이하�
 ### OpenAPI
 `GET /openapi.json`, `GET /docs`
 
-**인증이 없다.** 내부망 전용으로 배치할 것. 상세는
+운영/스테이징은 `X-Internal-Service-Token`을 검증한다. 토큰 검증과 별개로
+내부망 전용으로 배치해야 한다. 상세는
 [`python-review-api-contract.md`](../contracts/python-review-api-contract.md).
 
 ---
@@ -116,13 +120,21 @@ python -m data_pipeline.worker
 
 ---
 
-## 5. Analysis Worker
+## 5. 레거시 Analysis Worker
 
 ```powershell
 python -m data_pipeline.analysis_worker
 ```
 
-`analysis_job`을 폴링해 임베딩 → pgvector Retrieval → B 모델을 실행한다.
+이 프로세스는 이전 Candidate 사용자 승인 흐름의 `analysis_job`을 폴링한다.
+신규 자동 SQS 흐름은 수집 Worker가 외부 호출 결과를 Plan에 모은 뒤 최종
+그래프를 한 트랜잭션으로 반영하므로 이 Worker를 사용하지 않는다.
+
+Job은 meeting별 Decision-first 순서로 생성된다. Decision이 있는 회의에서는
+Decision 분석과 사용자 최종 결정이 모두 끝나기 전까지 Action/Issue Job이
+생성되지 않는다. 마지막 Decision 승인 트랜잭션이 대기 중 Action/Issue의
+Job과 `ANALYSIS_QUEUED` Outbox를 함께 저장하므로 Worker가 별도 단계 전환
+함수를 호출할 필요는 없다.
 
 | 환경변수 | 기본값 | 설명 |
 |---|---|---|

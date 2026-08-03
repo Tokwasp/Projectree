@@ -69,7 +69,7 @@ def test_coverage_fills_missing_with_minutes_only():
     result = validate_judgments(
         items=_items_with_evidence(),
         raw_judgments=[{"itemId": "m1", "result": "NEW_DECISION", "category": "BACKEND"}],
-        decision_candidate_ids=set(), action_candidate_status={},
+        decision_candidate_ids=set(), action_candidate_ids=set(),
         segments=_valid_evidence_segments(),
     )
     by_id = {j["itemId"]: j for j in result.judgments}
@@ -85,7 +85,7 @@ def test_duplicate_itemid_invalidates_response():
             {"itemId": "m1", "result": "NEW_DECISION", "category": "BACKEND"},
             {"itemId": "m1", "result": "MINUTES_ONLY", "reason": "NOT_CONFIRMED"},
         ],
-        decision_candidate_ids=set(), action_candidate_status={},
+        decision_candidate_ids=set(), action_candidate_ids=set(),
         segments=_valid_evidence_segments(),
     )
     assert result.response_invalid is not None
@@ -97,7 +97,7 @@ def test_result_not_allowed_for_type_demoted():
     result = validate_judgments(
         items=[{"id": "m1", "type": "DECISION", "evidence": [{"segmentId": "seg-1", "quote": "소음 전처리는 클로바 STT 전에 넣는 걸로 결정합시다."}]}],
         raw_judgments=[{"itemId": "m1", "result": "ATTACH", "attachTo": "m9"}],
-        decision_candidate_ids=set(), action_candidate_status={},
+        decision_candidate_ids=set(), action_candidate_ids=set(),
         segments=_valid_evidence_segments(),
     )
     assert result.judgments[0]["result"] == "MINUTES_ONLY"
@@ -108,7 +108,7 @@ def test_out_of_candidate_attach_demoted():
     result = validate_judgments(
         items=[{"id": "m1", "type": "ISSUE", "evidence": [{"segmentId": "seg-3", "quote": "리프레시 토큰 재사용 공격도 반드시 막아야 합니다."}]}],
         raw_judgments=[{"itemId": "m1", "result": "ATTACH", "attachTo": "decision-999"}],
-        decision_candidate_ids=set(), action_candidate_status={},
+        decision_candidate_ids=set(), action_candidate_ids=set(),
         segments=_valid_evidence_segments(),
     )
     assert result.judgments[0]["result"] == "MINUTES_ONLY"
@@ -124,7 +124,7 @@ def test_issue_attach_to_minutes_only_parent_demoted():
             {"itemId": "m2", "result": "MINUTES_ONLY", "reason": "NOT_CONFIRMED"},
             {"itemId": "m3", "result": "ATTACH", "attachTo": "m2"},
         ],
-        decision_candidate_ids=set(), action_candidate_status={},
+        decision_candidate_ids=set(), action_candidate_ids=set(),
         segments=_valid_evidence_segments(),
     )
     by_id = {j["itemId"]: j for j in result.judgments}
@@ -132,17 +132,27 @@ def test_issue_attach_to_minutes_only_parent_demoted():
     assert any(d["rule"] == "ATTACH_TO_MINUTES_ONLY" for d in result.demoted)
 
 
-def test_illegal_transition_demoted():
-    # 완료된 액션을 IN_PROGRESS 로 되돌리는 UPDATE → 상태 세탁 → 강등.
+def test_update_action_status_key_is_rejected():
+    # lifecycle 제거(0007) 후 "status" 는 허용 키가 아니다 → 강등.
     result = validate_judgments(
         items=[{"id": "m1", "type": "ACTION", "evidence": [{"segmentId": "seg-2", "quote": "그 전처리 필터는 이번 주에 제가 구현할게요."}]}],
         raw_judgments=[{"itemId": "m1", "result": "UPDATE_ACTION", "targetActionId": "A-1",
                         "changes": {"status": "IN_PROGRESS"}}],
-        decision_candidate_ids=set(), action_candidate_status={"A-1": "COMPLETED"},
+        decision_candidate_ids=set(), action_candidate_ids={"A-1"},
         segments=_valid_evidence_segments(),
     )
     assert result.judgments[0]["result"] == "MINUTES_ONLY"
-    assert any(d["rule"].startswith("ILLEGAL_TRANSITION") for d in result.demoted)
+
+
+def test_update_action_due_date_is_still_allowed():
+    result = validate_judgments(
+        items=[{"id": "m1", "type": "ACTION", "evidence": [{"segmentId": "seg-2", "quote": "그 전처리 필터는 이번 주에 제가 구현할게요."}]}],
+        raw_judgments=[{"itemId": "m1", "result": "UPDATE_ACTION", "targetActionId": "A-1",
+                        "changes": {"dueDate": "2026-09-01"}}],
+        decision_candidate_ids=set(), action_candidate_ids={"A-1"},
+        segments=_valid_evidence_segments(),
+    )
+    assert result.judgments[0]["result"] == "UPDATE_ACTION"
 
 
 def test_sequential_order_uses_evidence_time_not_array_order():
@@ -153,6 +163,6 @@ def test_sequential_order_uses_evidence_time_not_array_order():
     ]
     result = validate_judgments(
         items=items, raw_judgments=[], decision_candidate_ids=set(),
-        action_candidate_status={}, segments=_valid_evidence_segments(),
+        action_candidate_ids=set(), segments=_valid_evidence_segments(),
     )
     assert result.sequential_order == ["mEarly", "mLate"]

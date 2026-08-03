@@ -16,7 +16,6 @@ Usage:
 Targets (documented, aspirational for the gold set):
     required recall            >= 95%
     noise candidates           <= 2%
-    action lifecycle accuracy  >= 90%
     parent hint accuracy (Top) >= 95%
     false canonicalization     == 0
 """
@@ -50,27 +49,14 @@ def _judgment_for(item_id: str, judgments: list[dict]) -> dict | None:
 def evaluate_scenario(gold: dict, actual: dict) -> dict:
     items = actual.get("items", [])
     judgments = actual.get("judgments", [])
-    lifecycles = actual.get("storedLifecycles") or {}
-
     matched: dict[str, dict] = {}
     missing: list[str] = []
-    lifecycle_hits = lifecycle_total = 0
     for required in gold.get("required", []):
         item = _match_required(required, items)
         if item is None:
             missing.append(required["key"])
             continue
         matched[required["key"]] = item
-        expected_lc = required.get("lifecycle")
-        if required["type"] == "ACTION":
-            lifecycle_total += 1
-            actual_lc = (
-                lifecycles.get(str(item.get("id")))
-                if lifecycles
-                else item.get("lifecycleStatus")
-            )
-            if actual_lc == expected_lc:
-                lifecycle_hits += 1
 
     noise = [
         str(item.get("title", ""))
@@ -111,11 +97,6 @@ def evaluate_scenario(gold: dict, actual: dict) -> dict:
         "candidateCount": len(items),
         "noiseCandidates": noise,
         "noiseRate": round(len(noise) / len(items), 4) if items else 0.0,
-        "lifecycleTotal": lifecycle_total,
-        "lifecycleHits": lifecycle_hits,
-        "lifecycleAccuracy": (
-            round(lifecycle_hits / lifecycle_total, 4) if lifecycle_total else None
-        ),
         "parentEdgeTotal": parent_total,
         "parentEdgeHits": parent_hits,
         "parentEdgeAccuracy": (
@@ -212,7 +193,6 @@ def main() -> int:
         "targets": {
             "requiredRecall": ">=0.95",
             "noiseRate": "<=0.02",
-            "lifecycleAccuracy": ">=0.90",
             "parentEdgeAccuracy": ">=0.95",
             "falseCanonicalizations": "==0",
         },
