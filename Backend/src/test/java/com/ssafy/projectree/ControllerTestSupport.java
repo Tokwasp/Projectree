@@ -11,6 +11,8 @@ import com.ssafy.projectree.domain.project.controller.InvitationController;
 import com.ssafy.projectree.domain.project.controller.ProjectInvitationController;
 import com.ssafy.projectree.domain.project.service.ProjectInvitationService;
 import com.ssafy.projectree.domain.project.service.ProjectService;
+import com.ssafy.projectree.global.s3.S3Controller;
+import com.ssafy.projectree.global.s3.S3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -23,7 +25,8 @@ import tools.jackson.databind.ObjectMapper;
         ProjectController.class,
         ProjectInvitationController.class,
         InvitationController.class,
-        NodeCategoryController.class
+        NodeCategoryController.class,
+        S3Controller.class
 })
 public abstract class ControllerTestSupport {
 
@@ -47,5 +50,8 @@ public abstract class ControllerTestSupport {
 
     @MockitoBean
     protected NodeCategoryService nodeCategoryService;
+
+    @MockitoBean
+    protected S3Service s3Service;
 
 }

@@ -39,6 +39,14 @@ spring:
   session:
     store-type: redis
     timeout: 30m
+  # AWS
+  cloud:
+    aws:
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
   mail:
     host: smtp.gmail.com
     port: 587
@@ -62,6 +70,10 @@ app:
     cookie:
       secure: ${SESSION_COOKIE_SECURE}
       same-site: ${SESSION_COOKIE_SAME_SITE}
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    # presigned URL 유효 시간. 업로드 한 번에 필요한 만큼만 짧게 준다.
+    presigned-url-expire-seconds: 300
 
 # 구글 Oauth
 google:
