@@ -9,6 +9,7 @@ export interface SocialLoginRequest {
 }
 
 export interface LoginUser {
+  memberId: number;
   name: string;
   imageUrl: string;
 }

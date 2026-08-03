@@ -3,6 +3,7 @@ import {
   type ApiErrorResponse,
   type ApiResponse,
 } from "../../../../api/apiClient";
+import { useAuthStore } from "../../../../store/authStore";
 
 export interface JoinResponse {
   roomName: string;
@@ -11,15 +12,8 @@ export interface JoinResponse {
   created: boolean;
 }
 
-// ─────────────────── 배포용 원본 (세션 인증 필요) ───────────────────
-//    테스트가 끝나면 아래 "테스트용" 블록을 지우고 이 코드를 되살릴 것.
-//    되돌릴 때 함께 원복해야 하는 것:
-//    - 이 파일 상단 import 를 `import { ApiError, apiRequest } from "../../../../api/apiClient";` 로
-//    - 이 파일 상단에 `const BASE_URL = import.meta.env.VITE_BASE_URL;` 복원
-//    - useMeetingPrejoin.ts  join(projectId)
-//    - useMeetingOverlay.ts  endMeeting(roomName)
+const OPENVIDU_URL = import.meta.env.VITE_OPENVIDU_URL;
 
-const BASE_URL = "https://i15d205.p.ssafy.io/api";
 const isErrorResponse = (body: unknown): body is ApiErrorResponse =>
   typeof body === "object" && body !== null && "errorCode" in body;
 
@@ -39,19 +33,33 @@ const unwrap = async <T>(response: Response): Promise<T> => {
 
   return (body as ApiResponse<T>).data;
 };
+const memberParams = () => {
+  const { memberId, name } = useAuthStore.getState();
+
+  if (memberId === null || name === null) {
+    throw new ApiError("UNAUTHENTICATED", "다시 로그인해 주세요.", 401);
+  }
+
+  return new URLSearchParams({
+    memberId: String(memberId),
+    memberName: name,
+  }).toString();
+};
+
 export const join = async (projectId: number): Promise<JoinResponse> => {
   const response = await fetch(
-    `${BASE_URL}/projects/${projectId}/meetings/join`,
+    `${OPENVIDU_URL}/projects/${projectId}/meetings/join?${memberParams()}`,
     {
       method: "POST",
       credentials: "include",
     },
   );
+
   return unwrap<JoinResponse>(response);
 };
 
 export const endMeeting = async (roomName: string): Promise<void> => {
-  const response = await fetch(`${BASE_URL}/meetings/${roomName}`, {
+  const response = await fetch(`${OPENVIDU_URL}/meetings/${roomName}`, {
     method: "DELETE",
     credentials: "include",
   });
@@ -64,61 +72,3 @@ export const endMeeting = async (roomName: string): Promise<void> => {
     );
   }
 };
-
-// ─────────────────── 배포용 원본 끝 ───────────────────
-
-// // ═════════════════ 테스트용 (dev-auth-bypass) — 배포 전 반드시 제거 ═════════════════
-// // 세션이 없는 환경에서 붙기 위해 memberId/memberName을 쿼리파라미터로 넘긴다.
-// // 실제 운영은 세션에서 읽으므로 이 코드로 배포하면 안 된다.
-// // 절대 URL이라 vite 프록시(/api)를 타지 않고 브라우저가 직접 크로스 오리진 요청을 보낸다.
-// const TEST_API_BASE = "https://i15d205.p.ssafy.io/api";
-// const TEST_PROJECT_ID = 12;
-// const TEST_MEMBER_ID = 1;
-// const TEST_MEMBER_NAME = "안현석";
-
-// // 한 대에서 2인 회의를 테스트하려고 창마다 다른 사용자로 붙을 때 쓴다.
-// // 쿼리가 없으면 위 하드코딩 값을 그대로 쓰므로 평소 동작은 바뀌지 않는다.
-// //   1번 창: /projects/1/meeting
-// //   2번 창: /projects/1/meeting?memberId=2&memberName=tester2
-// // LiveKit은 같은 identity가 다시 들어오면 기존 참가자를 끊는다 —
-// // 두 번째 창은 반드시 memberId를 다르게 줘야 한 명이 튕기지 않는다.
-// const testParam = (key: string, fallback: string) =>
-//   new URLSearchParams(window.location.search).get(key) || fallback;
-
-// export const join = async (): Promise<JoinResponse> => {
-//   const projectId = testParam("projectId", String(TEST_PROJECT_ID));
-//   const query = new URLSearchParams({
-//     memberId: testParam("memberId", String(TEST_MEMBER_ID)),
-//     memberName: testParam("memberName", TEST_MEMBER_NAME),
-//   }).toString();
-
-//   // credentials:"include"로 SESSION 쿠키를 함께 보낸다
-//   const response = await fetch(
-//     `${TEST_API_BASE}/projects/${projectId}/meetings/join?${query}`,
-//     {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       credentials: "include",
-//     },
-//   );
-
-//   return unwrap<JoinResponse>(response);
-// };
-
-// // 회의 종료(방장) — roomName으로 deleteRoom. Redis는 room_finished 웹훅이 닫는다.
-// // roomName은 join 응답에서 받은 실제 값을 그대로 써야 한다.
-// // 하드코딩하면 없는 방을 지우게 되어, 진짜 방은 살아있고 남은 사람도 안 나간다
-// export const endMeeting = async (roomName: string): Promise<void> => {
-//   const response = await fetch(`${TEST_API_BASE}/meetings/${roomName}`, {
-//     method: "DELETE",
-//     credentials: "include",
-//   });
-
-//   if (!response.ok) {
-//     throw new ApiError(
-//       "MEETING_END_FAILED",
-//       "회의를 종료하지 못했습니다.",
-//       response.status,
-//     );
-//   }
-// };
