@@ -95,7 +95,7 @@ public class SpeechFeedbackService {
 
     private static final String USER_MESSAGE = """
             분당 음절수: %s
-            발화 시간: %d초, 발화 구간 %d개, 최장 침묵 %d초
+            발화 시간: %d초, 발화 구간 %d개
             말버릇(확실): %s
             말버릇(문맥에 따라 다름, 정상적인 쓰임이 섞일 수 있음): %s
 
@@ -152,7 +152,6 @@ public class SpeechFeedbackService {
                 speedOf(transcript, segments),
                 segments.speakingSeconds(),
                 segments.segmentCount(),
-                segments.longestSilenceSeconds(),
                 tallyOf(FillerWords.tallyClear(transcript.text())),
                 tallyOf(FillerWords.tallyAmbiguous(transcript.text())),
                 transcript.text());

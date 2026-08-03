@@ -32,14 +32,6 @@ public class SpeechSegments {
         return segments.size();
     }
 
-    public int longestSilenceSeconds() {
-        double longest = 0.0;
-        for (int i = 0; i < segments.size() - 1; i++) {
-            longest = Math.max(longest, segments.get(i).silenceSecondsUntil(segments.get(i + 1)));
-        }
-        return toSeconds(longest);
-    }
-
     private int toSeconds(double seconds) {
         return Math.toIntExact(Math.round(seconds));
     }

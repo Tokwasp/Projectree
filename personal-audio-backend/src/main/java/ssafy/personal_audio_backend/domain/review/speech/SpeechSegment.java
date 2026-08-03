@@ -34,10 +34,6 @@ public class SpeechSegment {
         return durationSeconds() < MIN_SPEECH_SECONDS;
     }
 
-    public double silenceSecondsUntil(SpeechSegment next) {
-        return Math.max(0.0, next.startSeconds - this.endSeconds);
-    }
-
     @Override
     public boolean equals(Object other) {
         if (this == other) {
