@@ -19,7 +19,7 @@ export default function Landing() {
           <h1 className={style.title}>Projectree</h1>
           <p className={style.info}>
             <span className={style.typingText}>
-              당신의 프로젝트를 시각화하세요
+              당신의 프로젝트를 시각화하세요.
             </span>
           </p>
 
@@ -29,6 +29,13 @@ export default function Landing() {
         </div>
 
         <div className={style.eclipseBlur} />
+        <a
+          className={style.scrollGuide}
+          href="#about"
+          aria-label="Projectree 소개 영역으로 이동"
+        >
+          <span className={style.scrollArrow} aria-hidden="true" />
+        </a>
       </section>
 
       <AboutSection />

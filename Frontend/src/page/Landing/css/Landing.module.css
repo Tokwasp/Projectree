@@ -15,6 +15,7 @@
   scrollbar-width: thin;
   scrollbar-color: var(--color-gray-600)
     var(--color-landing-background);
+  scroll-behavior: smooth;
 }
 
 .landing::-webkit-scrollbar {
@@ -79,7 +80,7 @@
   border-right: 2px solid var(--color-primary);
   white-space: nowrap;
   animation:
-    typing 2.4s steps(16, end) 0.5s forwards,
+    typing 2.4s steps(17, end) 0.5s forwards,
     cursor 0.8s step-end infinite;
 }
 
@@ -89,7 +90,7 @@
   }
 
   to {
-    width: 16em;
+    width: 17em;
   }
 }
 
@@ -138,6 +139,52 @@
   pointer-events: none;
 }
 
+.scrollGuide {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  animation: scrollFloat 1.8s ease-in-out infinite;
+}
+
+.scrollArrow {
+  width: 16px;
+  height: 16px;
+  border-right: 2px solid var(--color-gray-400);
+  border-bottom: 2px solid var(--color-gray-400);
+  transform: rotate(45deg);
+  transition: border-color var(--transition-fast);
+}
+
+.scrollGuide:hover .scrollArrow {
+  border-color: var(--color-primary);
+}
+
+.scrollGuide:focus-visible {
+  border-radius: var(--radius-full);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@keyframes scrollFloat {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: translate(-50%, 8px);
+    opacity: 0.65;
+  }
+}
+
 @media (max-width: 768px) {
   .heroContent {
     width: calc(100% - 40px);
@@ -162,9 +209,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .landing {
+    scroll-behavior: auto;
+  }
+
   .typingText {
     width: auto;
     border-right: 0;
+    animation: none;
+  }
+
+  .scrollGuide {
     animation: none;
   }
 }

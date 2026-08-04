@@ -25,7 +25,7 @@ const features = [
 
 export default function AboutSection() {
   return (
-    <section className={style.about}>
+    <section className={style.about} id="about">
       <div className={style.inner}>
         <div className={style.copy}>
           <p className={style.eyebrow}>ABOUT</p>
