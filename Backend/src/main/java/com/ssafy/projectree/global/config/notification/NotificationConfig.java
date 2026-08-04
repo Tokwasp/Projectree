@@ -14,10 +14,6 @@ public class NotificationConfig {
 
     public static final String NOTIFICATION_TOPIC = "NOTIFICATION";
 
-    /**
-     * RedisConnectionFactory 는 Spring Session 이 이미 만들어 둔 것을 그대로 쓴다.
-     * 이중화된 모든 인스턴스가 같은 토픽을 구독하고, 연결을 들고 있는 인스턴스만 반응한다.
-     */
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
@@ -26,7 +22,6 @@ public class NotificationConfig {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(notificationSubscriber, new ChannelTopic(NOTIFICATION_TOPIC));
-
         return container;
     }
 }

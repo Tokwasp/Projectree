@@ -48,18 +48,13 @@ public class NotificationService {
         return emitter;
     }
 
-    /**
-     * 저장이 먼저이고 발행이 나중이다. 순서를 바꾸면 아직 id가 없어서 SSE 이벤트 id를 만들 수 없고,
-     * Last-Event-ID 복구의 기준이 사라진다.
-     * <p>
-     * 수신자가 접속 중이 아니어도 정상이다. 알림은 DB에 남았고 다음 구독 때 받아 갈 수 있다.
-     */
     @Transactional
     public void handleCallback(NotificationCallbackRequest request) {
-        validateReceiverExists(request.getReceiverId());
+        if (notExistMemberBy(request.getReceiverId())) {
+            throw new CustomException(CommonErrorCode.MEMBER_NOT_FOUND);
+        }
 
         Notification notification = notificationRepository.save(request.toEntity());
-
         notificationPublisher.publish(NotificationMessage.from(notification));
     }
 
@@ -75,9 +70,8 @@ public class NotificationService {
         return lastEventId != null && lastEventId > 0;
     }
 
-    private void validateReceiverExists(int receiverId) {
-        if (!memberRepository.existsById(receiverId)) {
-            throw new CustomException(CommonErrorCode.MEMBER_NOT_FOUND);
-        }
+    private boolean notExistMemberBy(int request) {
+        return !memberRepository.existsById(request);
     }
+
 }
