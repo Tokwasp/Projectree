@@ -1,0 +1,22 @@
+.intro {
+  width: 100%;
+}
+
+.title {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+}
+
+.description {
+  margin: 0;
+  color: var(--color-gray-600);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 768px) {
+  .title {
+    font-size: var(--text-2xl);
+  }
+}
