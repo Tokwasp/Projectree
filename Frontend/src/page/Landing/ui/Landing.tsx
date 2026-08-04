@@ -1,3 +1,4 @@
+import Footer from "../../../components/Footer/Footer";
 import AboutSection from "../components/AboutSection/AboutSection";
 import FeatureShowcaseSection from "../components/FeatureShowcaseSection/FeatureShowcaseSection";
 import HowItWorksSection from "../components/HowItWorksSection/HowItWorksSection";
@@ -34,6 +35,7 @@ export default function Landing() {
       <StatsSection />
       <FeatureShowcaseSection />
       <HowItWorksSection />
+      <Footer />
     </main>
   );
 }
