@@ -7,6 +7,7 @@ import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventType;
 import com.ssafy.projectree.domain.meeting.result.graph.event.GraphResultSourceType;
 import com.ssafy.projectree.domain.meeting.result.graph.event.GraphSnapshotReference;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayload;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.GraphProjectionReplacer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,6 +42,8 @@ class GraphSnapshotLoaderTransactionIntegrationTest {
     @Autowired
     private GraphSnapshotLoader loader;
     @Autowired
+    private GraphProjectionReplacer projectionReplacer;
+    @Autowired
     private ObjectMapper objectMapper;
     @Autowired
     private ApplicationContext applicationContext;
@@ -55,6 +58,12 @@ class GraphSnapshotLoaderTransactionIntegrationTest {
     @Transactional
     void rejectsInvocationInsideExistingDatabaseTransaction() {
         assertThatThrownBy(() -> loader.load(event(), payload()))
+                .isInstanceOf(IllegalTransactionStateException.class);
+    }
+
+    @Test
+    void rejectsProjectionReplacementWithoutApplierTransaction() {
+        assertThatThrownBy(() -> projectionReplacer.replace(1, null, Instant.now()))
                 .isInstanceOf(IllegalTransactionStateException.class);
     }
 

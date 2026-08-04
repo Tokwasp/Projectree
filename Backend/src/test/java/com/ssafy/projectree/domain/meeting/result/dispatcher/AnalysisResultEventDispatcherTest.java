@@ -29,6 +29,8 @@ class AnalysisResultEventDispatcherTest {
                 .isInstanceOf(AnalysisResultHandlerUnavailableException.class);
         assertThatThrownBy(() -> dispatcher.dispatch(event(AnalysisResultEventType.PROJECT_GRAPH_CHANGED)))
                 .isInstanceOf(AnalysisResultHandlerUnavailableException.class);
+        assertThat(dispatcher.supports(AnalysisResultEventType.ANALYSIS_TASK_STATUS_CHANGED)).isTrue();
+        assertThat(dispatcher.supports(AnalysisResultEventType.PROJECT_GRAPH_CHANGED)).isFalse();
     }
 
     @Test

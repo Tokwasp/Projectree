@@ -169,6 +169,20 @@ public class Meeting extends BaseEntity {
         };
     }
 
+    public AnalysisTaskCompletionResult completeNodeAnalysis() {
+        return switch (nodeStatus) {
+            case PROCESSING -> {
+                nodeStatus = AnalysisTaskStatus.SUCCEEDED;
+                yield AnalysisTaskCompletionResult.APPLIED;
+            }
+            case SUCCEEDED -> AnalysisTaskCompletionResult.ALREADY_SUCCEEDED;
+            case FAILED -> AnalysisTaskCompletionResult.ALREADY_FAILED;
+            case SKIPPED, NOT_REQUESTED -> throw new IllegalStateException(
+                    "nodes task cannot receive a success event while " + nodeStatus
+            );
+        };
+    }
+
     private static AnalysisTaskStatus requestedStatus(boolean requested) {
         return requested ? AnalysisTaskStatus.PROCESSING : AnalysisTaskStatus.SKIPPED;
     }

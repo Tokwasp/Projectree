@@ -40,4 +40,16 @@ public class ProjectGraphSync {
         sync.syncedAt = Objects.requireNonNull(syncedAt, "syncedAt must not be null");
         return sync;
     }
+
+    public void advanceTo(long graphVersion, String commandId, Instant syncedAt) {
+        if (graphVersion <= currentGraphVersion) {
+            throw new IllegalArgumentException("graphVersion must advance current graph version");
+        }
+        if (commandId == null || commandId.isBlank()) {
+            throw new IllegalArgumentException("commandId must not be blank");
+        }
+        this.currentGraphVersion = graphVersion;
+        this.lastCommandId = commandId;
+        this.syncedAt = Objects.requireNonNull(syncedAt, "syncedAt must not be null");
+    }
 }

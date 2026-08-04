@@ -168,6 +168,28 @@ class MeetingTest {
         assertThatThrownBy(createMeeting()::completeSummaryAnalysis).isInstanceOf(IllegalStateException.class);
     }
 
+    @Test
+    void nodeSuccessEventsDistinguishAppliedAndFinalStatesWithoutChangingSummary() {
+        Meeting processing = createMeeting();
+        processing.confirmAnalysisOptions(true, true);
+        assertThat(processing.completeNodeAnalysis())
+                .isEqualTo(AnalysisTaskCompletionResult.APPLIED);
+        assertThat(processing.getSummaryStatus()).isEqualTo(AnalysisTaskStatus.PROCESSING);
+        assertThat(processing.completeNodeAnalysis())
+                .isEqualTo(AnalysisTaskCompletionResult.ALREADY_SUCCEEDED);
+
+        Meeting failed = createMeeting();
+        failed.confirmAnalysisOptions(false, true);
+        failed.markNodesFailed();
+        assertThat(failed.completeNodeAnalysis())
+                .isEqualTo(AnalysisTaskCompletionResult.ALREADY_FAILED);
+
+        Meeting skipped = createMeeting();
+        skipped.confirmAnalysisOptions(false, false);
+        assertThatThrownBy(skipped::completeNodeAnalysis).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(createMeeting()::completeNodeAnalysis).isInstanceOf(IllegalStateException.class);
+    }
+
     @DisplayName("NOT_REQUESTED 상태에서는 성공 또는 실패로 전이할 수 없다.")
     @Test
     void cannotCompleteNotRequestedTasks() {

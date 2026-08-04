@@ -21,7 +21,7 @@ public class AnalysisResultEventDispatcher {
             new EnumMap<>(AnalysisResultEventType.class);
 
     @PostConstruct
-    void initializeHandlers() {
+    public void initializeHandlers() {
         for (AnalysisResultEventHandler handler : handlers) {
             AnalysisResultEventHandler previous = handlersByType.putIfAbsent(
                     handler.supportedType(), handler
@@ -43,5 +43,9 @@ public class AnalysisResultEventDispatcher {
             );
         }
         handler.handle(event);
+    }
+
+    public boolean supports(AnalysisResultEventType eventType) {
+        return handlersByType.containsKey(eventType);
     }
 }
