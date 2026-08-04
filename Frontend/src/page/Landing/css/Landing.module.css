@@ -1,33 +1,86 @@
-main {
+.landing {
+  --color-landing-background: #050506;
+  --color-landing-section: #09090b;
+  --color-landing-primary-strong: rgba(203, 98, 255, 0.5);
+  --color-landing-primary-soft: rgba(203, 98, 255, 0.16);
+  --color-landing-primary-faint: rgba(203, 98, 255, 0.04);
+  --color-landing-primary-border: rgba(203, 98, 255, 0.18);
+
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--color-landing-background);
+  color: var(--color-white);
+}
+
+.hero {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.heroContent {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  color: var(--color-white);
   align-items: center;
+  transform: translate(-50%, -50%);
+  text-align: center;
 }
 
 .title {
+  margin: 0 0 var(--space-4);
   font-size: var(--text-title);
-  font-weight: bold;
-  margin-bottom: var(--space-4);
+  font-weight: var(--font-bold);
 }
 
 .info {
-  font-size: var(--text-lg);
-  margin-bottom: var(--space-12);
+  margin: 0 0 var(--space-12);
   color: var(--color-gray-300);
+  font-size: var(--text-lg);
+}
+
+.typingText {
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  border-right: 2px solid var(--color-primary);
+  white-space: nowrap;
+  animation:
+    typing 2.4s steps(16, end) 0.5s forwards,
+    cursor 0.8s step-end infinite;
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 16em;
+  }
+}
+
+@keyframes cursor {
+  50% {
+    border-color: transparent;
+  }
 }
 
 .startBtn {
-  padding: 15px 100px;
-  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 15px 100px;
   border: 1px solid #000;
+  border-radius: var(--radius-sm);
   background-color: var(--color-primary);
   color: var(--color-white);
   font-size: var(--text-lg);
@@ -49,12 +102,44 @@ main {
 
 .eclipseBlur {
   position: absolute;
-  width: 800px;
-  height: 12.78rem;
-  background-color: rgba(203, 98, 255, 0.5);
-  border-radius: 50%;
-  filter: blur(6.67rem);
   bottom: 0;
   left: 50%;
+  width: 800px;
+  height: 12.78rem;
+  border-radius: 50%;
+  background-color: var(--color-landing-primary-strong);
+  filter: blur(6.67rem);
   transform: translate(-50%, 60%);
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .heroContent {
+    width: calc(100% - 40px);
+  }
+
+  .title {
+    font-size: 44px;
+  }
+
+  .info {
+    font-size: var(--text-md);
+  }
+
+  .startBtn {
+    width: min(100%, 320px);
+    padding: 15px 24px;
+  }
+
+  .eclipseBlur {
+    width: 90%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typingText {
+    width: auto;
+    border-right: 0;
+    animation: none;
+  }
 }
