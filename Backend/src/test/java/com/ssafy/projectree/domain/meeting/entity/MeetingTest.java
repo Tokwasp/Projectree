@@ -120,6 +120,54 @@ class MeetingTest {
         assertThat(meeting.getNodeStatus()).isEqualTo(AnalysisTaskStatus.FAILED);
     }
 
+    @Test
+    void failureEventsOnlyChangeProcessingTaskAndIgnoreFinalTaskStates() {
+        Meeting meeting = createMeeting();
+        meeting.confirmAnalysisOptions(true, true);
+
+        assertThat(meeting.failSummaryAnalysis()).isTrue();
+        assertThat(meeting.getSummaryStatus()).isEqualTo(AnalysisTaskStatus.FAILED);
+        assertThat(meeting.getNodeStatus()).isEqualTo(AnalysisTaskStatus.PROCESSING);
+        assertThat(meeting.failSummaryAnalysis()).isFalse();
+
+        meeting.markNodesSucceeded();
+        assertThat(meeting.failNodeAnalysis()).isFalse();
+        assertThat(meeting.getNodeStatus()).isEqualTo(AnalysisTaskStatus.SUCCEEDED);
+    }
+
+    @Test
+    void failureEventsRejectSkippedAndNotRequestedTasks() {
+        Meeting notRequested = createMeeting();
+        assertThatThrownBy(notRequested::failSummaryAnalysis).isInstanceOf(IllegalStateException.class);
+
+        Meeting skipped = createMeeting();
+        skipped.confirmAnalysisOptions(false, false);
+        assertThatThrownBy(skipped::failSummaryAnalysis).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(skipped::failNodeAnalysis).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void summarySuccessEventsDistinguishAppliedAndFinalStatesWithoutChangingNodes() {
+        Meeting processing = createMeeting();
+        processing.confirmAnalysisOptions(true, true);
+        assertThat(processing.completeSummaryAnalysis())
+                .isEqualTo(AnalysisTaskCompletionResult.APPLIED);
+        assertThat(processing.getNodeStatus()).isEqualTo(AnalysisTaskStatus.PROCESSING);
+        assertThat(processing.completeSummaryAnalysis())
+                .isEqualTo(AnalysisTaskCompletionResult.ALREADY_SUCCEEDED);
+
+        Meeting failed = createMeeting();
+        failed.confirmAnalysisOptions(true, false);
+        failed.markSummaryFailed();
+        assertThat(failed.completeSummaryAnalysis())
+                .isEqualTo(AnalysisTaskCompletionResult.ALREADY_FAILED);
+
+        Meeting skipped = createMeeting();
+        skipped.confirmAnalysisOptions(false, false);
+        assertThatThrownBy(skipped::completeSummaryAnalysis).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(createMeeting()::completeSummaryAnalysis).isInstanceOf(IllegalStateException.class);
+    }
+
     @DisplayName("NOT_REQUESTED 상태에서는 성공 또는 실패로 전이할 수 없다.")
     @Test
     void cannotCompleteNotRequestedTasks() {

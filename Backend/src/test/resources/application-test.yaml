@@ -44,6 +44,14 @@ app:
     scan-count: 200
     key-prefix: "meeting:project:"
   meeting-analysis:
+    graph-snapshot:
+      max-size-bytes: 10485760
+      s3:
+        enabled: false
+        expected-bucket: ""
+        allowed-object-key-prefix: graph-snapshots/
+        region: ap-northeast-2
+        endpoint-override: ""
     publisher:
       enabled: false
       fixed-delay-ms: 1000
@@ -55,6 +63,13 @@ app:
       api-call-attempt-timeout-seconds: 5
       api-call-timeout-seconds: 10
       queue-url: ""
+      region: ap-northeast-2
+    result-consumer:
+      enabled: false
+      queue-url: ""
+      wait-time-seconds: 20
+      max-number-of-messages: 10
+      polling-delay-ms: 1000
       region: ap-northeast-2
   cors:
     allowed-origins: http://localhost:5173

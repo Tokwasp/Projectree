@@ -77,6 +77,26 @@ public class MeetingAnalysisNotificationOutbox extends BaseEntity {
             NotificationAudience audience,
             String payload
     ) {
+        return pending(
+                commandId,
+                meetingId,
+                projectId,
+                recipientMemberId,
+                audience,
+                NotificationType.MEETING_ANALYSIS_COMMAND_PUBLISH_FAILED,
+                payload
+        );
+    }
+
+    public static MeetingAnalysisNotificationOutbox pending(
+            String commandId,
+            int meetingId,
+            int projectId,
+            Integer recipientMemberId,
+            NotificationAudience audience,
+            NotificationType notificationType,
+            String payload
+    ) {
         MeetingAnalysisNotificationOutbox outbox = new MeetingAnalysisNotificationOutbox();
         outbox.notificationId = UUID.randomUUID().toString();
         outbox.commandId = requireText(commandId, "commandId");
@@ -90,7 +110,7 @@ public class MeetingAnalysisNotificationOutbox extends BaseEntity {
             throw new IllegalArgumentException("OPERATIONS notification must not have recipientMemberId");
         }
         outbox.recipientMemberId = recipientMemberId;
-        outbox.notificationType = NotificationType.MEETING_ANALYSIS_COMMAND_PUBLISH_FAILED;
+        outbox.notificationType = Objects.requireNonNull(notificationType, "notificationType must not be null");
         outbox.payload = requireText(payload, "payload");
         outbox.status = NotificationOutboxStatus.PENDING;
         return outbox;

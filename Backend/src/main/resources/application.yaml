@@ -62,6 +62,14 @@ app:
     scan-count: ${MEETING_SYNC_SCAN_COUNT:200}
     key-prefix: ${MEETING_SYNC_KEY_PREFIX:meeting:project:}
   meeting-analysis:
+    graph-snapshot:
+      max-size-bytes: ${MEETING_ANALYSIS_GRAPH_SNAPSHOT_MAX_SIZE_BYTES:10485760}
+      s3:
+        enabled: ${MEETING_ANALYSIS_GRAPH_SNAPSHOT_S3_ENABLED:false}
+        expected-bucket: ${AWS_ANALYSIS_RESULT_BUCKET:}
+        allowed-object-key-prefix: ${MEETING_ANALYSIS_GRAPH_SNAPSHOT_S3_PREFIX:graph-snapshots/}
+        region: ${AWS_REGION:ap-northeast-2}
+        endpoint-override: ${MEETING_ANALYSIS_GRAPH_SNAPSHOT_S3_ENDPOINT:}
     publisher:
       enabled: ${MEETING_ANALYSIS_PUBLISHER_ENABLED:false}
       fixed-delay-ms: ${MEETING_ANALYSIS_PUBLISHER_FIXED_DELAY_MS:1000}
@@ -73,6 +81,13 @@ app:
       api-call-attempt-timeout-seconds: ${MEETING_ANALYSIS_API_CALL_ATTEMPT_TIMEOUT_SECONDS:5}
       api-call-timeout-seconds: ${MEETING_ANALYSIS_API_CALL_TIMEOUT_SECONDS:10}
       queue-url: ${MEETING_ANALYSIS_COMMAND_QUEUE_URL:}
+      region: ${AWS_REGION:ap-northeast-2}
+    result-consumer:
+      enabled: ${MEETING_ANALYSIS_RESULT_CONSUMER_ENABLED:false}
+      queue-url: ${AWS_ANALYSIS_RESULT_QUEUE_URL:}
+      wait-time-seconds: ${MEETING_ANALYSIS_RESULT_WAIT_TIME_SECONDS:20}
+      max-number-of-messages: ${MEETING_ANALYSIS_RESULT_MAX_NUMBER_OF_MESSAGES:10}
+      polling-delay-ms: ${MEETING_ANALYSIS_RESULT_POLLING_DELAY_MS:1000}
       region: ${AWS_REGION:ap-northeast-2}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}

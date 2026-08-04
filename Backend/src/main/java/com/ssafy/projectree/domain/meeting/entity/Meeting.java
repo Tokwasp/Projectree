@@ -139,6 +139,36 @@ public class Meeting extends BaseEntity {
         nodeStatus = failed(nodeStatus, "nodes");
     }
 
+    public boolean failSummaryAnalysis() {
+        if (summaryStatus == AnalysisTaskStatus.PROCESSING) {
+            summaryStatus = AnalysisTaskStatus.FAILED;
+            return true;
+        }
+        return isFailureNoOpAllowed(summaryStatus, "summary");
+    }
+
+    public boolean failNodeAnalysis() {
+        if (nodeStatus == AnalysisTaskStatus.PROCESSING) {
+            nodeStatus = AnalysisTaskStatus.FAILED;
+            return true;
+        }
+        return isFailureNoOpAllowed(nodeStatus, "nodes");
+    }
+
+    public AnalysisTaskCompletionResult completeSummaryAnalysis() {
+        return switch (summaryStatus) {
+            case PROCESSING -> {
+                summaryStatus = AnalysisTaskStatus.SUCCEEDED;
+                yield AnalysisTaskCompletionResult.APPLIED;
+            }
+            case SUCCEEDED -> AnalysisTaskCompletionResult.ALREADY_SUCCEEDED;
+            case FAILED -> AnalysisTaskCompletionResult.ALREADY_FAILED;
+            case SKIPPED, NOT_REQUESTED -> throw new IllegalStateException(
+                    "summary task cannot receive a success event while " + summaryStatus
+            );
+        };
+    }
+
     private static AnalysisTaskStatus requestedStatus(boolean requested) {
         return requested ? AnalysisTaskStatus.PROCESSING : AnalysisTaskStatus.SKIPPED;
     }
@@ -159,6 +189,15 @@ public class Meeting extends BaseEntity {
                     taskName + " task must be PROCESSING but was " + current
             );
         }
+    }
+
+    private static boolean isFailureNoOpAllowed(AnalysisTaskStatus current, String taskName) {
+        if (current == AnalysisTaskStatus.FAILED || current == AnalysisTaskStatus.SUCCEEDED) {
+            return false;
+        }
+        throw new IllegalStateException(
+                taskName + " task cannot receive a failure event while " + current
+        );
     }
 
     private static void validateRoomName(String roomName) {

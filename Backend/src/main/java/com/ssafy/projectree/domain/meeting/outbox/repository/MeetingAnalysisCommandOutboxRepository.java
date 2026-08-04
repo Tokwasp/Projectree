@@ -22,6 +22,17 @@ public interface MeetingAnalysisCommandOutboxRepository
 
     long countByMeetingId(int meetingId);
 
+    @Query("""
+            select o
+            from MeetingAnalysisCommandOutbox o
+            join fetch o.meeting m
+            join fetch m.project
+            where o.commandId = :commandId
+            """)
+    Optional<MeetingAnalysisCommandOutbox> findByCommandIdWithMeetingAndProject(
+            @Param("commandId") String commandId
+    );
+
     @Query(value = """
             SELECT *
             FROM meeting_analysis_command_outbox

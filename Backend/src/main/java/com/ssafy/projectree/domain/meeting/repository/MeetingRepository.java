@@ -44,4 +44,12 @@ public interface MeetingRepository extends JpaRepository<Meeting, Integer> {
             where m.id = :meetingId
             """)
     Optional<Meeting> findByIdForUpdate(@Param("meetingId") int meetingId);
+
+    @Query("""
+            select m
+            from Meeting m
+            join fetch m.project
+            where m.id = :meetingId
+            """)
+    Optional<Meeting> findByIdWithProject(@Param("meetingId") int meetingId);
 }
