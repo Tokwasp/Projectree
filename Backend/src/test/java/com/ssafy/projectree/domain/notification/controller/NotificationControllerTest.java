@@ -15,7 +15,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import static com.ssafy.projectree.global.config.session.SessionConst.SESSION_LOGIN_MEMBER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
@@ -35,7 +34,7 @@ class NotificationControllerTest extends ControllerTestSupport {
     @Test
     void subscribe() throws Exception {
         // given
-        given(notificationService.subscribe(anyInt(), anyString())).willReturn(new SseEmitter());
+        given(notificationService.subscribe(anyInt(), any())).willReturn(new SseEmitter());
 
         // when // then
         mockMvc.perform(get("/api/notifications/subscribe")
@@ -53,14 +52,14 @@ class NotificationControllerTest extends ControllerTestSupport {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
 
-        then(notificationService).should(never()).subscribe(anyInt(), anyString());
+        then(notificationService).should(never()).subscribe(anyInt(), any());
     }
 
     @DisplayName("재연결 시 브라우저가 붙인 Last-Event-ID 를 그대로 넘긴다.")
     @Test
     void subscribeWithLastEventId() throws Exception {
         // given
-        given(notificationService.subscribe(anyInt(), anyString())).willReturn(new SseEmitter());
+        given(notificationService.subscribe(anyInt(), any())).willReturn(new SseEmitter());
 
         // when // then
         mockMvc.perform(get("/api/notifications/subscribe")
@@ -68,21 +67,33 @@ class NotificationControllerTest extends ControllerTestSupport {
                         .header("Last-Event-ID", "41"))
                 .andExpect(status().isOk());
 
-        then(notificationService).should().subscribe(MEMBER_ID, "41");
+        then(notificationService).should().subscribe(MEMBER_ID, 41);
     }
 
     @DisplayName("Last-Event-ID 는 첫 연결에 없으므로 없어도 구독할 수 있다.")
     @Test
     void subscribeWithoutLastEventId() throws Exception {
         // given
-        given(notificationService.subscribe(anyInt(), anyString())).willReturn(new SseEmitter());
+        given(notificationService.subscribe(anyInt(), any())).willReturn(new SseEmitter());
 
         // when // then
         mockMvc.perform(get("/api/notifications/subscribe")
                         .session(loginSession(MEMBER_ID)))
                 .andExpect(status().isOk());
 
-        then(notificationService).should().subscribe(MEMBER_ID, "");
+        then(notificationService).should().subscribe(MEMBER_ID, null);
+    }
+
+    @DisplayName("숫자가 아닌 Last-Event-ID 로는 구독할 수 없다.")
+    @Test
+    void subscribeWithNonNumericLastEventId() throws Exception {
+        // when // then
+        mockMvc.perform(get("/api/notifications/subscribe")
+                        .session(loginSession(MEMBER_ID))
+                        .header("Last-Event-ID", "abc"))
+                .andExpect(status().isBadRequest());
+
+        then(notificationService).should(never()).subscribe(anyInt(), any());
     }
 
     @DisplayName("AI 서버가 작업 완료를 콜백하면 200을 응답한다.")

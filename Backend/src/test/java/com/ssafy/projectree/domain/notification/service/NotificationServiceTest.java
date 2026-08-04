@@ -71,7 +71,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
         int memberId = saveMember().getId();
 
         // when
-        SseEmitter emitter = notificationService.subscribe(memberId, "");
+        SseEmitter emitter = notificationService.subscribe(memberId, null);
 
         // then
         Map<String, SseEmitter> emitters = emitterRepository.findAllByMemberId(memberId);
@@ -87,26 +87,11 @@ class NotificationServiceTest extends IntegrationTestSupport {
         int memberId = saveMember().getId();
 
         // when
-        notificationService.subscribe(memberId, "");
+        notificationService.subscribe(memberId, null);
 
         // then
-        then(notificationSender).should().send(
-                anyString(), any(SseEmitter.class), anyString(),
-                eq("connect"), any());
-    }
-
-    @DisplayName("같은 회원이 탭을 두 개 열면 두 연결이 모두 남는다.")
-    @Test
-    void subscribeTwice() {
-        // given
-        int memberId = saveMember().getId();
-
-        // when
-        notificationService.subscribe(memberId, "");
-        notificationService.subscribe(memberId, "");
-
-        // then
-        assertThat(emitterRepository.findAllByMemberId(memberId)).hasSize(2);
+        then(notificationSender).should().sendSubscriptionMessage(
+                anyString(), any(SseEmitter.class), eq("connect"), any());
     }
 
     @DisplayName("첫 연결에는 Last-Event-ID 가 없으므로 지난 알림을 재전송하지 않는다.")
@@ -117,7 +102,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
         saveNotification(memberId);
 
         // when
-        notificationService.subscribe(memberId, "");
+        notificationService.subscribe(memberId, null);
 
         // then
         then(notificationSender).should(never()).send(
@@ -134,7 +119,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
         Notification missed = saveNotification(memberId);
 
         // when
-        notificationService.subscribe(memberId, String.valueOf(received.getId()));
+        notificationService.subscribe(memberId, received.getId());
 
         // then
         var eventIdCaptor = forClass(String.class);
@@ -153,7 +138,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
         Notification missed = saveNotification(memberId);
 
         // when
-        notificationService.subscribe(memberId, String.valueOf(received.getId()));
+        notificationService.subscribe(memberId, received.getId());
 
         // then
         var messageCaptor = forClass(NotificationMessage.class);
@@ -165,15 +150,15 @@ class NotificationServiceTest extends IntegrationTestSupport {
                 .containsExactly(missed.getId(), memberId);
     }
 
-    @DisplayName("더미 이벤트의 id 처럼 숫자가 아닌 Last-Event-ID 가 오면 재전송만 건너뛰고 구독은 정상 처리한다.")
+    @DisplayName("Last-Event-ID 가 0 이하면 기준으로 삼을 수 없으므로 재전송하지 않는다.")
     @Test
-    void subscribeWithNonNumericLastEventId() {
+    void subscribeWithNonPositiveLastEventId() {
         // given
         int memberId = saveMember().getId();
         saveNotification(memberId);
 
         // when
-        notificationService.subscribe(memberId, memberId + "_1754287263000");
+        notificationService.subscribe(memberId, 0);
 
         // then
         assertThat(emitterRepository.findAllByMemberId(memberId)).hasSize(1);

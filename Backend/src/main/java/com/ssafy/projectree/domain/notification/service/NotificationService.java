@@ -14,8 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -28,7 +26,7 @@ public class NotificationService {
     private final NotificationPublisher notificationPublisher;
     private final NotificationProperties notificationProperties;
 
-    public SseEmitter subscribe(int memberId, String lastEventId) {
+    public SseEmitter subscribe(int memberId, Integer lastEventId) {
         String emitterId = createEmitterId(memberId);
         SseEmitter emitter = emitterRepository.save(emitterId, createEmitter());
 
@@ -36,18 +34,17 @@ public class NotificationService {
         emitter.onTimeout(emitter::complete);
         emitter.onError(throwable -> emitter.complete());
 
-        notificationSender.send(emitterId, emitter, emitterId, "connect", "연결되었습니다.");
-//        if(!lastEventId.isEmpty()){
-//            notificationRepository.findNotReceivedMessages(memberId, Integer.parseInt(lastEventId))
-//                    .forEach(notification -> notificationSender.send(
-//                            emitterId,
-//                            emitter,
-//                            String.valueOf(notification.getId()),
-//                            NotificationSender.NOTIFICATION_EVENT,
-//                            NotificationMessage.from(notification))
-//                    );
-//        }
-        resendMissed(memberId, emitterId, emitter, lastEventId);
+        notificationSender.sendSubscriptionMessage(emitterId, emitter, "connect", "연결되었습니다.");
+        if (isValidLastEventId(lastEventId)) {
+            notificationRepository.findNotReceivedMessages(memberId, lastEventId)
+                    .forEach(notification -> notificationSender.send(
+                            emitterId,
+                            emitter,
+                            String.valueOf(notification.getId()),
+                            NotificationSender.NOTIFICATION_EVENT,
+                            NotificationMessage.from(notification))
+                    );
+        }
         return emitter;
     }
 
@@ -74,31 +71,8 @@ public class NotificationService {
         return new SseEmitter(notificationProperties.getSse().getTimeout().toMillis());
     }
 
-    private void resendMissed(int memberId, String emitterId, SseEmitter emitter, String lastEventId) {
-        parseEventId(lastEventId).ifPresent(eventId ->
-                notificationRepository
-                        .findNotReceivedMessages(memberId, eventId)
-                        .forEach(notification -> notificationSender.send(
-                                emitterId,
-                                emitter,
-                                String.valueOf(notification.getId()),
-                                NotificationSender.NOTIFICATION_EVENT,
-                                NotificationMessage.from(notification))));
-    }
-
-    /**
-     * 더미 이벤트의 id를 받은 경우처럼 숫자가 아니면 재전송만 건너뛴다.
-     * 파싱 실패로 구독 자체가 깨지면 안 된다.
-     */
-    private Optional<Integer> parseEventId(String lastEventId) {
-        if (lastEventId.isEmpty()) {
-            return Optional.empty();
-        }
-        try {
-            return Optional.of(Integer.parseInt(lastEventId));
-        } catch (NumberFormatException e) {
-            return Optional.empty();
-        }
+    private boolean isValidLastEventId(Integer lastEventId) {
+        return lastEventId != null && lastEventId > 0;
     }
 
     private void validateReceiverExists(int receiverId) {

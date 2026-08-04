@@ -45,6 +45,18 @@ class NotificationSenderTest {
         assertThat(capturedEvent()).contains("id:41", "event:notification");
     }
 
+    @DisplayName("구독 메시지에는 이벤트 id 를 붙이지 않아 브라우저의 Last-Event-ID 를 덮어쓰지 않는다.")
+    @Test
+    void sendSubscriptionMessage() throws Exception {
+        // when
+        notificationSender.sendSubscriptionMessage(EMITTER_ID, emitter, "connect", "연결되었습니다.");
+
+        // then
+        assertThat(capturedEvent())
+                .contains("event:connect")
+                .doesNotContain("id:");
+    }
+
     @DisplayName("하트비트는 이벤트가 아니라 주석으로 나가 프론트가 처리할 것이 없다.")
     @Test
     void sendHeartbeat() throws Exception {

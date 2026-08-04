@@ -17,6 +17,20 @@ public class NotificationSender {
     public static final String NOTIFICATION_EVENT = "notification";
     private final EmitterRepository emitterRepository;
 
+    public void sendSubscriptionMessage(String emitterId, SseEmitter emitter, String eventName, Object data) {
+        try {
+            emitter.send(
+                    SseEmitter.event()
+                            .name(eventName)
+                            .data(data, MediaType.APPLICATION_JSON)
+            );
+        } catch (IOException | IllegalStateException e) {
+            log.debug("SSE 구독 실패 emitterId={}", emitterId);
+            emitterRepository.deleteById(emitterId);
+            emitter.complete();
+        }
+    }
+
     public void send(String emitterId, SseEmitter emitter, String eventId, String eventName, Object data) {
         try {
             emitter.send(
@@ -26,7 +40,7 @@ public class NotificationSender {
                     .data(data, MediaType.APPLICATION_JSON)
             );
         } catch (IOException | IllegalStateException e) {
-            log.debug("SSE 전송 실패로 emitter 를 정리한다: emitterId={}", emitterId);
+            log.debug("SSE 전송 실패 emitterId={}", emitterId);
             emitterRepository.deleteById(emitterId);
             emitter.complete();
         }
@@ -39,7 +53,7 @@ public class NotificationSender {
                     .comment("keep-alive")
             );
         } catch (IOException | IllegalStateException e) {
-            log.debug("SSE 전송 실패로 emitter 를 정리한다: emitterId={}", emitterId);
+            log.debug("SSE 하트비트 체크 실패 emitterId={}", emitterId);
             emitterRepository.deleteById(emitterId);
             emitter.complete();
         }
