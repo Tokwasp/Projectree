@@ -17,8 +17,6 @@ import java.util.stream.Collectors;
 @Repository
 public class EmitterRepository {
 
-    public static final String EMITTER_ID_DELIMITER = "_";
-
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     public SseEmitter save(String emitterId, SseEmitter emitter) {
@@ -35,7 +33,7 @@ public class EmitterRepository {
      * 구분자를 붙여야 memberId=1 이 11_..., 123_... 에 걸려 남의 알림이 가는 일을 막는다.
      */
     public Map<String, SseEmitter> findAllByMemberId(int memberId) {
-        String prefix = memberId + EMITTER_ID_DELIMITER;
+        String prefix = memberId + "_";
 
         return emitters.entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith(prefix))

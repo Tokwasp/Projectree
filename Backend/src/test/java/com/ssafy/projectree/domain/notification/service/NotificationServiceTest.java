@@ -92,7 +92,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
         // then
         then(notificationSender).should().send(
                 anyString(), any(SseEmitter.class), anyString(),
-                eq(NotificationSender.CONNECT_EVENT), any());
+                eq("connect"), any());
     }
 
     @DisplayName("같은 회원이 탭을 두 개 열면 두 연결이 모두 남는다.")

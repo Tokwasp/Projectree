@@ -15,16 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static com.ssafy.projectree.domain.notification.repository.EmitterRepository.EMITTER_ID_DELIMITER;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class NotificationService {
-
-    private static final String CONNECT_MESSAGE = "연결되었습니다.";
 
     private final NotificationRepository notificationRepository;
     private final MemberRepository memberRepository;
@@ -33,24 +28,26 @@ public class NotificationService {
     private final NotificationPublisher notificationPublisher;
     private final NotificationProperties notificationProperties;
 
-    /**
-     * 밀리초만으로 키를 만들면 같은 밀리초에 들어온 두 구독이 서로를 덮어써
-     * 먼저 붙은 탭이 "연결은 살아 있는데 알림만 오지 않는" 상태가 된다.
-     * 연결마다 고유한 값이 필요하므로 시퀀스를 함께 붙인다.
-     */
-    private final AtomicLong emitterSequence = new AtomicLong();
-
     public SseEmitter subscribe(int memberId, String lastEventId) {
         String emitterId = createEmitterId(memberId);
         SseEmitter emitter = emitterRepository.save(emitterId, createEmitter());
 
-        registerLifecycleCallbacks(emitterId, emitter);
+        emitter.onCompletion(() -> emitterRepository.deleteById(emitterId));
+        emitter.onTimeout(emitter::complete);
+        emitter.onError(throwable -> emitter.complete());
 
-        notificationSender.send(emitterId, emitter, emitterId,
-                NotificationSender.CONNECT_EVENT, CONNECT_MESSAGE);
-
+        notificationSender.send(emitterId, emitter, emitterId, "connect", "연결되었습니다.");
+//        if(!lastEventId.isEmpty()){
+//            notificationRepository.findNotReceivedMessages(memberId, Integer.parseInt(lastEventId))
+//                    .forEach(notification -> notificationSender.send(
+//                            emitterId,
+//                            emitter,
+//                            String.valueOf(notification.getId()),
+//                            NotificationSender.NOTIFICATION_EVENT,
+//                            NotificationMessage.from(notification))
+//                    );
+//        }
         resendMissed(memberId, emitterId, emitter, lastEventId);
-
         return emitter;
     }
 
@@ -70,23 +67,11 @@ public class NotificationService {
     }
 
     private String createEmitterId(int memberId) {
-        return memberId + EMITTER_ID_DELIMITER
-                + System.currentTimeMillis() + EMITTER_ID_DELIMITER
-                + emitterSequence.incrementAndGet();
+        return memberId + "_" + System.currentTimeMillis();
     }
 
     private SseEmitter createEmitter() {
         return new SseEmitter(notificationProperties.getSse().getTimeout().toMillis());
-    }
-
-    /**
-     * onTimeout/onError 에서 직접 지우지 않고 complete() 만 호출한다.
-     * 삭제 지점을 onCompletion 하나로 모아 두면 지우는 코드가 한 곳뿐이라 빠뜨릴 일이 없다.
-     */
-    private void registerLifecycleCallbacks(String emitterId, SseEmitter emitter) {
-        emitter.onCompletion(() -> emitterRepository.deleteById(emitterId));
-        emitter.onTimeout(emitter::complete);
-        emitter.onError(throwable -> emitter.complete());
     }
 
     private void resendMissed(int memberId, String emitterId, SseEmitter emitter, String lastEventId) {
