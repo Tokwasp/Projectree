@@ -19,6 +19,7 @@ public class NotificationHeartbeatScheduler {
 
     @Scheduled(fixedRateString = "${app.notification.sse.heartbeat-interval}")
     public void sendHeartbeat() {
-        emitterRepository.findAll().forEach(notificationSender::sendHeartbeat);
+        emitterRepository.findAll().forEach((memberId, emitters) ->
+                emitters.forEach(emitter -> notificationSender.sendHeartbeat(memberId, emitter)));
     }
 }

@@ -20,13 +20,6 @@ public class NotificationSubscriber implements MessageListener {
     private final EmitterRepository emitterRepository;
     private final NotificationSender notificationSender;
 
-    /**
-     * 이 메서드는 절대 예외를 밖으로 던지지 않는다.
-     * 한 건의 실패가 다음 메시지 수신을 막지 않게 한다.
-     * <p>
-     * Emitter 가 하나도 없으면 아무 일도 일어나지 않는다. 그 사용자가 다른 인스턴스에 붙어 있거나
-     * 접속 중이 아니라는 뜻이므로 오류가 아니다.
-     */
     @Override
     public void onMessage(Message message, byte[] pattern) {
         try {
@@ -35,8 +28,8 @@ public class NotificationSubscriber implements MessageListener {
                     NotificationMessage.class);
 
             emitterRepository.findAllByMemberId(payload.getReceiverId())
-                    .forEach((emitterId, emitter) -> notificationSender.send(
-                            emitterId,
+                    .forEach(emitter -> notificationSender.send(
+                            payload.getReceiverId(),
                             emitter,
                             String.valueOf(payload.getNotificationId()),
                             NotificationSender.NOTIFICATION_EVENT,

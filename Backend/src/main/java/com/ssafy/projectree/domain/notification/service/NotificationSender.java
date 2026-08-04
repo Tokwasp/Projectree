@@ -17,7 +17,7 @@ public class NotificationSender {
     public static final String NOTIFICATION_EVENT = "notification";
     private final EmitterRepository emitterRepository;
 
-    public void sendSubscriptionMessage(String emitterId, SseEmitter emitter, String eventName, Object data) {
+    public void sendSubscriptionMessage(int memberId, SseEmitter emitter, String eventName, Object data) {
         try {
             emitter.send(
                     SseEmitter.event()
@@ -25,13 +25,13 @@ public class NotificationSender {
                             .data(data, MediaType.APPLICATION_JSON)
             );
         } catch (IOException | IllegalStateException e) {
-            log.debug("SSE 구독 실패 emitterId={}", emitterId);
-            emitterRepository.deleteById(emitterId);
+            log.debug("SSE 구독 실패 memberId={}", memberId);
+            emitterRepository.delete(memberId, emitter);
             emitter.complete();
         }
     }
 
-    public void send(String emitterId, SseEmitter emitter, String eventId, String eventName, Object data) {
+    public void send(int memberId, SseEmitter emitter, String eventId, String eventName, Object data) {
         try {
             emitter.send(
                     SseEmitter.event()
@@ -40,21 +40,21 @@ public class NotificationSender {
                     .data(data, MediaType.APPLICATION_JSON)
             );
         } catch (IOException | IllegalStateException e) {
-            log.debug("SSE 전송 실패 emitterId={}", emitterId);
-            emitterRepository.deleteById(emitterId);
+            log.debug("SSE 전송 실패 memberId={}", memberId);
+            emitterRepository.delete(memberId, emitter);
             emitter.complete();
         }
     }
 
-    public void sendHeartbeat(String emitterId, SseEmitter emitter) {
+    public void sendHeartbeat(int memberId, SseEmitter emitter) {
         try {
             emitter.send(
                     SseEmitter.event()
                     .comment("keep-alive")
             );
         } catch (IOException | IllegalStateException e) {
-            log.debug("SSE 하트비트 체크 실패 emitterId={}", emitterId);
-            emitterRepository.deleteById(emitterId);
+            log.debug("SSE 하트비트 체크 실패 memberId={}", memberId);
+            emitterRepository.delete(memberId, emitter);
             emitter.complete();
         }
     }

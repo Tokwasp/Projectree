@@ -27,18 +27,17 @@ public class NotificationService {
     private final NotificationProperties notificationProperties;
 
     public SseEmitter subscribe(int memberId, Integer lastEventId) {
-        String emitterId = createEmitterId(memberId);
-        SseEmitter emitter = emitterRepository.save(emitterId, createEmitter());
+        SseEmitter emitter = emitterRepository.save(memberId, createEmitter());
 
-        emitter.onCompletion(() -> emitterRepository.deleteById(emitterId));
+        emitter.onCompletion(() -> emitterRepository.delete(memberId, emitter));
         emitter.onTimeout(emitter::complete);
         emitter.onError(throwable -> emitter.complete());
 
-        notificationSender.sendSubscriptionMessage(emitterId, emitter, "connect", "연결되었습니다.");
+        notificationSender.sendSubscriptionMessage(memberId, emitter, "connect", "연결되었습니다.");
         if (isValidLastEventId(lastEventId)) {
             notificationRepository.findNotReceivedMessages(memberId, lastEventId)
                     .forEach(notification -> notificationSender.send(
-                            emitterId,
+                            memberId,
                             emitter,
                             String.valueOf(notification.getId()),
                             NotificationSender.NOTIFICATION_EVENT,
@@ -56,10 +55,6 @@ public class NotificationService {
 
         Notification notification = notificationRepository.save(request.toEntity());
         notificationPublisher.publish(NotificationMessage.from(notification));
-    }
-
-    private String createEmitterId(int memberId) {
-        return memberId + "_" + System.currentTimeMillis();
     }
 
     private SseEmitter createEmitter() {

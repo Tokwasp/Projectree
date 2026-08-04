@@ -21,12 +21,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
@@ -61,7 +61,8 @@ class NotificationServiceTest extends IntegrationTestSupport {
 
     @AfterEach
     void clearEmitters() {
-        emitterRepository.findAll().keySet().forEach(emitterRepository::deleteById);
+        emitterRepository.findAll().forEach((memberId, emitters) ->
+                emitters.forEach(emitter -> emitterRepository.delete(memberId, emitter)));
     }
 
     @DisplayName("구독하면 연결이 회원 id로 찾을 수 있게 보관된다.")
@@ -74,10 +75,22 @@ class NotificationServiceTest extends IntegrationTestSupport {
         SseEmitter emitter = notificationService.subscribe(memberId, null);
 
         // then
-        Map<String, SseEmitter> emitters = emitterRepository.findAllByMemberId(memberId);
-        assertThat(emitters).hasSize(1)
-                .containsValue(emitter);
-        assertThat(emitters.keySet()).allMatch(emitterId -> emitterId.startsWith(memberId + "_"));
+        assertThat(emitterRepository.findAllByMemberId(memberId)).containsExactly(emitter);
+    }
+
+    @DisplayName("같은 회원이 탭을 두 개 열면 두 연결이 모두 남는다.")
+    @Test
+    void subscribeTwice() {
+        // given
+        int memberId = saveMember().getId();
+
+        // when
+        SseEmitter firstTab = notificationService.subscribe(memberId, null);
+        SseEmitter secondTab = notificationService.subscribe(memberId, null);
+
+        // then
+        assertThat(emitterRepository.findAllByMemberId(memberId))
+                .containsExactly(firstTab, secondTab);
     }
 
     @DisplayName("구독 직후 더미 이벤트를 보내 응답을 열어 둔다.")
@@ -91,7 +104,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
 
         // then
         then(notificationSender).should().sendSubscriptionMessage(
-                anyString(), any(SseEmitter.class), eq("connect"), any());
+                anyInt(), any(SseEmitter.class), eq("connect"), any());
     }
 
     @DisplayName("첫 연결에는 Last-Event-ID 가 없으므로 지난 알림을 재전송하지 않는다.")
@@ -106,7 +119,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
 
         // then
         then(notificationSender).should(never()).send(
-                anyString(), any(SseEmitter.class), anyString(),
+                anyInt(), any(SseEmitter.class), anyString(),
                 eq(NotificationSender.NOTIFICATION_EVENT), any());
     }
 
@@ -124,7 +137,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
         // then
         var eventIdCaptor = forClass(String.class);
         then(notificationSender).should(times(1)).send(
-                anyString(), any(SseEmitter.class), eventIdCaptor.capture(),
+                anyInt(), any(SseEmitter.class), eventIdCaptor.capture(),
                 eq(NotificationSender.NOTIFICATION_EVENT), any());
         assertThat(eventIdCaptor.getValue()).isEqualTo(String.valueOf(missed.getId()));
     }
@@ -143,7 +156,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
         // then
         var messageCaptor = forClass(NotificationMessage.class);
         then(notificationSender).should().send(
-                anyString(), any(SseEmitter.class), anyString(),
+                anyInt(), any(SseEmitter.class), anyString(),
                 eq(NotificationSender.NOTIFICATION_EVENT), messageCaptor.capture());
         assertThat(messageCaptor.getValue())
                 .extracting(NotificationMessage::getNotificationId, NotificationMessage::getReceiverId)
@@ -163,7 +176,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
         // then
         assertThat(emitterRepository.findAllByMemberId(memberId)).hasSize(1);
         then(notificationSender).should(never()).send(
-                anyString(), any(SseEmitter.class), anyString(),
+                anyInt(), any(SseEmitter.class), anyString(),
                 eq(NotificationSender.NOTIFICATION_EVENT), any());
     }
 

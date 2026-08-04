@@ -24,7 +24,7 @@ import static org.mockito.Mockito.never;
 @ExtendWith(MockitoExtension.class)
 class NotificationSenderTest {
 
-    private static final String EMITTER_ID = "7_1000";
+    private static final int MEMBER_ID = 7;
 
     @InjectMocks
     private NotificationSender notificationSender;
@@ -39,7 +39,7 @@ class NotificationSenderTest {
     @Test
     void send() throws Exception {
         // when
-        notificationSender.send(EMITTER_ID, emitter, "41", NotificationSender.NOTIFICATION_EVENT, "본문");
+        notificationSender.send(MEMBER_ID, emitter, "41", NotificationSender.NOTIFICATION_EVENT, "본문");
 
         // then
         assertThat(capturedEvent()).contains("id:41", "event:notification");
@@ -49,7 +49,7 @@ class NotificationSenderTest {
     @Test
     void sendSubscriptionMessage() throws Exception {
         // when
-        notificationSender.sendSubscriptionMessage(EMITTER_ID, emitter, "connect", "연결되었습니다.");
+        notificationSender.sendSubscriptionMessage(MEMBER_ID, emitter, "connect", "연결되었습니다.");
 
         // then
         assertThat(capturedEvent())
@@ -61,7 +61,7 @@ class NotificationSenderTest {
     @Test
     void sendHeartbeat() throws Exception {
         // when
-        notificationSender.sendHeartbeat(EMITTER_ID, emitter);
+        notificationSender.sendHeartbeat(MEMBER_ID, emitter);
 
         // then
         assertThat(capturedEvent())
@@ -77,10 +77,10 @@ class NotificationSenderTest {
 
         // when // then
         assertThatCode(() -> notificationSender.send(
-                EMITTER_ID, emitter, "41", NotificationSender.NOTIFICATION_EVENT, "본문"))
+                MEMBER_ID, emitter, "41", NotificationSender.NOTIFICATION_EVENT, "본문"))
                 .doesNotThrowAnyException();
 
-        then(emitterRepository).should().deleteById(EMITTER_ID);
+        then(emitterRepository).should().delete(MEMBER_ID, emitter);
         then(emitter).should().complete();
     }
 
@@ -93,10 +93,10 @@ class NotificationSenderTest {
 
         // when // then
         assertThatCode(() -> notificationSender.send(
-                EMITTER_ID, emitter, "41", NotificationSender.NOTIFICATION_EVENT, "본문"))
+                MEMBER_ID, emitter, "41", NotificationSender.NOTIFICATION_EVENT, "본문"))
                 .doesNotThrowAnyException();
 
-        then(emitterRepository).should().deleteById(EMITTER_ID);
+        then(emitterRepository).should().delete(MEMBER_ID, emitter);
         then(emitter).should().complete();
     }
 
@@ -107,20 +107,20 @@ class NotificationSenderTest {
         doThrow(new IOException("Broken pipe")).when(emitter).send(any(SseEmitter.SseEventBuilder.class));
 
         // when // then
-        assertThatCode(() -> notificationSender.sendHeartbeat(EMITTER_ID, emitter))
+        assertThatCode(() -> notificationSender.sendHeartbeat(MEMBER_ID, emitter))
                 .doesNotThrowAnyException();
 
-        then(emitterRepository).should().deleteById(EMITTER_ID);
+        then(emitterRepository).should().delete(MEMBER_ID, emitter);
     }
 
     @DisplayName("전송에 성공하면 연결을 정리하지 않는다.")
     @Test
     void sendKeepsEmitterWhenSucceeded() {
         // when
-        notificationSender.send(EMITTER_ID, emitter, "41", NotificationSender.NOTIFICATION_EVENT, "본문");
+        notificationSender.send(MEMBER_ID, emitter, "41", NotificationSender.NOTIFICATION_EVENT, "본문");
 
         // then
-        then(emitterRepository).should(never()).deleteById(EMITTER_ID);
+        then(emitterRepository).should(never()).delete(MEMBER_ID, emitter);
     }
 
     private String capturedEvent() throws IOException {

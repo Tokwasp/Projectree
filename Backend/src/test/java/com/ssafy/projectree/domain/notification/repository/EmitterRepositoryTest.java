@@ -4,11 +4,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class EmitterRepositoryTest {
+
+    private static final int MEMBER_ID = 7;
+    private static final int OTHER_MEMBER_ID = 8;
 
     private final EmitterRepository emitterRepository = new EmitterRepository();
 
@@ -16,89 +20,110 @@ class EmitterRepositoryTest {
     @Test
     void findAllByMemberId() {
         // given
-        SseEmitter firstTab = emitterRepository.save("7_1000", new SseEmitter());
-        SseEmitter secondTab = emitterRepository.save("7_2000", new SseEmitter());
+        SseEmitter firstTab = emitterRepository.save(MEMBER_ID, new SseEmitter());
+        SseEmitter secondTab = emitterRepository.save(MEMBER_ID, new SseEmitter());
 
         // when
-        Map<String, SseEmitter> emitters = emitterRepository.findAllByMemberId(7);
+        List<SseEmitter> emitters = emitterRepository.findAllByMemberId(MEMBER_ID);
 
         // then
-        assertThat(emitters).hasSize(2)
-                .containsEntry("7_1000", firstTab)
-                .containsEntry("7_2000", secondTab);
+        assertThat(emitters).containsExactly(firstTab, secondTab);
     }
 
-    @DisplayName("회원 id 뒤에 구분자를 붙여 스캔하므로 id가 앞부분만 겹치는 다른 회원의 연결은 걸리지 않는다.")
+    @DisplayName("회원 id 를 키로 쓰므로 다른 회원의 연결은 섞이지 않는다.")
     @Test
-    void findAllByMemberIdDoesNotMatchOtherMemberWithSamePrefix() {
+    void findAllByMemberIdDoesNotMatchOtherMember() {
         // given
-        SseEmitter target = emitterRepository.save("1_1000", new SseEmitter());
-        emitterRepository.save("11_1000", new SseEmitter());
-        emitterRepository.save("123_1000", new SseEmitter());
+        SseEmitter target = emitterRepository.save(MEMBER_ID, new SseEmitter());
+        emitterRepository.save(OTHER_MEMBER_ID, new SseEmitter());
 
         // when
-        Map<String, SseEmitter> emitters = emitterRepository.findAllByMemberId(1);
+        List<SseEmitter> emitters = emitterRepository.findAllByMemberId(MEMBER_ID);
 
         // then
-        assertThat(emitters).hasSize(1)
-                .containsEntry("1_1000", target);
+        assertThat(emitters).containsExactly(target);
     }
 
     @DisplayName("접속 중인 연결이 없는 회원을 조회하면 빈 결과를 반환한다.")
     @Test
     void findAllByMemberIdWhenNotSubscribed() {
         // given
-        emitterRepository.save("7_1000", new SseEmitter());
+        emitterRepository.save(MEMBER_ID, new SseEmitter());
 
         // when
-        Map<String, SseEmitter> emitters = emitterRepository.findAllByMemberId(8);
+        List<SseEmitter> emitters = emitterRepository.findAllByMemberId(OTHER_MEMBER_ID);
 
         // then
         assertThat(emitters).isEmpty();
     }
 
-    @DisplayName("연결을 삭제하면 더 이상 조회되지 않는다.")
+    @DisplayName("탭을 하나 닫으면 끊긴 연결만 빠지고 나머지 탭은 남는다.")
     @Test
-    void deleteById() {
+    void delete() {
         // given
-        emitterRepository.save("7_1000", new SseEmitter());
-        emitterRepository.save("7_2000", new SseEmitter());
+        SseEmitter closed = emitterRepository.save(MEMBER_ID, new SseEmitter());
+        SseEmitter alive = emitterRepository.save(MEMBER_ID, new SseEmitter());
 
         // when
-        emitterRepository.deleteById("7_1000");
+        emitterRepository.delete(MEMBER_ID, closed);
 
         // then
-        assertThat(emitterRepository.findAllByMemberId(7)).hasSize(1)
-                .containsKey("7_2000");
+        assertThat(emitterRepository.findAllByMemberId(MEMBER_ID)).containsExactly(alive);
+    }
+
+    @DisplayName("마지막 연결이 빠지면 빈 목록이 쌓이지 않도록 회원 자체가 제거된다.")
+    @Test
+    void deleteRemovesMemberWhenLastEmitterLeft() {
+        // given
+        SseEmitter onlyTab = emitterRepository.save(MEMBER_ID, new SseEmitter());
+
+        // when
+        emitterRepository.delete(MEMBER_ID, onlyTab);
+
+        // then
+        assertThat(emitterRepository.findAll()).doesNotContainKey(MEMBER_ID);
+        assertThat(emitterRepository.findAllByMemberId(MEMBER_ID)).isEmpty();
+    }
+
+    @DisplayName("접속 중이 아닌 회원의 연결을 지워도 예외가 나지 않는다.")
+    @Test
+    void deleteWhenNotSubscribed() {
+        // when
+        emitterRepository.delete(MEMBER_ID, new SseEmitter());
+
+        // then
+        assertThat(emitterRepository.findAll()).isEmpty();
     }
 
     @DisplayName("하트비트를 위해 회원과 무관하게 모든 연결을 조회한다.")
     @Test
     void findAll() {
         // given
-        emitterRepository.save("7_1000", new SseEmitter());
-        emitterRepository.save("8_1000", new SseEmitter());
+        emitterRepository.save(MEMBER_ID, new SseEmitter());
+        emitterRepository.save(MEMBER_ID, new SseEmitter());
+        emitterRepository.save(OTHER_MEMBER_ID, new SseEmitter());
 
         // when
-        Map<String, SseEmitter> emitters = emitterRepository.findAll();
+        Map<Integer, List<SseEmitter>> emitters = emitterRepository.findAll();
 
         // then
-        assertThat(emitters).hasSize(2)
-                .containsKeys("7_1000", "8_1000");
+        assertThat(emitters).hasSize(2);
+        assertThat(emitters.get(MEMBER_ID)).hasSize(2);
+        assertThat(emitters.get(OTHER_MEMBER_ID)).hasSize(1);
     }
 
     @DisplayName("전체 조회 결과를 순회하는 동안 원본에서 연결이 삭제되어도 순회에 영향을 주지 않는다.")
     @Test
     void findAllReturnsCopy() {
         // given
-        emitterRepository.save("7_1000", new SseEmitter());
-        Map<String, SseEmitter> emitters = emitterRepository.findAll();
+        SseEmitter emitter = emitterRepository.save(MEMBER_ID, new SseEmitter());
+        Map<Integer, List<SseEmitter>> emitters = emitterRepository.findAll();
 
         // when
-        emitterRepository.deleteById("7_1000");
+        emitterRepository.delete(MEMBER_ID, emitter);
 
         // then
-        assertThat(emitters).hasSize(1);
+        assertThat(emitters).containsKey(MEMBER_ID);
         assertThat(emitterRepository.findAll()).isEmpty();
     }
 
@@ -106,14 +131,14 @@ class EmitterRepositoryTest {
     @Test
     void findAllByMemberIdReturnsCopy() {
         // given
-        emitterRepository.save("7_1000", new SseEmitter());
-        Map<String, SseEmitter> emitters = emitterRepository.findAllByMemberId(7);
+        SseEmitter emitter = emitterRepository.save(MEMBER_ID, new SseEmitter());
+        List<SseEmitter> emitters = emitterRepository.findAllByMemberId(MEMBER_ID);
 
         // when
-        emitterRepository.deleteById("7_1000");
+        emitterRepository.delete(MEMBER_ID, emitter);
 
         // then
         assertThat(emitters).hasSize(1);
-        assertThat(emitterRepository.findAllByMemberId(7)).isEmpty();
+        assertThat(emitterRepository.findAllByMemberId(MEMBER_ID)).isEmpty();
     }
 }
