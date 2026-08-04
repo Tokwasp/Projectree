@@ -12,6 +12,31 @@
   overflow-x: hidden;
   background-color: var(--color-landing-background);
   color: var(--color-white);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-600)
+    var(--color-landing-background);
+}
+
+.landing::-webkit-scrollbar {
+  width: 10px;
+}
+
+.landing::-webkit-scrollbar-track {
+  background-color: var(--color-landing-background);
+}
+
+.landing::-webkit-scrollbar-thumb {
+  border: 2px solid var(--color-landing-background);
+  border-radius: var(--radius-full);
+  background-color: var(--color-gray-600);
+}
+
+.landing::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-primary);
+}
+
+.landing::-webkit-scrollbar-button {
+  display: none;
 }
 
 .hero {

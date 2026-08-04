@@ -58,11 +58,15 @@
   );
   transition:
     border-color var(--transition-normal),
+    box-shadow var(--transition-normal),
     transform var(--transition-normal);
 }
 
 .featureCard:hover {
   border-color: var(--color-landing-primary-strong);
+  box-shadow:
+    inset 0 0 110px var(--color-landing-primary-strong),
+    0 16px 40px var(--color-landing-primary-soft);
 }
 
 .featureCard:nth-child(even) {
