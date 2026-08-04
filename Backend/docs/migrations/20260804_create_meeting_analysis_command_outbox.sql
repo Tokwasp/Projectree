@@ -9,6 +9,10 @@ CREATE TABLE meeting_analysis_command_outbox (
     payload LONGTEXT NOT NULL,
     status VARCHAR(30) NOT NULL,
     attempt_count INT NOT NULL DEFAULT 0,
+    requested_by_member_id INT NOT NULL,
+    next_attempt_at DATETIME(6) NULL,
+    lease_until DATETIME(6) NULL,
+    claim_token VARCHAR(36) NULL,
     published_at DATETIME(6) NULL,
     last_error VARCHAR(1000) NULL,
     created_at DATETIME(6) NOT NULL,
@@ -22,5 +26,8 @@ CREATE TABLE meeting_analysis_command_outbox (
         FOREIGN KEY (meeting_id) REFERENCES meeting (id)
 );
 
-CREATE INDEX idx_meeting_analysis_outbox_publish
-    ON meeting_analysis_command_outbox (status, created_at, id);
+CREATE INDEX idx_meeting_analysis_outbox_pending
+    ON meeting_analysis_command_outbox (status, next_attempt_at, created_at, id);
+
+CREATE INDEX idx_meeting_analysis_outbox_expired_lease
+    ON meeting_analysis_command_outbox (status, lease_until, created_at, id);

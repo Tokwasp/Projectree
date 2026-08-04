@@ -10,6 +10,8 @@ import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisOutboxSt
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.project.entity.Project;
+import com.ssafy.projectree.domain.project.entity.ProjectMember;
+import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
 import com.ssafy.projectree.global.exception.CommonErrorCode;
 import com.ssafy.projectree.global.exception.CustomException;
@@ -26,6 +28,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,7 +69,11 @@ class MeetingAnalysisRequestServiceTest {
                 meetingRepository,
                 projectMemberRepository,
                 outboxRepository,
-                objectMapper
+                objectMapper,
+                Clock.fixed(
+                        Instant.parse("2026-08-04T01:00:00Z"),
+                        ZoneId.of("Asia/Seoul")
+                )
         );
     }
 
@@ -85,8 +94,8 @@ class MeetingAnalysisRequestServiceTest {
         Meeting meeting = meeting();
         when(meetingRepository.findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME))
                 .thenReturn(Optional.of(meeting));
-        when(projectMemberRepository.existsByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
-                .thenReturn(true);
+        when(projectMemberRepository.findByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
+                .thenReturn(Optional.of(creatorOf(meeting)));
         when(objectMapper.writeValueAsString(any(MeetingAnalysisRequestedCommand.class)))
                 .thenReturn("{\"commandSchemaVersion\":1}");
 
@@ -137,8 +146,8 @@ class MeetingAnalysisRequestServiceTest {
         Meeting meeting = meeting();
         when(meetingRepository.findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME))
                 .thenReturn(Optional.of(meeting));
-        when(projectMemberRepository.existsByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
-                .thenReturn(false);
+        when(projectMemberRepository.findByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
+                .thenReturn(Optional.empty());
 
         assertError(
                 () -> service.requestAnalysis(
@@ -157,8 +166,8 @@ class MeetingAnalysisRequestServiceTest {
         meeting.confirmAnalysisOptions(true, false);
         when(meetingRepository.findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME))
                 .thenReturn(Optional.of(meeting));
-        when(projectMemberRepository.existsByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
-                .thenReturn(true);
+        when(projectMemberRepository.findByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
+                .thenReturn(Optional.of(creatorOf(meeting)));
 
         assertError(
                 () -> service.requestAnalysis(
@@ -182,8 +191,8 @@ class MeetingAnalysisRequestServiceTest {
         meeting.markNodesFailed();
         when(meetingRepository.findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME))
                 .thenReturn(Optional.of(meeting));
-        when(projectMemberRepository.existsByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
-                .thenReturn(true);
+        when(projectMemberRepository.findByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
+                .thenReturn(Optional.of(creatorOf(meeting)));
 
         assertError(
                 () -> service.requestAnalysis(
@@ -217,8 +226,8 @@ class MeetingAnalysisRequestServiceTest {
         Meeting meeting = meeting();
         when(meetingRepository.findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME))
                 .thenReturn(Optional.of(meeting));
-        when(projectMemberRepository.existsByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
-                .thenReturn(true);
+        when(projectMemberRepository.findByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
+                .thenReturn(Optional.of(creatorOf(meeting)));
         when(objectMapper.writeValueAsString(any(MeetingAnalysisRequestedCommand.class)))
                 .thenReturn("{}");
 
@@ -235,8 +244,8 @@ class MeetingAnalysisRequestServiceTest {
         Meeting meeting = meeting();
         when(meetingRepository.findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME))
                 .thenReturn(Optional.of(meeting));
-        when(projectMemberRepository.existsByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
-                .thenReturn(true);
+        when(projectMemberRepository.findByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
+                .thenReturn(Optional.of(creatorOf(meeting)));
         when(objectMapper.writeValueAsString(any(MeetingAnalysisRequestedCommand.class)))
                 .thenThrow(mock(JacksonException.class));
 
@@ -252,9 +261,16 @@ class MeetingAnalysisRequestServiceTest {
     private Meeting meeting() {
         Project project = Project.builder().title("project").content("content").build();
         ReflectionTestUtils.setField(project, "id", PROJECT_ID);
-        Meeting meeting = Meeting.create(project, ROOM_NAME);
+        ProjectMember creator = ProjectMember.createMember(MEMBER_ID, ProjectRole.OWNER);
+        project.addMember(creator);
+        ReflectionTestUtils.setField(creator, "id", 91);
+        Meeting meeting = Meeting.create(project, creator, ROOM_NAME);
         ReflectionTestUtils.setField(meeting, "id", MEETING_ID);
         return meeting;
+    }
+
+    private ProjectMember creatorOf(Meeting meeting) {
+        return meeting.getProject().getProjectMembers().get(0);
     }
 
     private void assertError(

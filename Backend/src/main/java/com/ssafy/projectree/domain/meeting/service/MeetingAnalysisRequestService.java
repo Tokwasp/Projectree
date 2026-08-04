@@ -10,6 +10,7 @@ import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandO
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
+import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.global.exception.CommonErrorCode;
 import com.ssafy.projectree.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -29,6 +32,7 @@ public class MeetingAnalysisRequestService {
     private final ProjectMemberRepository projectMemberRepository;
     private final MeetingAnalysisCommandOutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
 
     @Transactional
     public MeetingAnalysisRequestResponse requestAnalysis(
@@ -44,8 +48,14 @@ public class MeetingAnalysisRequestService {
                 .findByProjectIdAndRoomNameForUpdate(projectId, canonicalRoomName)
                 .orElseThrow(() -> new CustomException(MeetingErrorCode.MEETING_NOT_FOUND));
 
-        if (!projectMemberRepository.existsByProjectIdAndMemberId(projectId, memberId)) {
-            throw new CustomException(MeetingErrorCode.MEETING_ACCESS_DENIED);
+        ProjectMember requester = projectMemberRepository
+                .findByProjectIdAndMemberId(projectId, memberId)
+                .orElseThrow(() -> new CustomException(MeetingErrorCode.MEETING_ACCESS_DENIED));
+        if (meeting.getCreatorMemberId() == null) {
+            throw new CustomException(MeetingErrorCode.MEETING_CREATOR_NOT_REGISTERED);
+        }
+        if (!meeting.isCreatedBy(requester)) {
+            throw new CustomException(MeetingErrorCode.MEETING_ANALYSIS_CREATOR_ONLY);
         }
         if (meeting.isAnalysisRequestConfirmed()) {
             throw new CustomException(MeetingErrorCode.MEETING_ANALYSIS_ALREADY_REQUESTED);
@@ -62,7 +72,7 @@ public class MeetingAnalysisRequestService {
                 MeetingAnalysisRequestedCommand.CURRENT_SCHEMA_VERSION,
                 commandId,
                 commandType,
-                Instant.now(),
+                Instant.now(clock),
                 projectId,
                 new MeetingAnalysisRequestedCommand.Payload(
                         meeting.getId(),
@@ -78,7 +88,9 @@ public class MeetingAnalysisRequestService {
                         commandId,
                         meeting,
                         commandType,
-                        payload
+                        payload,
+                        memberId,
+                        LocalDateTime.now(clock)
                 )
         );
 

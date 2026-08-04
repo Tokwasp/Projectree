@@ -18,6 +18,7 @@ import com.ssafy.projectree.domain.member.service.NaverOAuthClient;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
+import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.exception.CustomException;
 import org.junit.jupiter.api.AfterEach;
@@ -31,9 +32,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -67,6 +70,9 @@ class MeetingAnalysisRequestIntegrationTest {
 
     @Autowired
     private ProjectRepository projectRepository;
+
+    @Autowired
+    private ProjectMemberRepository projectMemberRepository;
 
     @Autowired
     private MemberRepository memberRepository;
@@ -123,6 +129,10 @@ class MeetingAnalysisRequestIntegrationTest {
         assertThat(outbox.getCommandId()).isEqualTo(response.commandId().toString());
         assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.PENDING);
         assertThat(outbox.getAttemptCount()).isZero();
+        assertThat(outbox.getRequestedByMemberId()).isEqualTo(fixture.memberId());
+        assertThat(outbox.getNextAttemptAt()).isNotNull();
+        assertThat(outbox.getLeaseUntil()).isNull();
+        assertThat(outbox.getClaimToken()).isNull();
         assertThat(outbox.getPublishedAt()).isNull();
         assertThat(outbox.getLastError()).isNull();
         assertThat(outbox.getCreatedAt()).isNotNull();
@@ -142,6 +152,11 @@ class MeetingAnalysisRequestIntegrationTest {
         assertThat(command.requestedAt().toString()).endsWith("Z");
         assertThat(payloadTree.path("requestedAt").isString()).isTrue();
         assertThat(payloadTree.path("requestedAt").stringValue()).endsWith("Z");
+        assertThat(payloadTree.has("requestedByMemberId")).isFalse();
+        assertThat(payloadTree.has("creator")).isFalse();
+        assertThat(payloadTree.has("creatorMemberId")).isFalse();
+        assertThat(payloadTree.path("payload").has("creator")).isFalse();
+        assertThat(payloadTree.path("payload").has("creatorMemberId")).isFalse();
         assertThat(command.projectId()).isEqualTo(fixture.projectId());
         assertThat(command.payload().meetingId()).isEqualTo(fixture.meetingId());
         assertThat(command.payload().roomName()).isEqualTo(ROOM_NAME);
@@ -164,6 +179,58 @@ class MeetingAnalysisRequestIntegrationTest {
 
         assertThat(response.meetingId()).isEqualTo(fixture.meetingId());
         assertThat(outboxRepository.countByMeetingId(fixture.meetingId())).isEqualTo(1);
+    }
+
+    @DisplayName("프로젝트 구성원이더라도 Meeting 생성자가 아니면 분석을 요청할 수 없다.")
+    @ParameterizedTest
+    @EnumSource(ProjectRole.class)
+    void nonCreatorProjectMemberCannotRequest(ProjectRole role) {
+        Fixture fixture = fixture(ProjectRole.OWNER, ROOM_NAME);
+        Member nonCreator = memberRepository.saveAndFlush(
+                Member.builder()
+                        .email("non-creator-" + UUID.randomUUID() + "@example.com")
+                        .name("non-creator")
+                        .build()
+        );
+        Project project = projectRepository.findById(fixture.projectId()).orElseThrow();
+        ProjectMember projectMember = ProjectMember.createMember(nonCreator.getId(), role);
+        projectMember.assignProject(project);
+        projectMemberRepository.saveAndFlush(projectMember);
+
+        assertBusinessError(
+                () -> service.requestAnalysis(
+                        fixture.projectId(),
+                        ROOM_NAME,
+                        nonCreator.getId(),
+                        new MeetingAnalysisRequest(true, true)
+                ),
+                MeetingErrorCode.MEETING_ANALYSIS_CREATOR_ONLY
+        );
+
+        assertNotRequested(fixture.meetingId());
+        assertThat(outboxRepository.countByMeetingId(fixture.meetingId())).isZero();
+    }
+
+    @DisplayName("레거시 Meeting에 생성자가 등록되지 않았으면 분석 요청을 확정하지 않는다.")
+    @Test
+    void meetingWithoutRegisteredCreatorCannotRequest() {
+        Fixture fixture = fixture(ProjectRole.OWNER, ROOM_NAME);
+        Meeting meeting = meetingRepository.findById(fixture.meetingId()).orElseThrow();
+        ReflectionTestUtils.setField(meeting, "creatorMemberId", null);
+        meetingRepository.saveAndFlush(meeting);
+
+        assertBusinessError(
+                () -> service.requestAnalysis(
+                        fixture.projectId(),
+                        ROOM_NAME,
+                        fixture.memberId(),
+                        new MeetingAnalysisRequest(true, true)
+                ),
+                MeetingErrorCode.MEETING_CREATOR_NOT_REGISTERED
+        );
+
+        assertNotRequested(fixture.meetingId());
+        assertThat(outboxRepository.countByMeetingId(fixture.meetingId())).isZero();
     }
 
     @DisplayName("?꾨줈?앺듃 硫ㅻ쾭媛 ?꾨땲硫?Meeting怨?Outbox瑜?蹂寃쏀븯吏 ?딅뒗??")
@@ -293,7 +360,9 @@ class MeetingAnalysisRequestIntegrationTest {
                         UUID.randomUUID(),
                         meeting,
                         MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
-                        "{}"
+                        "{}",
+                        fixture.memberId(),
+                        LocalDateTime.now()
                 )
         );
 
@@ -327,7 +396,9 @@ class MeetingAnalysisRequestIntegrationTest {
                         commandId,
                         firstMeeting,
                         MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
-                        "{}"
+                        "{}",
+                        first.memberId(),
+                        LocalDateTime.now()
                 )
         );
 
@@ -336,7 +407,9 @@ class MeetingAnalysisRequestIntegrationTest {
                         commandId,
                         secondMeeting,
                         MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
-                        "{}"
+                        "{}",
+                        second.memberId(),
+                        LocalDateTime.now()
                 )
         )).isInstanceOf(DataIntegrityViolationException.class);
     }
@@ -385,9 +458,12 @@ class MeetingAnalysisRequestIntegrationTest {
                         .build()
         );
         Project project = Project.builder().title("project").content("content").build();
-        project.addMember(ProjectMember.createMember(member.getId(), role));
+        ProjectMember creator = ProjectMember.createMember(member.getId(), role);
+        project.addMember(creator);
         project = projectRepository.saveAndFlush(project);
-        Meeting meeting = meetingRepository.saveAndFlush(Meeting.create(project, roomName));
+        Meeting meeting = meetingRepository.saveAndFlush(
+                Meeting.create(project, creator, roomName)
+        );
         return new Fixture(project.getId(), member.getId(), meeting.getId());
     }
 

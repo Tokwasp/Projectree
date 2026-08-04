@@ -40,8 +40,12 @@ import java.util.UUID;
         },
         indexes = {
                 @Index(
-                        name = "idx_meeting_analysis_outbox_publish",
-                        columnList = "status, created_at, id"
+                        name = "idx_meeting_analysis_outbox_pending",
+                        columnList = "status, next_attempt_at, created_at, id"
+                ),
+                @Index(
+                        name = "idx_meeting_analysis_outbox_expired_lease",
+                        columnList = "status, lease_until, created_at, id"
                 )
         }
 )
@@ -78,6 +82,18 @@ public class MeetingAnalysisCommandOutbox extends BaseEntity {
     @Column(name = "attempt_count", nullable = false)
     private int attemptCount;
 
+    @Column(name = "requested_by_member_id", nullable = false)
+    private int requestedByMemberId;
+
+    @Column(name = "next_attempt_at")
+    private LocalDateTime nextAttemptAt;
+
+    @Column(name = "lease_until")
+    private LocalDateTime leaseUntil;
+
+    @Column(name = "claim_token", length = 36)
+    private String claimToken;
+
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
@@ -88,7 +104,9 @@ public class MeetingAnalysisCommandOutbox extends BaseEntity {
             UUID commandId,
             Meeting meeting,
             MeetingAnalysisCommandType commandType,
-            String payload
+            String payload,
+            int requestedByMemberId,
+            LocalDateTime now
     ) {
         MeetingAnalysisCommandOutbox outbox = new MeetingAnalysisCommandOutbox();
         outbox.commandId = Objects.requireNonNull(commandId, "commandId must not be null").toString();
@@ -100,6 +118,90 @@ public class MeetingAnalysisCommandOutbox extends BaseEntity {
         outbox.payload = payload;
         outbox.status = MeetingAnalysisOutboxStatus.PENDING;
         outbox.attemptCount = 0;
+        if (requestedByMemberId <= 0) {
+            throw new IllegalArgumentException("requestedByMemberId must be positive");
+        }
+        outbox.requestedByMemberId = requestedByMemberId;
+        outbox.nextAttemptAt = Objects.requireNonNull(now, "now must not be null");
         return outbox;
+    }
+
+    public String claim(LocalDateTime now, LocalDateTime leaseUntil, int maxAttempts) {
+        Objects.requireNonNull(now, "now must not be null");
+        Objects.requireNonNull(leaseUntil, "leaseUntil must not be null");
+        boolean pending = status == MeetingAnalysisOutboxStatus.PENDING
+                && nextAttemptAt != null
+                && !nextAttemptAt.isAfter(now)
+                && attemptCount < maxAttempts;
+        boolean expiredLease = status == MeetingAnalysisOutboxStatus.PUBLISHING
+                && this.leaseUntil != null
+                && !this.leaseUntil.isAfter(now);
+        if (!pending && !expiredLease) {
+            throw new IllegalStateException("outbox is not claimable");
+        }
+        if (pending) {
+            attemptCount++;
+        }
+        status = MeetingAnalysisOutboxStatus.PUBLISHING;
+        claimToken = UUID.randomUUID().toString();
+        this.leaseUntil = leaseUntil;
+        nextAttemptAt = null;
+        return claimToken;
+    }
+
+    public boolean markPublished(String expectedClaimToken, LocalDateTime now) {
+        if (!isOwnedBy(expectedClaimToken)) {
+            return false;
+        }
+        status = MeetingAnalysisOutboxStatus.PUBLISHED;
+        publishedAt = Objects.requireNonNull(now, "now must not be null");
+        clearClaim();
+        lastError = null;
+        return true;
+    }
+
+    public boolean rescheduleOrFail(
+            String expectedClaimToken,
+            LocalDateTime now,
+            int maxAttempts,
+            long firstRetryDelaySeconds,
+            long secondRetryDelaySeconds,
+            String error
+    ) {
+        if (!isOwnedBy(expectedClaimToken)) {
+            return false;
+        }
+        lastError = truncate(error);
+        if (attemptCount >= maxAttempts) {
+            status = MeetingAnalysisOutboxStatus.FAILED;
+            clearClaim();
+            return true;
+        }
+        long retryDelay = attemptCount == 1
+                ? firstRetryDelaySeconds
+                : secondRetryDelaySeconds;
+        status = MeetingAnalysisOutboxStatus.PENDING;
+        nextAttemptAt = Objects.requireNonNull(now, "now must not be null")
+                .plusSeconds(retryDelay);
+        leaseUntil = null;
+        claimToken = null;
+        return false;
+    }
+
+    public boolean isOwnedBy(String expectedClaimToken) {
+        return status == MeetingAnalysisOutboxStatus.PUBLISHING
+                && expectedClaimToken != null
+                && expectedClaimToken.equals(claimToken);
+    }
+
+    private void clearClaim() {
+        nextAttemptAt = null;
+        leaseUntil = null;
+        claimToken = null;
+    }
+
+    private static String truncate(String error) {
+        String safe = error == null || error.isBlank() ? "Unknown publish failure" : error;
+        return safe.length() <= 1000 ? safe : safe.substring(0, 1000);
     }
 }
