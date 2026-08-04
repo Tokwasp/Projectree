@@ -20,6 +20,7 @@ repositories {
 dependencies {
     implementation platform('software.amazon.awssdk:bom:2.46.17')
     implementation 'software.amazon.awssdk:sqs'
+    implementation 'software.amazon.awssdk:s3'
 
     // Lombok & mvc
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
