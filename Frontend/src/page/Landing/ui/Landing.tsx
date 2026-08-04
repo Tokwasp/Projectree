@@ -1,4 +1,5 @@
 import AboutSection from "../components/AboutSection/AboutSection";
+import StatsSection from "../components/StatsSection/StatsSection";
 import StarfieldBackground from "../components/StarfieldBackground/StarfieldBackground";
 import style from "../css/Landing.module.css";
 import { useLoginModalStore } from "../../../store/loginModalStore";
@@ -28,6 +29,7 @@ export default function Landing() {
       </section>
 
       <AboutSection />
+      <StatsSection />
     </main>
   );
 }
