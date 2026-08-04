@@ -43,9 +43,13 @@ spring:
 app:
   invitation:
     base-url: https://projectree.site
-  # 통합 테스트 중 백그라운드 스위퍼가 테스트 데이터를 처리하지 않도록 비활성화한다.
-  invitation-mail:
-    scheduling-enabled: false
+  # 통합 테스트 중 백그라운드 스케줄러가 테스트 데이터를 건드리지 않도록 비활성화한다.
+  scheduling:
+    enabled: false
+  notification:
+    sse:
+      timeout: 30m
+      heartbeat-interval: 30s
   cors:
     allowed-origins: http://localhost:5173
   session:
