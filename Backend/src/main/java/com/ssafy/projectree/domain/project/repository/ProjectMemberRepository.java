@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Integer> {
 
@@ -26,6 +27,8 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, In
     List<ProjectMemberResponse> findMemberResponsesByProjectId(@Param("projectId") int projectId);
 
     boolean existsByProjectIdAndMemberId(int projectId, int memberId);
+
+    Optional<ProjectMember> findByProjectIdAndMemberId(int projectId, int memberId);
 
     boolean existsByProjectIdAndMemberIdAndRole(int projectId, int memberId, ProjectRole role);
 }

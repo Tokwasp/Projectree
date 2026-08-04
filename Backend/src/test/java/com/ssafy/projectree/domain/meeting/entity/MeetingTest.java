@@ -1,6 +1,8 @@
 package com.ssafy.projectree.domain.meeting.entity;
 
 import com.ssafy.projectree.domain.project.entity.Project;
+import com.ssafy.projectree.domain.project.entity.ProjectMember;
+import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,10 +17,14 @@ class MeetingTest {
     @Test
     void createsMeeting() {
         Project project = createProject();
+        ProjectMember creator = project.getProjectMembers().get(0);
 
-        Meeting meeting = Meeting.create(project, "550e8400-e29b-41d4-a716-446655440000");
+        Meeting meeting = Meeting.create(
+                project, creator, "550e8400-e29b-41d4-a716-446655440000"
+        );
 
         assertThat(meeting.getProject()).isSameAs(project);
+        assertThat(meeting.getCreatorMemberId()).isEqualTo(creator.getMemberId());
         assertThat(meeting.getRoomName()).isEqualTo("550e8400-e29b-41d4-a716-446655440000");
         assertThat(meeting.isGenerateSummary()).isFalse();
         assertThat(meeting.getSummaryStatus()).isEqualTo(AnalysisTaskStatus.NOT_REQUESTED);
@@ -154,7 +160,12 @@ class MeetingTest {
     @DisplayName("Project가 null이면 Meeting을 생성할 수 없다.")
     @Test
     void projectMustNotBeNull() {
-        assertThatThrownBy(() -> Meeting.create(null, "room-name"))
+        Project project = createProject();
+        assertThatThrownBy(() -> Meeting.create(
+                null,
+                project.getProjectMembers().get(0),
+                "550e8400-e29b-41d4-a716-446655440000"
+        ))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessage("project must not be null");
     }
@@ -164,25 +175,70 @@ class MeetingTest {
     @org.junit.jupiter.params.provider.NullAndEmptySource
     @org.junit.jupiter.params.provider.ValueSource(strings = {" ", "   "})
     void roomNameMustNotBeBlank(String roomName) {
-        assertThatThrownBy(() -> Meeting.create(createProject(), roomName))
+        Project project = createProject();
+        assertThatThrownBy(() -> Meeting.create(
+                project, project.getProjectMembers().get(0), roomName
+        ))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @DisplayName("roomName이 128자를 초과하면 Meeting을 생성할 수 없다.")
     @Test
     void roomNameMustNotExceed128Characters() {
-        assertThatThrownBy(() -> Meeting.create(createProject(), "a".repeat(129)))
+        Project project = createProject();
+        assertThatThrownBy(() -> Meeting.create(
+                project, project.getProjectMembers().get(0), "a".repeat(129)
+        ))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    void creatorMustBelongToMeetingProject() {
+        Project project = createProject();
+        Project otherProject = createProject();
+
+        assertThatThrownBy(() -> Meeting.create(
+                project,
+                otherProject.getProjectMembers().get(0),
+                "550e8400-e29b-41d4-a716-446655440000"
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void creatorCanBeRegisteredOnceAndCannotBeReplaced() {
+        Project project = createProject();
+        ProjectMember first = project.getProjectMembers().get(0);
+        ProjectMember second = ProjectMember.createMember(2, ProjectRole.MEMBER);
+        project.addMember(second);
+        Meeting meeting = Meeting.create(
+                project, first, "550e8400-e29b-41d4-a716-446655440000"
+        );
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                meeting, "creatorMemberId", null
+        );
+
+        assertThat(meeting.registerCreator(first)).isTrue();
+        assertThat(meeting.registerCreator(first)).isFalse();
+        assertThatThrownBy(() -> meeting.registerCreator(second))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(meeting.getCreatorMemberId()).isEqualTo(first.getMemberId());
+    }
+
     private Meeting createMeeting() {
-        return Meeting.create(createProject(), "550e8400-e29b-41d4-a716-446655440000");
+        Project project = createProject();
+        return Meeting.create(
+                project,
+                project.getProjectMembers().get(0),
+                "550e8400-e29b-41d4-a716-446655440000"
+        );
     }
 
     private Project createProject() {
-        return Project.builder()
+        Project project = Project.builder()
                 .title("project")
                 .content("content")
                 .build();
+        project.addMember(ProjectMember.createMember(1, ProjectRole.OWNER));
+        return project;
     }
 }

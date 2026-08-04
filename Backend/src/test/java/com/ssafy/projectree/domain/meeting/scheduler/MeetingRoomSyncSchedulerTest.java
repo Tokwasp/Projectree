@@ -83,6 +83,11 @@ class MeetingRoomSyncSchedulerTest {
     }
 
     private MeetingRoomRedisEntry entry(int projectId, String roomName) {
-        return new MeetingRoomRedisEntry("meeting-room:" + roomName, projectId, roomName);
+        return new MeetingRoomRedisEntry(
+                "meeting:project:" + projectId,
+                projectId,
+                722,
+                roomName
+        );
     }
 }

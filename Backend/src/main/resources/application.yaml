@@ -60,7 +60,20 @@ app:
     enabled: ${MEETING_SYNC_ENABLED:true}
     fixed-delay-ms: ${MEETING_SYNC_FIXED_DELAY_MS:5000}
     scan-count: ${MEETING_SYNC_SCAN_COUNT:200}
-    key-prefix: ${MEETING_SYNC_KEY_PREFIX:meeting-room:}
+    key-prefix: ${MEETING_SYNC_KEY_PREFIX:meeting:project:}
+  meeting-analysis:
+    publisher:
+      enabled: ${MEETING_ANALYSIS_PUBLISHER_ENABLED:false}
+      fixed-delay-ms: ${MEETING_ANALYSIS_PUBLISHER_FIXED_DELAY_MS:1000}
+      batch-size: ${MEETING_ANALYSIS_PUBLISHER_BATCH_SIZE:20}
+      max-attempts: ${MEETING_ANALYSIS_PUBLISHER_MAX_ATTEMPTS:3}
+      lease-duration-seconds: ${MEETING_ANALYSIS_PUBLISHER_LEASE_SECONDS:60}
+      first-retry-delay-seconds: ${MEETING_ANALYSIS_FIRST_RETRY_DELAY_SECONDS:30}
+      second-retry-delay-seconds: ${MEETING_ANALYSIS_SECOND_RETRY_DELAY_SECONDS:120}
+      api-call-attempt-timeout-seconds: ${MEETING_ANALYSIS_API_CALL_ATTEMPT_TIMEOUT_SECONDS:5}
+      api-call-timeout-seconds: ${MEETING_ANALYSIS_API_CALL_TIMEOUT_SECONDS:10}
+      queue-url: ${MEETING_ANALYSIS_COMMAND_QUEUE_URL:}
+      region: ${AWS_REGION:ap-northeast-2}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   session:

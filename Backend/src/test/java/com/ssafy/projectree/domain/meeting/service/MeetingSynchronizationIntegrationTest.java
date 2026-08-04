@@ -1,11 +1,14 @@
 package com.ssafy.projectree.domain.meeting.service;
 
 import com.ssafy.projectree.domain.meeting.infrastructure.redis.MeetingRoomRedisEntry;
+import com.ssafy.projectree.domain.meeting.entity.Meeting;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.meeting.scheduler.MeetingRoomSyncScheduler;
 import com.ssafy.projectree.domain.member.service.GoogleOAuthClient;
 import com.ssafy.projectree.domain.member.service.NaverOAuthClient;
 import com.ssafy.projectree.domain.project.entity.Project;
+import com.ssafy.projectree.domain.project.entity.ProjectMember;
+import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -57,14 +60,8 @@ class MeetingSynchronizationIntegrationTest {
     @DisplayName("같은 roomName을 동시에 동기화해도 Meeting은 최종 1건만 생성된다.")
     @Test
     void concurrentSynchronizationCreatesOnlyOneMeeting() throws Exception {
-        Project project = projectRepository.saveAndFlush(
-                Project.builder().title("project").content("content").build()
-        );
-        MeetingRoomRedisEntry entry = new MeetingRoomRedisEntry(
-                "meeting-room:" + ROOM_NAME,
-                project.getId(),
-                ROOM_NAME
-        );
+        Fixture fixture = fixture();
+        MeetingRoomRedisEntry entry = entry(fixture, ROOM_NAME);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
 
@@ -85,26 +82,68 @@ class MeetingSynchronizationIntegrationTest {
         }
 
         assertThat(meetingRepository.count()).isEqualTo(1);
-        assertThat(meetingRepository.findByRoomName(ROOM_NAME)).isPresent();
+        assertThat(meetingRepository.findByRoomName(ROOM_NAME))
+                .isPresent()
+                .get()
+                .extracting(Meeting::getCreatorMemberId)
+                .isEqualTo(fixture.creator().getMemberId());
     }
 
     @DisplayName("같은 Redis entry를 반복 처리해도 Meeting은 추가 생성되지 않는다.")
     @Test
     void repeatedSynchronizationIsIdempotent() {
-        Project project = projectRepository.saveAndFlush(
-                Project.builder().title("project").content("content").build()
-        );
-        MeetingRoomRedisEntry entry = new MeetingRoomRedisEntry(
-                "meeting-room:" + ROOM_NAME,
-                project.getId(),
-                ROOM_NAME
-        );
+        Fixture fixture = fixture();
+        MeetingRoomRedisEntry entry = entry(fixture, ROOM_NAME);
 
         assertThat(synchronizationService.synchronize(entry))
                 .isEqualTo(MeetingSynchronizationOutcome.CREATED);
         assertThat(synchronizationService.synchronize(entry))
                 .isEqualTo(MeetingSynchronizationOutcome.ALREADY_EXISTS);
         assertThat(meetingRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void missingCreatorProjectMemberDoesNotCreateMeeting() {
+        Fixture fixture = fixture();
+        MeetingRoomRedisEntry entry = new MeetingRoomRedisEntry(
+                "meeting:project:" + fixture.project().getId(),
+                fixture.project().getId(),
+                999999,
+                ROOM_NAME
+        );
+
+        assertThat(synchronizationService.synchronize(entry))
+                .isEqualTo(MeetingSynchronizationOutcome.CREATOR_PROJECT_MEMBER_NOT_FOUND);
+        assertThat(meetingRepository.count()).isZero();
+    }
+
+    @Test
+    void existingMeetingCreatorIsSupplementedButConflictIsNotOverwritten() {
+        Fixture fixture = fixture();
+        Meeting legacy = Meeting.create(fixture.project(), fixture.creator(), ROOM_NAME);
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                legacy, "creatorMemberId", null
+        );
+        meetingRepository.saveAndFlush(legacy);
+
+        assertThat(synchronizationService.synchronize(entry(fixture, ROOM_NAME)))
+                .isEqualTo(MeetingSynchronizationOutcome.CREATOR_REGISTERED);
+        assertThat(meetingRepository.findByRoomName(ROOM_NAME).orElseThrow()
+                .getCreatorMemberId()).isEqualTo(fixture.creator().getMemberId());
+
+        ProjectMember other = ProjectMember.createMember(723, ProjectRole.MEMBER);
+        fixture.project().addMember(other);
+        projectRepository.saveAndFlush(fixture.project());
+        MeetingRoomRedisEntry conflicting = new MeetingRoomRedisEntry(
+                "meeting:project:" + fixture.project().getId(),
+                fixture.project().getId(),
+                other.getMemberId(),
+                ROOM_NAME
+        );
+        assertThat(synchronizationService.synchronize(conflicting))
+                .isEqualTo(MeetingSynchronizationOutcome.CREATOR_CONFLICT);
+        assertThat(meetingRepository.findByRoomName(ROOM_NAME).orElseThrow()
+                .getCreatorMemberId()).isEqualTo(fixture.creator().getMemberId());
     }
 
     @DisplayName("app.meeting-sync.enabled=false이면 Scheduler Bean을 만들지 않는다.")
@@ -121,5 +160,25 @@ class MeetingSynchronizationIntegrationTest {
         ready.countDown();
         start.await();
         return synchronizationService.synchronize(entry);
+    }
+
+    private Fixture fixture() {
+        Project project = Project.builder().title("project").content("content").build();
+        ProjectMember creator = ProjectMember.createMember(722, ProjectRole.OWNER);
+        project.addMember(creator);
+        project = projectRepository.saveAndFlush(project);
+        return new Fixture(project, creator);
+    }
+
+    private MeetingRoomRedisEntry entry(Fixture fixture, String roomName) {
+        return new MeetingRoomRedisEntry(
+                "meeting:project:" + fixture.project().getId(),
+                fixture.project().getId(),
+                fixture.creator().getMemberId(),
+                roomName
+        );
+    }
+
+    private record Fixture(Project project, ProjectMember creator) {
     }
 }

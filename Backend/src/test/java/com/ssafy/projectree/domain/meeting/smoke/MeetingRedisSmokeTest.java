@@ -1,5 +1,6 @@
 package com.ssafy.projectree.domain.meeting.smoke;
 
+import com.ssafy.projectree.domain.meeting.entity.Meeting;
 import com.ssafy.projectree.domain.meeting.infrastructure.redis.MeetingRoomRedisEntry;
 import com.ssafy.projectree.domain.meeting.infrastructure.redis.MeetingRoomRedisReader;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
@@ -8,6 +9,8 @@ import com.ssafy.projectree.domain.meeting.service.MeetingSynchronizationService
 import com.ssafy.projectree.domain.member.service.GoogleOAuthClient;
 import com.ssafy.projectree.domain.member.service.NaverOAuthClient;
 import com.ssafy.projectree.domain.project.entity.Project;
+import com.ssafy.projectree.domain.project.entity.ProjectMember;
+import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
@@ -37,7 +40,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 @EnabledIfEnvironmentVariable(named = "MEETING_REDIS_SMOKE_ALLOW_WRITE", matches = "(?i)true")
 class MeetingRedisSmokeTest {
 
-    private static final String KEY_PREFIX = "meeting-room:";
+    private static final String KEY_PREFIX = "meeting:project:";
     private static final Duration KEY_TTL = Duration.ofSeconds(60);
 
     @MockitoBean
@@ -74,22 +77,22 @@ class MeetingRedisSmokeTest {
     void synchronizesHashAndSkipsWrongTypeOnStagingRedis() {
         verifySafetyGuards();
 
-        Project project = projectRepository.saveAndFlush(
-                Project.builder()
-                        .title("meeting-redis-smoke")
-                        .content("temporary smoke fixture")
-                        .build()
-        );
+        Project project = Project.builder()
+                .title("meeting-redis-smoke")
+                .content("temporary smoke fixture")
+                .build();
+        ProjectMember creator = ProjectMember.createMember(722, ProjectRole.OWNER);
+        project.addMember(creator);
+        project = projectRepository.saveAndFlush(project);
         String validRoomName = UUID.randomUUID().toString();
-        String wrongTypeRoomName = UUID.randomUUID().toString();
-        String validKey = KEY_PREFIX + validRoomName;
-        String wrongTypeKey = KEY_PREFIX + wrongTypeRoomName;
+        String wrongTypeKey = KEY_PREFIX + (project.getId() + 1);
+        String validKey = KEY_PREFIX + project.getId();
 
         redisTemplate.opsForHash().putAll(
                 validKey,
                 Map.of(
-                        "projectId", Integer.toString(project.getId()),
-                        "roomName", validRoomName
+                        "creator", Integer.toString(creator.getMemberId()),
+                        "room", validRoomName
                 )
         );
         redisTemplate.expire(validKey, KEY_TTL);
@@ -101,8 +104,7 @@ class MeetingRedisSmokeTest {
         var entries = redisReader.findAll();
         assertThat(entries)
                 .extracting(MeetingRoomRedisEntry::roomName)
-                .contains(validRoomName)
-                .doesNotContain(wrongTypeRoomName);
+                .contains(validRoomName);
 
         MeetingRoomRedisEntry validEntry = entries.stream()
                 .filter(entry -> validRoomName.equals(entry.roomName()))
@@ -113,7 +115,10 @@ class MeetingRedisSmokeTest {
         assertThat(synchronizationService.synchronize(validEntry))
                 .isEqualTo(MeetingSynchronizationOutcome.ALREADY_EXISTS);
 
-        assertThat(meetingRepository.findByRoomName(validRoomName)).isPresent();
+        assertThat(meetingRepository.findByRoomName(validRoomName))
+                .get()
+                .extracting(Meeting::getCreatorMemberId)
+                .isEqualTo(creator.getMemberId());
         assertThat(meetingRepository.count()).isEqualTo(1);
         assertThat(redisTemplate.hasKey(validKey)).isTrue();
         assertThat(redisTemplate.hasKey(wrongTypeKey)).isTrue();

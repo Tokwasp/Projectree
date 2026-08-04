@@ -13,7 +13,17 @@ public interface MeetingRepository extends JpaRepository<Meeting, Integer> {
 
     boolean existsByRoomName(String roomName);
 
+    boolean existsByProjectId(int projectId);
+
     Optional<Meeting> findByRoomName(String roomName);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select m
+            from Meeting m
+            where m.roomName = :roomName
+            """)
+    Optional<Meeting> findByRoomNameForUpdate(@Param("roomName") String roomName);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -26,4 +36,12 @@ public interface MeetingRepository extends JpaRepository<Meeting, Integer> {
             @Param("projectId") int projectId,
             @Param("roomName") String roomName
     );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select m
+            from Meeting m
+            where m.id = :meetingId
+            """)
+    Optional<Meeting> findByIdForUpdate(@Param("meetingId") int meetingId);
 }

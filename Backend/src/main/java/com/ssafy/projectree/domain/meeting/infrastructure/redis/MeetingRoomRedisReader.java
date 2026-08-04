@@ -23,8 +23,8 @@ import java.util.UUID;
 public class MeetingRoomRedisReader {
 
     private static final int MAX_ROOM_NAME_LENGTH = 128;
-    private static final String PROJECT_ID_FIELD = "projectId";
-    private static final String ROOM_NAME_FIELD = "roomName";
+    private static final String CREATOR_FIELD = "creator";
+    private static final String ROOM_FIELD = "room";
     private static final StringRedisSerializer STRING_SERIALIZER = new StringRedisSerializer();
 
     private final StringRedisTemplate redisTemplate;
@@ -81,30 +81,30 @@ public class MeetingRoomRedisReader {
     }
 
     Optional<MeetingRoomRedisEntry> parse(String sourceKey, Map<String, String> fields) {
-        Optional<String> keyRoomName = parseKeyRoomName(sourceKey);
-        if (keyRoomName.isEmpty()) {
+        Optional<Integer> parsedProjectId = parseKeyProjectId(sourceKey);
+        if (parsedProjectId.isEmpty()) {
             return Optional.empty();
         }
 
-        String rawProjectId = fields.get(PROJECT_ID_FIELD);
-        if (rawProjectId == null || rawProjectId.isBlank()) {
-            log.warn("[MeetingSync] MISSING_PROJECT_ID. key={}", sourceKey);
+        String rawCreatorMemberId = fields.get(CREATOR_FIELD);
+        if (rawCreatorMemberId == null || rawCreatorMemberId.isBlank()) {
+            log.warn("[MeetingSync] MISSING_CREATOR. key={}", sourceKey);
             return Optional.empty();
         }
 
-        Integer projectId;
+        Integer creatorMemberId;
         try {
-            projectId = Integer.valueOf(rawProjectId);
+            creatorMemberId = Integer.valueOf(rawCreatorMemberId);
         } catch (NumberFormatException exception) {
-            log.warn("[MeetingSync] INVALID_PROJECT_ID. key={}, projectId={}", sourceKey, rawProjectId);
+            log.warn("[MeetingSync] INVALID_CREATOR. key={}", sourceKey);
             return Optional.empty();
         }
-        if (projectId <= 0) {
-            log.warn("[MeetingSync] INVALID_PROJECT_ID. key={}, projectId={}", sourceKey, projectId);
+        if (creatorMemberId <= 0) {
+            log.warn("[MeetingSync] INVALID_CREATOR. key={}", sourceKey);
             return Optional.empty();
         }
 
-        String roomName = fields.get(ROOM_NAME_FIELD);
+        String roomName = fields.get(ROOM_FIELD);
         if (roomName == null || roomName.isBlank()) {
             log.warn("[MeetingSync] MISSING_ROOM_NAME. key={}", sourceKey);
             return Optional.empty();
@@ -113,33 +113,37 @@ public class MeetingRoomRedisReader {
             log.warn("[MeetingSync] INVALID_ROOM_NAME. key={}, roomName={}", sourceKey, roomName);
             return Optional.empty();
         }
-        if (!keyRoomName.get().equals(roomName)) {
-            log.warn(
-                    "[MeetingSync] ROOM_NAME_MISMATCH. key={}, keyRoomName={}, valueRoomName={}",
-                    sourceKey,
-                    keyRoomName.get(),
-                    roomName
-            );
-            return Optional.empty();
-        }
 
-        return Optional.of(new MeetingRoomRedisEntry(sourceKey, projectId, roomName));
+        return Optional.of(new MeetingRoomRedisEntry(
+                sourceKey,
+                parsedProjectId.get(),
+                creatorMemberId,
+                UUID.fromString(roomName).toString()
+        ));
     }
 
-    private Optional<String> parseKeyRoomName(String sourceKey) {
+    private Optional<Integer> parseKeyProjectId(String sourceKey) {
         if (sourceKey == null || sourceKey.isBlank() || !sourceKey.startsWith(properties.keyPrefix())) {
             log.warn("[MeetingSync] INVALID_REDIS_KEY. key={}", sourceKey);
             return Optional.empty();
         }
 
-        String roomName = sourceKey.substring(properties.keyPrefix().length());
-        if (roomName.isBlank()
-                || roomName.length() > MAX_ROOM_NAME_LENGTH
-                || !isCanonicalUuid(roomName)) {
-            log.warn("[MeetingSync] INVALID_REDIS_KEY. key={}, roomName={}", sourceKey, roomName);
+        String suffix = sourceKey.substring(properties.keyPrefix().length());
+        if (suffix.isBlank() || suffix.contains(":")) {
+            log.warn("[MeetingSync] INVALID_REDIS_KEY. key={}", sourceKey);
             return Optional.empty();
         }
-        return Optional.of(roomName);
+        try {
+            int projectId = Integer.parseInt(suffix);
+            if (projectId <= 0) {
+                log.warn("[MeetingSync] INVALID_PROJECT_ID. key={}", sourceKey);
+                return Optional.empty();
+            }
+            return Optional.of(projectId);
+        } catch (NumberFormatException exception) {
+            log.warn("[MeetingSync] INVALID_PROJECT_ID. key={}", sourceKey);
+            return Optional.empty();
+        }
     }
 
     private Map<String, String> deserialize(Map<byte[], byte[]> rawFields) {

@@ -3,6 +3,8 @@ package com.ssafy.projectree.domain.meeting.repository;
 import com.ssafy.projectree.domain.meeting.entity.AnalysisTaskStatus;
 import com.ssafy.projectree.domain.meeting.entity.Meeting;
 import com.ssafy.projectree.domain.project.entity.Project;
+import com.ssafy.projectree.domain.project.entity.ProjectMember;
+import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.config.JpaAuditingConfig;
 import jakarta.persistence.EntityManager;
@@ -41,12 +43,17 @@ class MeetingRepositoryTest {
         Project project = saveProject("project");
 
         Meeting saved = meetingRepository.saveAndFlush(
-                Meeting.create(project, "550e8400-e29b-41d4-a716-446655440000")
+                Meeting.create(
+                        project,
+                        creator(project),
+                        "550e8400-e29b-41d4-a716-446655440000"
+                )
         );
         entityManager.clear();
 
         Meeting found = meetingRepository.findById(saved.getId()).orElseThrow();
         assertThat(found.getProject().getId()).isEqualTo(project.getId());
+        assertThat(found.getCreatorMemberId()).isEqualTo(creator(project).getMemberId());
         assertThat(found.getSummaryStatus()).isEqualTo(AnalysisTaskStatus.NOT_REQUESTED);
         assertThat(found.getNodeStatus()).isEqualTo(AnalysisTaskStatus.NOT_REQUESTED);
         assertThat(found.getCreatedAt()).isNotNull();
@@ -58,7 +65,7 @@ class MeetingRepositoryTest {
     void findByRoomName() {
         Project project = saveProject("project");
         String roomName = "550e8400-e29b-41d4-a716-446655440000";
-        meetingRepository.saveAndFlush(Meeting.create(project, roomName));
+        meetingRepository.saveAndFlush(Meeting.create(project, creator(project), roomName));
 
         assertThat(meetingRepository.existsByRoomName(roomName)).isTrue();
         assertThat(meetingRepository.findByRoomName(roomName))
@@ -73,10 +80,12 @@ class MeetingRepositoryTest {
     void roomNameMustBeUnique() {
         Project project = saveProject("project");
         String roomName = "550e8400-e29b-41d4-a716-446655440000";
-        meetingRepository.saveAndFlush(Meeting.create(project, roomName));
+        meetingRepository.saveAndFlush(Meeting.create(project, creator(project), roomName));
 
         assertThatThrownBy(() ->
-                meetingRepository.saveAndFlush(Meeting.create(project, roomName)))
+                meetingRepository.saveAndFlush(
+                        Meeting.create(project, creator(project), roomName)
+                ))
                 .rootCause()
                 .isInstanceOf(SQLIntegrityConstraintViolationException.class);
     }
@@ -107,6 +116,7 @@ class MeetingRepositoryTest {
         Project project = saveProject("project");
         Meeting meeting = Meeting.create(
                 project,
+                creator(project),
                 "550e8400-e29b-41d4-a716-446655440000"
         );
         meeting.confirmAnalysisOptions(true, false);
@@ -119,11 +129,15 @@ class MeetingRepositoryTest {
     }
 
     private Project saveProject(String title) {
-        return projectRepository.saveAndFlush(
-                Project.builder()
-                        .title(title)
-                        .content("content")
-                        .build()
-        );
+        Project project = Project.builder()
+                .title(title)
+                .content("content")
+                .build();
+        project.addMember(ProjectMember.createMember(1, ProjectRole.OWNER));
+        return projectRepository.saveAndFlush(project);
+    }
+
+    private ProjectMember creator(Project project) {
+        return project.getProjectMembers().get(0);
     }
 }

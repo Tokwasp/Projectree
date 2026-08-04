@@ -32,6 +32,19 @@ public class MeetingSynchronizationService {
                         entry.projectId(),
                         entry.roomName()
                 );
+            } else if (outcome == MeetingSynchronizationOutcome.CREATOR_PROJECT_MEMBER_NOT_FOUND) {
+                log.warn(
+                        "[MeetingSync] CREATOR_PROJECT_MEMBER_NOT_FOUND. projectId={}, creatorMemberId={}, roomName={}",
+                        entry.projectId(),
+                        entry.creatorMemberId(),
+                        entry.roomName()
+                );
+            } else if (outcome == MeetingSynchronizationOutcome.CREATOR_CONFLICT) {
+                log.warn(
+                        "[MeetingSync] CREATOR_CONFLICT. projectId={}, roomName={}",
+                        entry.projectId(),
+                        entry.roomName()
+                );
             }
             return outcome;
         } catch (DataIntegrityViolationException exception) {
@@ -99,6 +112,8 @@ public class MeetingSynchronizationService {
         return entry != null
                 && entry.projectId() != null
                 && entry.projectId() > 0
+                && entry.creatorMemberId() != null
+                && entry.creatorMemberId() > 0
                 && entry.roomName() != null
                 && !entry.roomName().isBlank();
     }
