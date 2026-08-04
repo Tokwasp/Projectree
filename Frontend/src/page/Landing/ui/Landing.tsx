@@ -1,4 +1,5 @@
 import AboutSection from "../components/AboutSection/AboutSection";
+import FeatureShowcaseSection from "../components/FeatureShowcaseSection/FeatureShowcaseSection";
 import StatsSection from "../components/StatsSection/StatsSection";
 import StarfieldBackground from "../components/StarfieldBackground/StarfieldBackground";
 import style from "../css/Landing.module.css";
@@ -30,6 +31,7 @@ export default function Landing() {
 
       <AboutSection />
       <StatsSection />
+      <FeatureShowcaseSection />
     </main>
   );
 }
