@@ -100,3 +100,113 @@
   margin-right: var(--space-2);
   object-fit: contain;
 }
+
+.mainSidebar {
+  position: relative;
+  padding: var(--space-8) var(--space-4);
+}
+
+.collapseButton {
+  position: absolute;
+  top: 72px;
+  right: -12px;
+  z-index: 2;
+  display: flex;
+  width: 24px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-white);
+  color: var(--color-background);
+  font-size: var(--text-xl);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.collapseButton:hover {
+  color: var(--color-primary);
+}
+
+.collapseButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.mainSidebar .brand {
+  justify-content: center;
+  height: auto;
+  padding: 0;
+}
+
+.mainSidebar .logo {
+  width: var(--space-10);
+  height: var(--space-10);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-white) 8%, transparent);
+}
+
+.mainSidebar .navigation {
+  gap: var(--space-4);
+  margin-top: var(--space-12);
+}
+
+.mainSidebar .menuButton {
+  height: var(--space-10);
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  color: var(--color-gray-300);
+  font-size: var(--text-sm);
+}
+
+.mainSidebar .menuButton:hover {
+  background: color-mix(in srgb, var(--color-white) 6%, transparent);
+}
+
+.mainSidebar .menuButtonActive {
+  color: var(--color-white);
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 10%,
+    transparent
+  );
+}
+
+.mainSidebar .menuButtonActive::before {
+  top: 22%;
+  right: 0;
+  bottom: 22%;
+  left: auto;
+  width: 3px;
+  background: var(--color-primary);
+  box-shadow: 0 0 var(--space-2)
+    color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.mainSidebar .menuIcon {
+  width: var(--space-4);
+  height: var(--space-4);
+  margin-right: 0;
+}
+
+.mainSidebarCollapsed {
+  padding-right: var(--space-3);
+  padding-left: var(--space-3);
+}
+
+.mainSidebarCollapsed .navigation {
+  align-items: center;
+}
+
+.mainSidebarCollapsed .menuButton {
+  justify-content: center;
+  padding: 0;
+}
+
+.mainSidebarCollapsed .menuLabel {
+  display: none;
+}

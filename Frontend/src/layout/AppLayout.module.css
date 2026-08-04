@@ -11,6 +11,11 @@
   height: 100vh;
   background: var(--color-background);
   color: var(--color-white);
+  transition: width var(--transition-normal);
+}
+
+.sidebarCollapsed {
+  width: 72px;
 }
 
 .mainArea {
@@ -19,6 +24,14 @@
   margin-left: var(--app-sidebar-width);
   overflow-y: auto;
   scrollbar-gutter: stable;
+  transition:
+    width var(--transition-normal),
+    margin-left var(--transition-normal);
+}
+
+.mainAreaExpanded {
+  width: calc(100% - 72px);
+  margin-left: 72px;
 }
 
 .header {
