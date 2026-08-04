@@ -5,6 +5,8 @@ import com.ssafy.projectree.domain.member.controller.MemberController;
 import com.ssafy.projectree.domain.member.service.AuthService;
 import com.ssafy.projectree.domain.member.service.MemberService;
 import com.ssafy.projectree.domain.meeting.controller.MeetingController;
+import com.ssafy.projectree.domain.meeting.result.graph.query.GraphQueryController;
+import com.ssafy.projectree.domain.meeting.result.graph.query.GraphQueryService;
 import com.ssafy.projectree.domain.meeting.service.MeetingAnalysisRequestService;
 import com.ssafy.projectree.domain.nodeCategory.controller.NodeCategoryController;
 import com.ssafy.projectree.domain.nodeCategory.service.NodeCategoryService;
@@ -26,7 +28,8 @@ import tools.jackson.databind.ObjectMapper;
         ProjectInvitationController.class,
         InvitationController.class,
         NodeCategoryController.class,
-        MeetingController.class
+        MeetingController.class,
+        GraphQueryController.class
 })
 public abstract class ControllerTestSupport {
 
@@ -53,5 +56,8 @@ public abstract class ControllerTestSupport {
 
     @MockitoBean
     protected MeetingAnalysisRequestService meetingAnalysisRequestService;
+
+    @MockitoBean
+    protected GraphQueryService graphQueryService;
 
 }

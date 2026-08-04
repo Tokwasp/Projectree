@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Collection;
 
 public interface NodeEvidenceProjectionRepository extends JpaRepository<NodeEvidenceProjection, String> {
 
@@ -15,6 +16,10 @@ public interface NodeEvidenceProjectionRepository extends JpaRepository<NodeEvid
     long countByNodeId(String nodeId);
 
     void deleteAllByNodeId(String nodeId);
+
+    List<NodeEvidenceProjection> findAllByNodeIdOrderByEvidenceOrderAscEvidenceIdAsc(String nodeId);
+
+    List<NodeEvidenceProjection> findAllByNodeIdIn(Collection<String> nodeIds);
 
     @Modifying(flushAutomatically = true)
     @Query("""
