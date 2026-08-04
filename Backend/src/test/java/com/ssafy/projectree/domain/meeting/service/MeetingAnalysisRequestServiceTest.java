@@ -212,6 +212,23 @@ class MeetingAnalysisRequestServiceTest {
                 .findByProjectIdAndRoomNameForUpdate(any(Integer.class), any());
     }
 
+    @Test
+    void canonicalizesUppercaseRoomNameBeforeQuery() {
+        Meeting meeting = meeting();
+        when(meetingRepository.findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME))
+                .thenReturn(Optional.of(meeting));
+        when(projectMemberRepository.existsByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
+                .thenReturn(true);
+        when(objectMapper.writeValueAsString(any(MeetingAnalysisRequestedCommand.class)))
+                .thenReturn("{}");
+
+        service.requestAnalysis(
+                PROJECT_ID, ROOM_NAME.toUpperCase(), MEMBER_ID, new MeetingAnalysisRequest(true, false)
+        );
+
+        verify(meetingRepository).findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME);
+    }
+
     @DisplayName("?臾몄옄 canonical UUID???뚮Ц?먮줈 ?뺢퇋?뷀븳 ??Repository?먯꽌 議고쉶?쒕떎.")
     @Test
     void serializationFailure() {

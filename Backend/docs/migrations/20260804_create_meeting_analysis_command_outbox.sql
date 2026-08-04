@@ -21,3 +21,6 @@ CREATE TABLE meeting_analysis_command_outbox (
     CONSTRAINT fk_meeting_analysis_command_outbox_meeting
         FOREIGN KEY (meeting_id) REFERENCES meeting (id)
 );
+
+CREATE INDEX idx_meeting_analysis_outbox_publish
+    ON meeting_analysis_command_outbox (status, created_at, id);

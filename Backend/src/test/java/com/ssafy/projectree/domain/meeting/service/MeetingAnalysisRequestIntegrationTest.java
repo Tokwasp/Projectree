@@ -361,6 +361,21 @@ class MeetingAnalysisRequestIntegrationTest {
         }
     }
 
+    @Test
+    void uppercaseRoomNameIsCanonicalized() {
+        Fixture fixture = fixture(ProjectRole.OWNER, ROOM_NAME);
+
+        service.requestAnalysis(
+                fixture.projectId(), ROOM_NAME.toUpperCase(), fixture.memberId(),
+                new MeetingAnalysisRequest(true, false)
+        );
+
+        Meeting meeting = meetingRepository.findById(fixture.meetingId()).orElseThrow();
+        assertThat(meeting.getRoomName()).isEqualTo(ROOM_NAME);
+        MeetingAnalysisCommandOutbox outbox = outboxRepository.findAll().get(0);
+        assertThat(outbox.getPayload()).contains(ROOM_NAME);
+    }
+
     private Fixture fixture(ProjectRole role, String roomName) {
         String suffix = UUID.randomUUID().toString();
         Member member = memberRepository.saveAndFlush(

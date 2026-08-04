@@ -37,10 +37,11 @@ public class MeetingAnalysisRequestService {
             int memberId,
             MeetingAnalysisRequest request
     ) {
-        validateRequest(projectId, roomName, request);
+        validateRequest(projectId, request);
+        String canonicalRoomName = canonicalizeRoomName(roomName);
 
         Meeting meeting = meetingRepository
-                .findByProjectIdAndRoomNameForUpdate(projectId, roomName)
+                .findByProjectIdAndRoomNameForUpdate(projectId, canonicalRoomName)
                 .orElseThrow(() -> new CustomException(MeetingErrorCode.MEETING_NOT_FOUND));
 
         if (!projectMemberRepository.existsByProjectIdAndMemberId(projectId, memberId)) {
@@ -86,7 +87,6 @@ public class MeetingAnalysisRequestService {
 
     private void validateRequest(
             int projectId,
-            String roomName,
             MeetingAnalysisRequest request
     ) {
         if (projectId <= 0
@@ -95,20 +95,20 @@ public class MeetingAnalysisRequestService {
                 || request.generateNodes() == null) {
             throw new CustomException(CommonErrorCode.INVALID_REQUEST);
         }
-        if (!isCanonicalUuid(roomName)) {
-            throw new CustomException(MeetingErrorCode.INVALID_ROOM_NAME);
-        }
     }
 
-    private boolean isCanonicalUuid(String value) {
-        if (value == null || value.isBlank()) {
-            return false;
+    private String canonicalizeRoomName(String roomName) {
+        if (roomName == null || roomName.isBlank()) {
+            throw new CustomException(MeetingErrorCode.INVALID_ROOM_NAME);
         }
         try {
-            UUID parsed = UUID.fromString(value);
-            return parsed.toString().equalsIgnoreCase(value);
+            UUID parsed = UUID.fromString(roomName);
+            if (!parsed.toString().equalsIgnoreCase(roomName)) {
+                throw new CustomException(MeetingErrorCode.INVALID_ROOM_NAME);
+            }
+            return parsed.toString();
         } catch (IllegalArgumentException exception) {
-            return false;
+            throw new CustomException(MeetingErrorCode.INVALID_ROOM_NAME);
         }
     }
 

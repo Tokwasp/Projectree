@@ -12,6 +12,7 @@ import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -35,6 +36,12 @@ import java.util.UUID;
                 @UniqueConstraint(
                         name = "uk_meeting_analysis_command_outbox_meeting_type",
                         columnNames = {"meeting_id", "command_type"}
+                )
+        },
+        indexes = {
+                @Index(
+                        name = "idx_meeting_analysis_outbox_publish",
+                        columnList = "status, created_at, id"
                 )
         }
 )
