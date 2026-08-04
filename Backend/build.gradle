@@ -66,5 +66,18 @@ clean {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'smoke'
+    }
+}
+
+tasks.register('smokeTest', Test) {
+    group = 'verification'
+    description = 'Runs opt-in tests against the configured staging Redis.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'smoke'
+    }
+    shouldRunAfter tasks.named('test')
 }

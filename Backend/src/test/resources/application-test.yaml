@@ -38,6 +38,11 @@ app:
   # 통합 테스트 중 백그라운드 스위퍼가 테스트 데이터를 처리하지 않도록 비활성화한다.
   invitation-mail:
     scheduling-enabled: false
+  meeting-sync:
+    enabled: false
+    fixed-delay-ms: 5000
+    scan-count: 200
+    key-prefix: "meeting-room:"
   cors:
     allowed-origins: http://localhost:5173
   session:
