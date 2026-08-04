@@ -10,6 +10,7 @@ interface AppLayoutProps {
 
 export default function AppLayout({ sidebar }: AppLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const canCollapseSidebar = sidebar === undefined;
 
   return (
@@ -27,8 +28,11 @@ export default function AppLayout({ sidebar }: AppLayoutProps) {
 
       <div
         className={`${style.mainArea} ${canCollapseSidebar && isSidebarCollapsed ? style.mainAreaExpanded : ""}`}
+        onScroll={(event) => setIsScrolled(event.currentTarget.scrollTop > 0)}
       >
-        <header className={style.header}>
+        <header
+          className={`${style.header} ${isScrolled ? style.headerScrolled : ""}`}
+        >
           <AppHeader />
         </header>
 
