@@ -8,9 +8,6 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum ProjectErrorCode implements ErrorCode {
 
-    // 400
-    INVALID_CATEGORY(HttpStatus.BAD_REQUEST, "유효하지 않은 카테고리입니다."),
-
     //403
     PROJECT_DELETE_FORBIDDEN(HttpStatus.FORBIDDEN, "프로젝트 삭제 권한이 없습니다."),
     PROJECT_LEAVE_FORBIDDEN(HttpStatus.FORBIDDEN, "프로젝트 탈퇴 권한이 없습니다."),

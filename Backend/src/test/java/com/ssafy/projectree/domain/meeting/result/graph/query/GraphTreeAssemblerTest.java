@@ -29,6 +29,7 @@ class GraphTreeAssemblerTest {
 
         assertThat(root.id()).isEqualTo("project:1");
         assertThat(root.title()).isEqualTo("Projectree");
+        assertThat(root.children()).hasSize(6);
         assertThat(root.children()).extracting(GraphTreeNodeResponse::id).containsExactly(
                 "category:BACKEND", "category:FRONTEND", "category:DESIGN", "category:INFRA",
                 "category:PLANNING", "category:AI"
