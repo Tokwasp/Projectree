@@ -23,4 +23,8 @@ public class ApiResponse<T> {
     public static ApiResponse<Void> success() {
         return new ApiResponse<>(HttpStatus.OK.value(), "성공", null);
     }
+
+    public static <T> ApiResponse<T> accepted(T data) {
+        return new ApiResponse<>(HttpStatus.ACCEPTED.value(), "성공", data);
+    }
 }

@@ -2,6 +2,7 @@ package com.ssafy.projectree.global.config.notification;
 
 import com.ssafy.projectree.domain.notification.service.NotificationSubscriber;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -15,6 +16,11 @@ public class NotificationConfig {
     public static final String NOTIFICATION_TOPIC = "NOTIFICATION";
 
     @Bean
+    @ConditionalOnProperty(
+            name = "app.notification.enabled",
+            havingValue = "true",
+            matchIfMissing = true
+    )
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
             NotificationSubscriber notificationSubscriber

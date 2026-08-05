@@ -1,6 +1,8 @@
 package com.ssafy.projectree.domain.project.service;
 
 import com.ssafy.projectree.IntegrationTestSupport;
+import com.ssafy.projectree.domain.meeting.entity.Meeting;
+import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
@@ -36,6 +38,9 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
     @Autowired
     private ProjectRepository projectRepository;
+
+    @Autowired
+    private MeetingRepository meetingRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -342,6 +347,29 @@ class ProjectServiceTest extends IntegrationTestSupport {
         // then
         assertThat(countProjectMembers()).isZero();
         assertThat(countProjectCategories()).isZero();
+    }
+
+    @DisplayName("Meeting이 존재하는 프로젝트는 OWNER도 삭제할 수 없다.")
+    @Test
+    void deleteProjectWithMeetingIsRejected() {
+        Member owner = memberRepository.save(createMember("owner-meeting@gmail.com", "owner"));
+        int projectId = createProjectOwnedBy(owner);
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        ProjectMember creator = project.getProjectMembers().get(0);
+        Meeting meeting = meetingRepository.saveAndFlush(Meeting.create(
+                project,
+                creator,
+                "550e8400-e29b-41d4-a716-446655440000"
+        ));
+
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_HAS_MEETINGS);
+
+        flushAndClear();
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(meetingRepository.findById(meeting.getId())).isPresent();
     }
 
     @DisplayName("OWNER가 아닌 참여 멤버가 삭제하려 하면 PROJECT_DELETE_FORBIDDEN 예외가 발생한다.")

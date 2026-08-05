@@ -1,5 +1,6 @@
 package com.ssafy.projectree.domain.project.service;
 
+import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.nodeCategory.entity.Category;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
@@ -31,6 +32,7 @@ public class ProjectService {
     private final MemberRepository memberRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final MeetingRepository meetingRepository;
 
     @Transactional
     public int createProject(ProjectCreateRequest request, int memberId) {
@@ -51,6 +53,9 @@ public class ProjectService {
 
         if (project.isNotOwner(memberId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_DELETE_FORBIDDEN);
+        }
+        if (meetingRepository.existsByProjectId(projectId)) {
+            throw new CustomException(ProjectErrorCode.PROJECT_HAS_MEETINGS);
         }
 
         projectRepository.delete(project);

@@ -2,6 +2,7 @@ package com.ssafy.projectree.global.exception;
 
 import com.ssafy.projectree.global.response.ApiErrorResponse;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +55,13 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException e
     ) {
         log.warn("type mismatch: {} = {}", e.getName(), e.getValue());
+
+        return errorResponse(CommonErrorCode.INVALID_REQUEST);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException e) {
+        log.warn("constraint validation failed: {}", e.getMessage());
 
         return errorResponse(CommonErrorCode.INVALID_REQUEST);
     }
