@@ -27,8 +27,7 @@ public class GraphTreeAssembler {
             GraphNodeCategory.DESIGN,
             GraphNodeCategory.INFRA,
             GraphNodeCategory.PLANNING,
-            GraphNodeCategory.AI,
-            GraphNodeCategory.ETC
+            GraphNodeCategory.AI
     );
 
     private static final Comparator<ProjectNodeProjection> NODE_ORDER = Comparator
