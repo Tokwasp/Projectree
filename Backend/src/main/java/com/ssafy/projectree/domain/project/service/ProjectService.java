@@ -1,14 +1,13 @@
 package com.ssafy.projectree.domain.project.service;
 
-import com.ssafy.projectree.domain.meetingreview.exception.MeetingReviewErrorCode;
+import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
 import com.ssafy.projectree.domain.meetingreview.dto.response.MyMeetingReviewResponse;
 import com.ssafy.projectree.domain.meetingreview.dto.response.PersonalSpeakingResponse;
+import com.ssafy.projectree.domain.meetingreview.exception.MeetingReviewErrorCode;
 import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
 import com.ssafy.projectree.domain.member.Member;
-import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
-import com.ssafy.projectree.domain.nodeCategory.entity.Category;
 import com.ssafy.projectree.domain.project.controller.dto.response.ProjectHomeResponse;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse;
@@ -27,9 +26,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,7 +39,6 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final MeetingReviewRepository meetingReviewRepository;
-    private final MeetingRepository meetingRepository;
 
     @Transactional
     public int createProject(ProjectCreateRequest request, int memberId) {
@@ -98,7 +96,7 @@ public class ProjectService {
     }
 
     public ProjectHomeResponse getProjectHome(Pageable pageable, int projectId, int memberId) {
-        if(isNotProjectMember(projectId, memberId)){
+        if (isNotProjectMember(projectId, memberId)) {
             throw new CustomException(MeetingReviewErrorCode.IS_NOT_PROJECT_MEMBER);
         }
 
@@ -107,7 +105,7 @@ public class ProjectService {
                 .map(meetingReviewRepository::findAllByRoomName)
                 .orElseGet(List::of);
 
-        if(lastMeetingReviews.isEmpty()){
+        if (lastMeetingReviews.isEmpty()) {
             return ProjectHomeResponse.empty();
         }
 
@@ -138,11 +136,11 @@ public class ProjectService {
     }
 
     private double toPercent(int speakingSeconds, int totalSpeakTime) {
-        if(speakingSeconds == 0 || totalSpeakTime == 0) return 0.0;
+        if (speakingSeconds == 0 || totalSpeakTime == 0) return 0.0;
         return Math.round(speakingSeconds * 1000.0 / totalSpeakTime) / 10.0;
     }
 
-    private List<PersonalSpeakingResponse> personalSpeakPercentBy(List<MeetingReview> meetingReviews){
+    private List<PersonalSpeakingResponse> personalSpeakPercentBy(List<MeetingReview> meetingReviews) {
         List<Integer> memberIds = meetingReviews.stream()
                 .map(MeetingReview::getMemberId)
                 .toList();
