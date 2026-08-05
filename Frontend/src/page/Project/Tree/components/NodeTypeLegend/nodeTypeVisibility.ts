@@ -1,6 +1,5 @@
 import type { NodeType } from "../SpaceTree";
 
-/** 루트는 트리의 기준점이라 끄지 않는다 — 끄면 트리 전체가 사라진다 */
 export type FilterableNodeType = Exclude<NodeType, "root">;
 
 export type NodeTypeVisibility = Record<FilterableNodeType, boolean>;

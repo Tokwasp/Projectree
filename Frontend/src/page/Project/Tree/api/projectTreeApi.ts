@@ -1,38 +1,55 @@
 import { apiRequest } from "../../../../api/apiClient";
 import type { NodeType, TreeNodeInput } from "../components/SpaceTree";
 
+export type ProjectTreeNodeKind =
+  | "PROJECT_ROOT"
+  | "CATEGORY_ROOT"
+  | "GRAPH_NODE";
+
+export type ProjectTreeNodeType = "DECISION" | "ACTION" | "ISSUE";
+
 // 서버 응답
 export interface ProjectTreeNodeResponse {
-  nodeId: number | string;
-  type: string;
+  id: string;
+  kind: ProjectTreeNodeKind;
   title: string;
+  category?: string;
+  nodeType?: ProjectTreeNodeType;
+  sourceMeetingId?: number;
+  nodeVersion?: number;
+  updatedAt?: string;
   children?: ProjectTreeNodeResponse[];
 }
 
-const NODE_TYPES: NodeType[] = [
-  "root",
-  "category",
-  "decision",
-  "task",
-  "issue",
-];
+export interface ProjectTreeResponse {
+  projectId: number;
+  graphVersion: number;
+  graphSyncedAt: string;
+  root: ProjectTreeNodeResponse;
+}
 
-const toNodeType = (raw: string): NodeType => {
-  const normalized = raw?.toLowerCase() as NodeType;
-  return NODE_TYPES.includes(normalized) ? normalized : "task";
+const NODE_TYPE_BY_SERVER: Record<ProjectTreeNodeType, NodeType> = {
+  DECISION: "decision",
+  ACTION: "task",
+  ISSUE: "issue",
 };
 
-/** id는 트리 전체에서 유일해야 한다 — 레이아웃 회전값과 물리 상태의 키로 쓰인다. */
+const toNodeType = ({ kind, nodeType }: ProjectTreeNodeResponse): NodeType => {
+  if (kind === "PROJECT_ROOT") return "root";
+  if (kind === "CATEGORY_ROOT") return "category";
+  return (nodeType && NODE_TYPE_BY_SERVER[nodeType]) ?? "task";
+};
+
 export const toTreeNodeInput = (
   node: ProjectTreeNodeResponse,
 ): TreeNodeInput => ({
-  id: String(node.nodeId),
-  type: toNodeType(node.type),
+  id: node.id,
+  type: toNodeType(node),
   title: node.title,
   children: node.children?.map(toTreeNodeInput),
 });
 
 export const getProjectTree = (
   projectId: number,
-): Promise<ProjectTreeNodeResponse> =>
-  apiRequest<ProjectTreeNodeResponse>(`/projects/${projectId}/nodes`);
+): Promise<ProjectTreeResponse> =>
+  apiRequest<ProjectTreeResponse>(`/projects/${projectId}/nodes/tree`);

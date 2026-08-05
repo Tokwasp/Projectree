@@ -16,10 +16,6 @@ export default function NodeTypeLegend({
   visibility,
   onChange,
 }: NodeTypeLegendProps) {
-  /**
-   * 계층이 카테고리 → 결정 → 작업 → 이슈 순이라 아래 단계는 위 단계 없이 존재할 수 없다.
-   * 끄면 아래도 같이 끄고, 켜면 위도 같이 켜서 체크 상태가 실제 화면과 어긋나지 않게 한다.
-   */
   const toggle = (type: FilterableNodeType) => {
     const index = FILTERABLE_NODE_TYPES.indexOf(type);
     const turningOn = !visibility[type];
@@ -66,7 +62,6 @@ export default function NodeTypeLegend({
         </label>
       ))}
 
-      {/* 결정 노드를 누를 수 있다는 걸 마우스를 올려보기 전에도 알아야 한다 */}
       <p className={style.hint}>
         <span
           className={style.dot}
