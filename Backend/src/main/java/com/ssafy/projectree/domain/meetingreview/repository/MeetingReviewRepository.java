@@ -17,7 +17,7 @@ public interface MeetingReviewRepository extends JpaRepository<MeetingReview, In
             order by mr.id desc
             limit 1
             """)
-    Optional<MeetingReview> getLastReview(@Param("projectId") int projectId, @Param("memberId") int memberId);
+    Optional<MeetingReview> getRecentReview(@Param("projectId") int projectId, @Param("memberId") int memberId);
 
     @Query("""
         select mr

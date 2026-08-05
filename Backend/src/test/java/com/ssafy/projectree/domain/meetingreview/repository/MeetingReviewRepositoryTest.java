@@ -24,7 +24,7 @@ class MeetingReviewRepositoryTest extends IntegrationTestSupport {
 
     @DisplayName("프로젝트와 회원 기준으로 가장 최근 회의 리뷰를 조회한다.")
     @Test
-    void getLastReview() {
+    void getRecentReview() {
         // given
         int projectId = 1;
         int memberId = 10;
@@ -38,7 +38,7 @@ class MeetingReviewRepositoryTest extends IntegrationTestSupport {
         flushAndClear();
 
         // when
-        Optional<MeetingReview> result = meetingReviewRepository.getLastReview(projectId, memberId);
+        Optional<MeetingReview> result = meetingReviewRepository.getRecentReview(projectId, memberId);
 
         // then
         assertThat(result).isPresent();
@@ -47,9 +47,9 @@ class MeetingReviewRepositoryTest extends IntegrationTestSupport {
 
     @DisplayName("프로젝트와 회원 기준으로 가장 최근 회의 리뷰를 조회할 때, 리뷰가 하나도 없으면 빈 값을 반환한다.")
     @Test
-    void getLastReviewWhenNoReviewExists() {
+    void getRecentReviewWhenNoReviewExists() {
         // when
-        Optional<MeetingReview> result = meetingReviewRepository.getLastReview(1, 10);
+        Optional<MeetingReview> result = meetingReviewRepository.getRecentReview(1, 10);
 
         // then
         assertThat(result).isEmpty();

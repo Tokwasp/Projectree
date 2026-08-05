@@ -1,6 +1,5 @@
 package com.ssafy.projectree.domain.project.service;
 
-import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
 import com.ssafy.projectree.domain.meetingreview.dto.response.MyMeetingReviewResponse;
 import com.ssafy.projectree.domain.meetingreview.dto.response.PersonalSpeakingResponse;
@@ -100,21 +99,21 @@ public class ProjectService {
             throw new CustomException(MeetingReviewErrorCode.IS_NOT_PROJECT_MEMBER);
         }
 
-        List<MeetingReview> lastMeetingReviews = meetingReviewRepository.getLastReview(projectId, memberId)
+        List<MeetingReview> recentMeetingReviews = meetingReviewRepository.getRecentReview(projectId, memberId)
                 .map(MeetingReview::getRoomName)
                 .map(meetingReviewRepository::findAllByRoomName)
                 .orElseGet(List::of);
 
-        if (lastMeetingReviews.isEmpty()) {
+        if (isRecentReviewNotExist(recentMeetingReviews)) {
             return ProjectHomeResponse.empty();
         }
 
-        MeetingReview myMeetingReview = lastMeetingReviews.stream()
+        MeetingReview myMeetingReview = recentMeetingReviews.stream()
                 .filter(mr -> mr.getMemberId() == memberId)
                 .findFirst()
                 .get();
 
-        List<PersonalSpeakingResponse> speakingResponses = personalSpeakPercentBy(lastMeetingReviews);
+        List<PersonalSpeakingResponse> speakingResponses = calculatePersonalSpeakPercentBy(recentMeetingReviews);
         MyMeetingReviewResponse myReviewResponse = MyMeetingReviewResponse.of(myMeetingReview);
         return ProjectHomeResponse.of(null, speakingResponses, myReviewResponse);
     }
@@ -135,12 +134,11 @@ public class ProjectService {
         return !projectMemberRepository.existsByProjectIdAndMemberId(projectId, memberId);
     }
 
-    private double toPercent(int speakingSeconds, int totalSpeakTime) {
-        if (speakingSeconds == 0 || totalSpeakTime == 0) return 0.0;
-        return Math.round(speakingSeconds * 1000.0 / totalSpeakTime) / 10.0;
+    private boolean isRecentReviewNotExist(List<MeetingReview> recentMeetingReviews) {
+        return recentMeetingReviews.isEmpty();
     }
 
-    private List<PersonalSpeakingResponse> personalSpeakPercentBy(List<MeetingReview> meetingReviews) {
+    private List<PersonalSpeakingResponse> calculatePersonalSpeakPercentBy(List<MeetingReview> meetingReviews) {
         List<Integer> memberIds = meetingReviews.stream()
                 .map(MeetingReview::getMemberId)
                 .toList();
@@ -157,5 +155,10 @@ public class ProjectService {
                         memberIdNameMap.get(review.getMemberId()),
                         toPercent(review.getSpeakingSeconds(), totalSpeakTime)))
                 .toList();
+    }
+
+    private double toPercent(int speakingSeconds, int totalSpeakTime) {
+        if (speakingSeconds == 0 || totalSpeakTime == 0) return 0.0;
+        return Math.round(speakingSeconds * 1000.0 / totalSpeakTime) / 10.0;
     }
 }
