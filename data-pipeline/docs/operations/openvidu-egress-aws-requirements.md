@@ -1,5 +1,7 @@
 # OpenVidu egress 수집을 위한 AWS 인프라 요구사항
 
+> 이 문서는 legacy 단일 Worker 운영 자료다. 신규 제품 배포는 Recording Ready consumer와 Java Command consumer를 분리하며, legacy 경로는 `ENABLE_LEGACY_OPENVIDU_AUDIO_WORKER=true` 없이는 비활성이다. 신규 queue/IAM 계약은 `docs/contracts/meeting-analysis-command-join-v1.md`를 우선한다.
+
 **작성일**: 2026-07-31
 **상태**: 문서화만 수행. **AWS 리소스는 하나도 변경하지 않았다.**
 **관련**: [`openvidu-egress-worker-contract.md`](../contracts/openvidu-egress-worker-contract.md)

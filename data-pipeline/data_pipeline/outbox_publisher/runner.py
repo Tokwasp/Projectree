@@ -18,11 +18,13 @@ class OutboxPublisher:
         transport: OutboxTransport,
         batch_size: int = 20,
         stall_timeout_seconds: float = 300.0,
+        schema_versions: tuple[str, ...] | None = None,
     ):
         self._session_factory = session_factory
         self._transport = transport
         self._batch_size = batch_size
         self._stall_timeout_seconds = stall_timeout_seconds
+        self._schema_versions = schema_versions
 
     def run_once(self) -> PublishResult:
         result = publish_pending_events(
@@ -30,6 +32,7 @@ class OutboxPublisher:
             self._transport,
             batch_size=self._batch_size,
             stall_timeout_seconds=self._stall_timeout_seconds,
+            schema_versions=self._schema_versions,
         )
         if result.claimed:
             logger.info(

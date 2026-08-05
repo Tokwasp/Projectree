@@ -61,10 +61,10 @@ MINUTES_ONLY 강등**되고 ATTACH 자식 2건이 연쇄 강등됐다. 강등 �
 목표: recall≥95%, noise≤2%, lifecycle≥90%, parent Top-K≥95%, false merge=0 — **전부 충족**
 (현재 gold set 기준. gold는 3개 시나리오로 작으므로 확대 필요).
 
-평가 도구: `scripts/evaluate_candidate_quality.py`
+평가 도구: `tests/tools/evaluation/evaluate_candidate_quality.py`
 - `--actual DIR` 캡처본 offline 평가 (CI-safe, provider 호출 없음)
 - `--live` opt-in 실제 provider 평가 (GMS_KEY 없으면 blocked로 종료)
-- gold: `evaluation/candidate_quality/gold/*.json`
+- gold: `tests/fixtures/evaluation/candidate_quality/gold/*.json`
 
 ## 4. 관측성 개선
 

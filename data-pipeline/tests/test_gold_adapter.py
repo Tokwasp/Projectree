@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from evaluation.gold_adapter import adapt_gold_judgments
+from tests.fixtures.evaluation.gold_adapter import adapt_gold_judgments
 
 
 def test_m2x_cross_meeting_attach_becomes_unattached():

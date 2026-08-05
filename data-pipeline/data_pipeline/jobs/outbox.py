@@ -9,6 +9,7 @@ on ``eventId``. This is deliberately not exactly-once.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import uuid
@@ -18,7 +19,7 @@ from typing import Protocol
 
 from sqlalchemy import select
 
-from data_pipeline.storage import OutboxEvent
+from data_pipeline.storage import GraphSnapshotArtifact, OutboxEvent
 
 from .claiming import backoff_delay, claim_rows, utcnow
 
@@ -68,6 +69,23 @@ class OutboxMessage:
         return json.dumps(self.as_dict(), ensure_ascii=False, default=str)
 
     def as_dict(self) -> dict:
+        if self.schema_version == "3":
+            occurred_at = self.occurred_at
+            if occurred_at.tzinfo is None:
+                occurred_at = occurred_at.replace(tzinfo=timezone.utc)
+            envelope = dict(self.payload)
+            return {
+                "eventSchemaVersion": 3,
+                "eventId": self.event_id,
+                "eventType": self.event_type,
+                "occurredAt": occurred_at.astimezone(timezone.utc).isoformat(
+                    timespec="microseconds"
+                ).replace("+00:00", "Z"),
+                "projectId": _public_result_identifier(self.project_id),
+                "meetingId": envelope["meetingId"],
+                "commandId": envelope["commandId"],
+                "payload": envelope["payload"],
+            }
         if self.schema_version == "1":
             occurred_at = self.occurred_at
             if occurred_at.tzinfo is None:
@@ -170,6 +188,126 @@ class HttpCallbackTransport:
             )
 
 
+def _public_result_identifier(value: str) -> str | int:
+    if value.isdigit() and (value == "0" or not value.startswith("0")):
+        parsed = int(value)
+        if -(2**63) <= parsed <= 2**63 - 1:
+            return parsed
+    return value
+
+
+class S3ClaimCheckSqsTransport:
+    """Publish Result Event v3, uploading graph artifacts before queue send."""
+
+    def __init__(
+        self,
+        *,
+        session_factory,
+        s3_client,
+        sqs_client,
+        queue_url: str,
+        snapshot_bucket: str,
+        queue_type: str = "STANDARD",
+        snapshot_max_size_bytes: str | int | None = None,
+    ) -> None:
+        queue_type = queue_type.strip().upper()
+        if queue_type not in {"STANDARD", "FIFO"}:
+            raise ValueError("queue_type must be STANDARD or FIFO")
+        if not queue_url or not snapshot_bucket:
+            raise ValueError("result queue URL and snapshot bucket are required")
+        self._session_factory = session_factory
+        self._s3 = s3_client
+        self._sqs = sqs_client
+        self._queue_url = queue_url
+        self._bucket = snapshot_bucket
+        self._queue_type = queue_type
+        from data_pipeline.meeting_analysis.snapshot import (
+            graph_snapshot_max_size_bytes,
+        )
+
+        self._snapshot_max_size_bytes = graph_snapshot_max_size_bytes(
+            snapshot_max_size_bytes
+        )
+
+    def publish(self, message: OutboxMessage) -> None:
+        if message.schema_version != "3":
+            raise ValueError(
+                "the Java result queue accepts only Result Event schema v3"
+            )
+        outgoing = message
+        if message.schema_version == "3" and message.event_type == "PROJECT_GRAPH_CHANGED":
+            outgoing = self._materialize_snapshot_ref(message)
+        parameters: dict[str, object] = {
+            "QueueUrl": self._queue_url,
+            "MessageBody": outgoing.to_json(),
+        }
+        if self._queue_type == "FIFO":
+            parameters["MessageGroupId"] = str(
+                _public_result_identifier(outgoing.project_id)
+            )
+            parameters["MessageDeduplicationId"] = outgoing.event_id
+        self._sqs.send_message(**parameters)
+
+    def _materialize_snapshot_ref(self, message: OutboxMessage) -> OutboxMessage:
+        envelope = dict(message.payload)
+        payload = dict(envelope.get("payload") or {})
+        artifact_id = payload.pop("snapshotArtifactId", None)
+        if not isinstance(artifact_id, str):
+            raise ValueError("PROJECT_GRAPH_CHANGED has no snapshotArtifactId")
+        session = self._session_factory()
+        try:
+            artifact = session.execute(
+                select(GraphSnapshotArtifact)
+                .where(GraphSnapshotArtifact.id == uuid.UUID(artifact_id))
+                .with_for_update()
+            ).scalar_one()
+            from data_pipeline.meeting_analysis.snapshot import (
+                canonical_json_bytes,
+                validate_graph_snapshot_size,
+            )
+
+            content = canonical_json_bytes(dict(artifact.payload_json))
+            digest = hashlib.sha256(content).hexdigest()
+            if len(content) != artifact.size_bytes or digest != artifact.sha256:
+                raise RuntimeError("stored graph snapshot artifact checksum mismatch")
+            validate_graph_snapshot_size(
+                content,
+                max_size_bytes=self._snapshot_max_size_bytes,
+            )
+            self._s3.put_object(
+                Bucket=self._bucket,
+                Key=artifact.object_key,
+                Body=content,
+                ContentType=artifact.content_type,
+            )
+            artifact.status = "UPLOADED"
+            artifact.uploaded_at = utcnow()
+            session.commit()
+            payload["snapshotRef"] = {
+                "bucket": self._bucket,
+                "objectKey": artifact.object_key,
+                "contentType": artifact.content_type,
+                "sizeBytes": artifact.size_bytes,
+                "sha256": artifact.sha256,
+            }
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+        envelope["payload"] = payload
+        return OutboxMessage(
+            event_id=message.event_id,
+            event_type=message.event_type,
+            aggregate_type=message.aggregate_type,
+            aggregate_id=message.aggregate_id,
+            project_id=message.project_id,
+            schema_version=message.schema_version,
+            occurred_at=message.occurred_at,
+            payload=envelope,
+        )
+
+
 def emit_outbox_event(
     session,
     *,
@@ -231,6 +369,7 @@ def publish_pending_events(
     *,
     batch_size: int = 20,
     stall_timeout_seconds: float = 300.0,
+    schema_versions: tuple[str, ...] | None = None,
 ) -> PublishResult:
     """Claim a batch, publish each, and record the outcome per row.
 
@@ -254,6 +393,12 @@ def publish_pending_events(
             )
             .order_by(OutboxEvent.available_at, OutboxEvent.created_at)
         )
+        if schema_versions is not None:
+            if not schema_versions:
+                raise ValueError("schema_versions must not be empty")
+            statement = statement.where(
+                OutboxEvent.schema_version.in_(schema_versions)
+            )
         rows = claim_rows(session, statement, limit=batch_size)
         for row in rows:
             # PUBLISHING makes the claim durable, so a crash between claim and
@@ -378,13 +523,18 @@ def _record_failure(
         session.close()
 
 
-def build_transport_from_env():
+def build_transport_from_env(*, session_factory=None):
     """Pick a transport from configuration; defaults to the recording fake."""
 
     import os
 
     name = os.getenv("OUTBOX_TRANSPORT", "fake").strip().lower()
     if name == "fake":
+        app_env = os.getenv("APP_ENV", "local").strip().lower()
+        if app_env not in {"test", "local", "development", "dev"}:
+            raise RuntimeError(
+                "OUTBOX_TRANSPORT=fake is forbidden outside local/test"
+            )
         return FakeOutboxTransport()
     if name == "http":
         return HttpCallbackTransport(
@@ -392,9 +542,24 @@ def build_transport_from_env():
             timeout_seconds=float(os.getenv("OUTBOX_HTTP_TIMEOUT_SECONDS", "10")),
             auth_header=os.getenv("OUTBOX_HTTP_AUTH_HEADER") or None,
         )
+    if name in {"result-sqs", "sqs"}:
+        if session_factory is None:
+            raise ValueError("session_factory is required for result-sqs transport")
+        import boto3
+
+        region = os.getenv("AWS_REGION", "ap-northeast-2")
+        return S3ClaimCheckSqsTransport(
+            session_factory=session_factory,
+            s3_client=boto3.client("s3", region_name=region),
+            sqs_client=boto3.client("sqs", region_name=region),
+            queue_url=os.getenv("PROJECTREE_ANALYSIS_RESULT_QUEUE_URL", ""),
+            snapshot_bucket=os.getenv("AWS_S3_BUCKET", ""),
+            queue_type=os.getenv(
+                "PROJECTREE_ANALYSIS_RESULT_QUEUE_TYPE", "STANDARD"
+            ),
+        )
     raise ValueError(
-        f"OUTBOX_TRANSPORT must be 'fake' or 'http'; got {name!r}. "
-        "An SQS transport can be added once Spring's receiving contract is fixed."
+        f"OUTBOX_TRANSPORT must be 'fake', 'http', or 'result-sqs'; got {name!r}."
     )
 
 
@@ -415,6 +580,7 @@ __all__ = [
     "HttpCallbackTransport",
     "OutboxMessage",
     "OutboxTransport",
+    "S3ClaimCheckSqsTransport",
     "PublishResult",
     "build_transport_from_env",
     "emit_outbox_event",

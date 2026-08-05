@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import uuid
 
-from data_pipeline.evaluation.contracts import EvaluationCase, PilotResult
-from data_pipeline.evaluation.metrics import compute_metrics
+from tests.evaluation_support.contracts import EvaluationCase, PilotResult
+from tests.evaluation_support.metrics import compute_metrics
 
 
 def test_unreviewed_cases_never_produce_meaning_accuracy() -> None:

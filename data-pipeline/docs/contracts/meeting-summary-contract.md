@@ -1,54 +1,35 @@
 # Meeting Summary 계약
 
-## 경계
+## 독립 작업
 
-회의 Node 생성·병합과 회의록 본문 생성은 별도 기능이다.
-`GenerationRun.result_summary`는 그래프 적용 통계이며 회의록 본문이 아니다.
-`MINUTES_ONLY`도 회의록 생성 상태가 아니다.
+`SUMMARY`와 `NODES`는 STT와 정규화 결과만 공유하는 독립 task다. Java command의 `generateSummary`, `generateNodes`가 각각 task 생성을 결정한다. 둘 다 선택되면 Transcript를 한 번만 저장한 뒤 두 task를 병렬 실행한다. 각각 `WAITING_INPUT → READY → PROCESSING → SUCCEEDED|FAILED`로 전이하며 요청하지 않은 task는 `SKIPPED`다. 한 task의 실패는 다른 task 상태를 변경하지 않는다. 선택된 task는 최대 3회 시도하며 최종 실패에만 실패 Event v3를 발행한다.
 
-현재 실제 외부 LLM 구현은 연결하지 않는다. `MeetingSummaryGenerator` port와
-`FakeMeetingSummaryGenerator`만 제공하며 실제 품질은 credit 정책에 따라
-`NOT_EVALUATED_CREDIT_BLOCKED`다.
+신규 command 경로는 `analysis_delivery_state` 및 Graph+Summary 통합 성공 barrier를 사용하지 않는다. 해당 구조는 legacy 호환을 위해 DB에 남아 있을 뿐 신규 Result Event 생성에 관여하지 않는다.
 
-## 정본과 버전
+## 저장과 멱등성
 
-`meeting_summary`가 회의록 정본이다. 한 프로젝트·외부 회의 ID 안에서
-`summary_version`은 양수이며 유일하다. 저장된 버전은 수정하지 않고 새 버전을
-추가한다. 같은 transcript source hash로 같은 버전을 재호출하면 기존 결과를
-멱등 반환한다. 같은 버전에 다른 입력이 들어오면 충돌로 거부한다.
+`meeting_summary`가 정본이다. `(project_id, external_meeting_id, summary_version)`은 유일하고, 동일 source hash의 재호출은 기존 결과를 반환한다. 다른 입력이 같은 version을 요구하면 충돌이다. summary 저장과 outbox 저장은 같은 transaction이다.
 
-저장 필드:
-
-- 실제 본문: `title`, `body`
-- 구조화 항목: `decisions`, `actions`, `issues`를 담은 `structured_summary`
-- 계보: `source_hash`, `generator_name`, `generator_version`
-- 공개 상태: `READY`
-
-## 원자성 및 전달
-
-회의록 INSERT와 `MEETING_SUMMARY_READY` Outbox INSERT는 같은 트랜잭션이다.
-Spring/Java는 이벤트 본문에 전체 회의록을 받지 않고 아래 식별자와 조회 경로를
-받는다.
+## 성공 이벤트
 
 ```json
 {
-  "meetingSummaryId": "UUID",
-  "projectId": "project-id",
-  "externalMeetingId": "meeting-id",
-  "summaryVersion": 1,
-  "status": "READY",
-  "apiPath": "/api/v1/meetings/meeting-id/summary?summaryVersion=1"
+  "eventSchemaVersion": 3,
+  "eventId": "event-uuid",
+  "eventType": "MEETING_SUMMARY_READY",
+  "occurredAt": "2026-08-04T01:00:00Z",
+  "projectId": 5,
+  "meetingId": 35,
+  "commandId": "command-uuid",
+  "payload": {
+    "meetingSummaryId": "summary-uuid",
+    "summaryVersion": 1,
+    "status": "READY",
+    "apiPath": "/api/v1/meetings/35/summary?summaryVersion=1"
+  }
 }
 ```
 
-조회 API:
+본문은 SQS에 넣지 않는다. Java는 `apiPath`로 조회하고 `eventId`로 중복 제거한다.
 
-```text
-GET /api/v1/meetings/{externalMeetingId}/summary
-GET /api/v1/meetings/{externalMeetingId}/summary?summaryVersion=1
-X-Project-Id: <project scope>
-```
-
-버전을 생략하면 가장 최신 버전을 반환한다. 다른 프로젝트의 회의록은 404로
-숨긴다. Outbox는 at-least-once이므로 Spring은 envelope의 `eventId`로 중복을
-제거해야 한다.
+제품 경로는 `GmsMeetingSummaryGenerator`가 기존 OpenAI 호환 GMS Client를 사용한다. 응답은 `title`, `body`, `decisions`, `actions`, `issues`의 엄격한 JSON 계약으로 검증한다. Fake 구현은 `tests/config/fake/`를 사용하는 local/test에만 허용하며 production coordinator는 시작 단계에서 모든 Fake AI adapter를 거부한다.

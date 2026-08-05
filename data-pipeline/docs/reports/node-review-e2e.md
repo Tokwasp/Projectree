@@ -70,6 +70,6 @@ $env:DATABASE_URL="postgresql+psycopg://pipeline:***@localhost:5432/dp_test_..."
 $env:EMBEDDING_ADAPTER="gms"; $env:B_MODEL_ADAPTER="gms"
 python -m alembic upgrade head
 # scratchpad/node_review_e2e.py 참조 (스크립트 사본은 산출물 디렉터리 참고)
-python scripts/evaluate_candidate_quality.py --actual evaluation/candidate_quality/actual-20260801 --out report.json
-python scripts/evaluate_candidate_quality.py --live --out report-live.json   # opt-in
+python tests/tools/evaluation/evaluate_candidate_quality.py --actual tests/fixtures/evaluation/candidate_quality/actual-20260801 --out report.json
+python tests/tools/evaluation/evaluate_candidate_quality.py --live --out report-live.json   # opt-in
 ```

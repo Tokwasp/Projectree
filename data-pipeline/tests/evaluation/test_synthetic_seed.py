@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from sqlalchemy import func, select
 
-from data_pipeline.evaluation.synthetic.labels import build_gold_labels
-from data_pipeline.evaluation.synthetic.scenarios import (
+from tests.evaluation_support.synthetic.labels import build_gold_labels
+from tests.evaluation_support.synthetic.scenarios import (
     ISOLATION_PROJECT_ID,
     MAIN_PROJECT_ID,
     build_synthetic_cases,
 )
-from data_pipeline.evaluation.synthetic.seed import seed_synthetic_evaluation
+from tests.evaluation_support.synthetic.seed import seed_synthetic_evaluation
 from data_pipeline.storage import (
     Evidence,
     Node,

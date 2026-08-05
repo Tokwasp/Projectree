@@ -46,6 +46,7 @@ from data_pipeline.pipeline.errors import (
     GraphMutationValidationError,
     MergeNotReversibleError,
     NodeNotFoundError,
+    NodeHasChildrenError,
     NodeReviewError,
     NodeStateError,
     NodeValidationError,
@@ -91,6 +92,7 @@ _MAPPING: list[tuple[type[Exception], int, str]] = [
     (NodeVersionConflict, 409, "VERSION_CONFLICT"),
     (AnalysisCandidateVersionConflict, 409, "VERSION_CONFLICT"),
     (StaleVersionError, 409, "VERSION_CONFLICT"),
+    (NodeHasChildrenError, 409, "NODE_HAS_CHILDREN"),
     # 422 validation (before the state errors they may subclass)
     (MeetingSummarySourceError, 422, "MEETING_SUMMARY_SOURCE_INVALID"),
     (CandidateValidationError, 422, "VALIDATION_FAILED"),

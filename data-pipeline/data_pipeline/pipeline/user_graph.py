@@ -13,6 +13,7 @@ from data_pipeline.storage import (
     GraphChangeEvent,
     MergeOperation,
     MergeOperationDependency,
+    MeetingAnalysisCommand,
     Node,
     NodeRevision,
     NodeRevisionEvidence,
@@ -24,6 +25,7 @@ from .errors import (
     GraphIntegrityError,
     GraphMutationValidationError,
     MergeNotReversibleError,
+    NodeHasChildrenError,
     NodeVersionConflict,
 )
 from .graph import (
@@ -34,6 +36,9 @@ from .graph import (
     unmerge_operation,
 )
 from .event_contract import stage_project_graph_changed
+from data_pipeline.meeting_analysis.result_events import (
+    stage_project_graph_changed_v3,
+)
 from .revisions import (
     create_node_revision,
     current_revision_evidence_specs,
@@ -669,17 +674,6 @@ def delete_node(
             raise GraphMutationValidationError(
                 "only ACTIVE or UNATTACHED Nodes can be deleted"
             )
-        incoming_merge = session.execute(
-            select(MergeOperation.id).where(
-                MergeOperation.project_id == project_id,
-                MergeOperation.resolved_target_node_id == node.id,
-                MergeOperation.status == "APPLIED",
-            )
-        ).scalars().first()
-        if incoming_merge is not None:
-            raise GraphMutationValidationError(
-                "CANONICAL_TARGET_DELETE_REQUIRES_UNMERGE"
-            )
         before = {
             "nodeId": str(node.id),
             "graphState": node.graph_state,
@@ -691,12 +685,28 @@ def delete_node(
             project_id=project_id,
             root_id=node.id,
         )
+        if children:
+            raise NodeHasChildrenError("NODE_HAS_CHILDREN")
+        merged_sources = list(
+            session.execute(
+                select(Node)
+                .where(
+                    Node.project_id == project_id,
+                    Node.graph_state == "MERGED",
+                    Node.merged_into_node_id == node.id,
+                    Node.deleted_at.is_(None),
+                )
+                .order_by(Node.id)
+                .with_for_update()
+            ).scalars()
+        )
+        delete_ids = [node.id, *(source.id for source in merged_sources)]
         for relation in session.execute(
             select(Relation).where(
                 Relation.project_id == project_id,
                 (
-                    (Relation.from_node_id == node.id)
-                    | (Relation.to_node_id == node.id)
+                    (Relation.from_node_id.in_(delete_ids))
+                    | (Relation.to_node_id.in_(delete_ids))
                 ),
                 Relation.status == "CONFIRMED",
                 Relation.valid_to.is_(None),
@@ -704,38 +714,43 @@ def delete_node(
         ).scalars():
             relation.status = "REJECTED"
             relation.valid_to = now
-        for child in children:
-            for structural_relation in session.execute(
-                select(Relation)
-                .where(
-                    Relation.project_id == project_id,
-                    Relation.from_node_id == child.id,
-                    Relation.relation_type == "ATTACHED_TO",
-                    Relation.status == "CONFIRMED",
-                    Relation.valid_to.is_(None),
-                )
-                .with_for_update()
-            ).scalars():
-                structural_relation.status = "REJECTED"
-                structural_relation.valid_to = now
-            child_specs = current_revision_evidence_specs(session, node=child)
+        for source in merged_sources:
+            source_specs = current_revision_evidence_specs(session, node=source)
             create_node_revision(
                 session,
-                node=child,
-                title=child.title,
-                content=child.content,
-                node_type=child.node_type,
-                category=child.category,
-                due_date=child.due_date,
+                node=source,
+                title=source.title,
+                content=source.content,
+                node_type=source.node_type,
+                category=source.category,
+                due_date=source.due_date,
                 created_by_type="USER",
                 created_by_id=actor_id,
                 generation_run_id=None,
-                evidence_specs=child_specs,
-                requires_evidence=bool(child_specs),
+                evidence_specs=source_specs,
+                requires_evidence=bool(source_specs),
             )
-            child.parent_id = None
-            child.graph_state = "UNATTACHED"
-            child.consistency_status = "NEEDS_ATTENTION"
+            source.parent_id = None
+            source.merged_into_node_id = None
+            source.graph_state = "DELETED"
+            source.deleted_at = now
+            source.deleted_by = actor_id
+            source.last_actor_type = "USER"
+            mark_node_embedding_stale(session, node=source)
+            _event(
+                session,
+                project_id=project_id,
+                node=source,
+                actor_id=actor_id,
+                request_id=request_id,
+                change_type="USER_DELETE_MERGED",
+                before={
+                    "nodeId": str(source.id),
+                    "graphState": "MERGED",
+                    "version": source.version - 1,
+                },
+                detail={"representativeNodeId": str(node.id)},
+            )
         root_specs = current_revision_evidence_specs(session, node=node)
         create_node_revision(
             session,
@@ -765,12 +780,20 @@ def delete_node(
             change_type="USER_DELETE_NODE",
             before=before,
         )
-        stage_project_graph_changed(
-            session,
-            project_id=project_id,
-            upserted_nodes=children,
-            deleted_nodes=[node],
-        )
+        command = session.execute(
+            select(MeetingAnalysisCommand).where(
+                MeetingAnalysisCommand.project_id == project_id,
+                MeetingAnalysisCommand.meeting_id == node.source_meeting_id,
+            )
+        ).scalar_one_or_none()
+        if command is None:
+            stage_project_graph_changed(
+                session,
+                project_id=project_id,
+                deleted_nodes=[node, *merged_sources],
+            )
+        else:
+            stage_project_graph_changed_v3(session, command=command)
         session.commit()
         return UserGraphMutationResult(
             node_id=node.id,

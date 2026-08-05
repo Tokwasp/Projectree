@@ -30,8 +30,9 @@ CLI·보고서 책임을 넣지 않는다. 기존 CLI/import는 얇은 wrapper�
 ## Evaluation
 
 ```text
-scripts/evaluation
-→ data_pipeline/evaluation
+tests/tools/evaluation
+→ tests/evaluation_support
+→ tests/fixtures/evaluation
 → retrieval / storage의 read-only query
 ```
 
@@ -44,6 +45,10 @@ scripts/evaluation
 
 - `tests/operations/`: 운영 도구의 안전·멱등성·동시성 검증
 - `tests/evaluation/`: 평가 계약, 추출, read-only, metrics, simulator 검증
+- `tests/tools/`: 수동 evaluation·integration·smoke 진입점
+- `tests/evaluation_support/`: 제품 패키지에 포함하지 않는 평가 지원 코드
+- `tests/fixtures/`: 입력 fixture와 평가 gold 데이터
+- `tests/config/`: 외부 호출이 차단된 Fake 환경 예시
 - `tests/`: core runtime 및 통합 회귀
 - `docs/contracts/`: 현재 제품 계약
 - `docs/operations/`: 운영 절차

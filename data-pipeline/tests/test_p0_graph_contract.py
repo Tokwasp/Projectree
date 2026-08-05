@@ -167,7 +167,7 @@ def test_action_category_change_requires_valid_parent_and_rolls_back(
         assert attached.to_node_id == uuid.UUID(new_parent["nodeId"])
 
 
-def test_soft_delete_detaches_children_and_snapshot_excludes_deleted(
+def test_soft_delete_rejects_a_node_with_structural_children(
     client,
     session_factory,
 ):
@@ -183,58 +183,12 @@ def test_soft_delete_detaches_children_and_snapshot_excludes_deleted(
         headers=HEADERS,
         json={"expectedVersion": parent["version"]},
     )
-    assert deleted.status_code == 200, deleted.text
-    assert deleted.json()["graphState"] == "DELETED"
-
-    replay = client.request(
-        "DELETE",
-        f"/api/v1/nodes/{parent['nodeId']}",
-        headers=HEADERS,
-        json={"expectedVersion": parent["version"]},
-    )
-    assert replay.status_code == 200
-    assert replay.json()["changed"] is False
-
-    assert client.get(f"/api/v1/nodes/{parent['nodeId']}", headers=HEADERS).status_code == 422
-    snapshot = client.get(f"/internal/projects/{PROJECT}/graph-snapshot")
-    assert snapshot.status_code == 200, snapshot.text
-    body = snapshot.json()
-    assert body["projectId"] == int(PROJECT)
-    ids = {row["nodeId"] for row in body["nodes"]}
-    assert parent["nodeId"] not in ids
-    assert child["nodeId"] in ids
-    assert grandchild["nodeId"] in ids
-    child_view = next(row for row in body["nodes"] if row["nodeId"] == child["nodeId"])
-    assert child_view["graphState"] == "UNATTACHED"
-    assert child_view["parentNodeId"] is None
-    grandchild_view = next(
-        row for row in body["nodes"] if row["nodeId"] == grandchild["nodeId"]
-    )
-    assert grandchild_view["graphState"] == "UNATTACHED"
-    assert grandchild_view["parentNodeId"] is None
+    assert deleted.status_code == 409, deleted.text
+    assert deleted.json()["error"]["code"] == "NODE_HAS_CHILDREN"
 
     with session_factory() as session:
         parent_row = session.get(Node, uuid.UUID(parent["nodeId"]))
         child_row = session.get(Node, uuid.UUID(child["nodeId"]))
-        assert parent_row.deleted_at is not None
-        assert parent_row.deleted_by == "user-77"
-        assert child_row.version == child["version"] + 1
-        event = session.execute(
-            select(OutboxEvent)
-            .where(
-                OutboxEvent.project_id == PROJECT,
-                OutboxEvent.event_type == "PROJECT_GRAPH_CHANGED",
-            )
-            .order_by(OutboxEvent.created_at.desc())
-            .limit(1)
-        ).scalar_one()
-        assert event.payload["deletedNodes"][0]["nodeId"] == parent["nodeId"]
-        assert {row["nodeId"] for row in event.payload["upsertedNodes"]} == {
-            child["nodeId"],
-            grandchild["nodeId"],
-        }
-        envelope = _to_message(event).as_dict()
-        assert envelope["eventSchemaVersion"] == 1
-        assert envelope["projectId"] == int(PROJECT)
-        assert envelope["occurredAt"].endswith("Z")
-        assert "startMs" not in envelope["payload"]["upsertedNodes"][0]["evidence"][0]
+        assert parent_row.deleted_at is None
+        assert child_row.parent_id == parent_row.id
+        assert child_row.version == child["version"]

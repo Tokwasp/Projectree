@@ -48,6 +48,10 @@ EXPECTED_TABLES = {
     "node_revision_evidence",
     "merge_operation",
     "merge_operation_dependency",
+    "recording_ready_event",
+    "meeting_analysis_command",
+    "meeting_analysis_task",
+    "graph_snapshot_artifact",
     "alembic_version",
 }
 
@@ -564,7 +568,7 @@ def test_clean_alembic_baseline_round_trip(tmp_path, monkeypatch):
     engine.dispose()
     assert (
         ScriptDirectory.from_config(config).get_current_head()
-        == "0009_graph_event_contract_v1"
+            == "0010_meeting_analysis_join_v3"
     )
 
 
@@ -928,7 +932,53 @@ def test_revision_files_do_not_use_live_orm_metadata():
         "0007_drop_lifecycle_status.py",
         "0008_meeting_summary.py",
         "0009_graph_event_contract_v1.py",
+        "0010_meeting_analysis_join_and_result_v3.py",
     }
+
+
+@pytest.mark.skipif(
+    not os.getenv("DATABASE_URL_TEST", "").startswith("postgresql"),
+    reason="requires a disposable PostgreSQL base URL",
+)
+def test_0010_postgresql_upgrade_downgrade_reupgrade(monkeypatch):
+    database_url, admin_engine = _create_isolated_postgresql_database(
+        os.environ["DATABASE_URL_TEST"]
+    )
+    try:
+        _set_database_url(monkeypatch, database_url)
+        config = _alembic_config()
+        command.upgrade(config, "0009_graph_event_contract_v1")
+        command.upgrade(config, "head")
+        engine = make_engine(database_url)
+        assert {
+            "recording_ready_event",
+            "meeting_analysis_command",
+            "meeting_analysis_task",
+            "graph_snapshot_artifact",
+        } <= set(inspect(engine).get_table_names())
+        engine.dispose()
+
+        command.downgrade(config, "0009_graph_event_contract_v1")
+        engine = make_engine(database_url)
+        assert not {
+            "recording_ready_event",
+            "meeting_analysis_command",
+            "meeting_analysis_task",
+            "graph_snapshot_artifact",
+        } & set(inspect(engine).get_table_names())
+        engine.dispose()
+
+        command.upgrade(config, "head")
+        engine = make_engine(database_url)
+        assert {
+            "recording_ready_event",
+            "meeting_analysis_command",
+            "meeting_analysis_task",
+            "graph_snapshot_artifact",
+        } <= set(inspect(engine).get_table_names())
+        engine.dispose()
+    finally:
+        _drop_isolated_postgresql_database(database_url, admin_engine)
 
 
 @pytest.mark.skipif(

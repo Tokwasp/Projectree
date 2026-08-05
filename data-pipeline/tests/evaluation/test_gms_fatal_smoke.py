@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from data_pipeline.evaluation.gms_fatal_smoke import (
+from tests.evaluation_support.gms_fatal_smoke import (
     CallBudget,
     HardCallBudgetExceeded,
     MeteredBModelClient,

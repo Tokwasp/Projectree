@@ -26,8 +26,10 @@ DESCRIPTION = """
 Internal HTTP layer over the canonical PostgreSQL graph.
 
 The SQS worker performs the automatic Decision-first graph plan. This API serves
-GenerationRun and graph reads plus direct user Node/Relation edits and logical
-MERGE/UNMERGE. It never invokes STT, Embedding, Retrieval, or an LLM.
+GenerationRun and graph reads plus direct user Node/Relation edits. Legacy
+manual MERGE/UNMERGE/REMERGE routes remain compatibility code but are disabled
+unless their explicit feature flag is enabled. The API never invokes STT,
+Embedding, Retrieval, or an LLM.
 
 Optimistic locking is explicit: mutating calls take `expectedVersion` and answer
 **409** with `expectedVersion`/`actualVersion` on conflict.

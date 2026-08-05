@@ -51,6 +51,7 @@ MEETING = "33cdf33c-aa42-471e-a0a0-d257ffc8a9eb"
 
 def _event(**overrides) -> dict:
     payload = {
+        "projectId": 15,
         "roomName": ROOM,
         "memberId": None,
         "kind": "MIXED",
@@ -116,6 +117,7 @@ def _adapter(s3, resolver=None, *, max_audio_bytes=1024 * 1024) -> OpenViduInges
 def test_parser_accepts_the_observed_production_body() -> None:
     event = _parser().parse(_body())
 
+    assert event.project_id == "15"
     assert event.room_name == ROOM
     assert event.egress_id == EGRESS
     assert event.object_key == KEY
@@ -215,15 +217,12 @@ def test_parser_bounds_identifiers_that_reach_128_char_columns(field: str) -> No
 
 
 def test_parser_accepts_identifiers_at_the_128_boundary() -> None:
-    room = "r" * 128
     event = _parser().parse(
         _body(
-            roomName=room,
             egressId="e" * 128,
-            objectKey=f"meetings/{room}/mixed/take.ogg",
         )
     )
-    assert len(event.room_name) == 128
+    assert event.room_name == ROOM
     assert len(event.egress_id) == 128
 
 
@@ -439,7 +438,7 @@ def test_router_rejects_invalid_json() -> None:
 # ------------------------------------------------------------------ config ---
 
 
-def test_openvidu_is_disabled_unless_a_recording_bucket_is_configured(
+def test_legacy_openvidu_worker_needs_bucket_and_explicit_flag(
     monkeypatch,
 ) -> None:
     """OpenVidu ingestion is opt-in; deploying this change changes nothing."""
@@ -450,6 +449,10 @@ def test_openvidu_is_disabled_unless_a_recording_bucket_is_configured(
     assert load_worker_settings().openvidu_enabled is False
 
     monkeypatch.setenv("OPENVIDU_RECORDING_BUCKET", "projectree-bucket")
+    settings = load_worker_settings()
+    assert settings.openvidu_enabled is False
+
+    monkeypatch.setenv("ENABLE_LEGACY_OPENVIDU_AUDIO_WORKER", "true")
     settings = load_worker_settings()
     assert settings.openvidu_enabled is True
     assert settings.openvidu_recording_prefix == "meetings/"

@@ -6,21 +6,24 @@ not an S3 ObjectCreated notification, and it is never rewritten to look like one
 
 The observed production body (2026-07-31, queue ``muOpenviduQueue``) is::
 
-    {"roomName": "<uuid>",
+    {"projectId": 15,
+     "roomName": "<uuid>",
      "memberId": null,
      "kind": "MIXED",
      "objectKey": "meetings/<roomName>/mixed/<yyyy-MM-dd'T'HHmmss>.ogg",
      "egressId": "EG_XXXXXXXXXXXX",
      "endedAt": "2026-07-31T07:28:05.804108359"}
 
-Only fields that were actually observed are modelled. Notably the event carries
-no bucket, no size, no eTag/versionId and no projectId; those are supplied later
-by :mod:`openvidu_ingest`.
+The v3 join contract adds ``projectId``. The event still carries no bucket,
+size, eTag/versionId, meetingId, or commandId. The dedicated recording consumer
+persists it and waits for the Java command instead of resolving a meeting while
+holding SQS visibility.
 """
 
 from __future__ import annotations
 
 import json
+import uuid
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
@@ -38,6 +41,7 @@ DISCRIMINATOR_FIELDS = ("roomName", "objectKey", "egressId")
 class OpenViduEgressEvent:
     """One completed OpenVidu egress recording."""
 
+    project_id: str
     room_name: str
     object_key: str
     egress_id: str
@@ -87,10 +91,17 @@ class OpenViduEgressEventParser:
                 "OpenVidu egress event must be a JSON object"
             )
 
+        project_id = self._positive_identifier(payload, "projectId")
         # roomName and egressId are bounded at 128 because they reach
         # audio_upload_event columns declared String(128); a longer value would
         # only fail at COMMIT time on PostgreSQL, after Clova and the LLM ran.
         room_name = self._required_text(payload, "roomName", max_length=128)
+        try:
+            uuid.UUID(room_name)
+        except ValueError as exc:
+            raise OpenViduEventValidationError(
+                "OpenVidu egress roomName must be a UUID"
+            ) from exc
         egress_id = self._required_text(payload, "egressId", max_length=128)
         object_key = self._required_text(payload, "objectKey", max_length=1024)
 
@@ -122,6 +133,7 @@ class OpenViduEgressEventParser:
         self._validate_object_key(object_key, room_name=room_name)
 
         return OpenViduEgressEvent(
+            project_id=project_id,
             room_name=room_name,
             object_key=object_key,
             egress_id=egress_id,
@@ -143,6 +155,19 @@ class OpenViduEgressEventParser:
                 f"OpenVidu egress event {field} is too long"
             )
         return value
+
+    @staticmethod
+    def _positive_identifier(payload: dict, field: str) -> str:
+        value = payload.get(field)
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise OpenViduEventValidationError(
+                f"OpenVidu egress {field} must be a positive JSON integer"
+            )
+        if value <= 0 or value > 2**63 - 1:
+            raise OpenViduEventValidationError(
+                f"OpenVidu egress {field} is outside the positive signed 64-bit range"
+            )
+        return str(value)
 
     def _validate_object_key(self, object_key: str, *, room_name: str) -> None:
         # The key is used verbatim as an S3 key; it is not URL-encoded by this

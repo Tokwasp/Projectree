@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import uuid
 
-from data_pipeline.evaluation.contracts import (
+from tests.evaluation_support.contracts import (
     EvaluationCase,
     PilotResult,
     RetrievedCandidate,
 )
-from data_pipeline.evaluation.thresholds import simulate_thresholds
+from tests.evaluation_support.thresholds import simulate_thresholds
 
 
 def test_unlabeled_thresholds_verify_mechanics_without_calibration() -> None:

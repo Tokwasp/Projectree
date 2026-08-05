@@ -5,7 +5,7 @@ import uuid
 import pytest
 from pydantic import ValidationError
 
-from data_pipeline.evaluation.contracts import EvaluationCase, LabelStatus
+from tests.evaluation_support.contracts import EvaluationCase, LabelStatus
 
 
 def test_label_contract_uses_public_aliases() -> None:

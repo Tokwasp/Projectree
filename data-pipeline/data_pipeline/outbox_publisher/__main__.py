@@ -24,13 +24,16 @@ def main() -> None:
     settings = load_settings()
     engine = make_engine(settings.database_url)
     try:
+        session_factory = make_session_factory(engine)
+        transport_name = os.getenv("OUTBOX_TRANSPORT", "fake").strip().lower()
         publisher = OutboxPublisher(
-            session_factory=make_session_factory(engine),
-            transport=build_transport_from_env(),
+            session_factory=session_factory,
+            transport=build_transport_from_env(session_factory=session_factory),
             batch_size=int(os.getenv("OUTBOX_BATCH_SIZE", "20")),
             stall_timeout_seconds=float(
                 os.getenv("OUTBOX_STALL_TIMEOUT_SECONDS", "300")
             ),
+            schema_versions=("3",) if transport_name in {"result-sqs", "sqs"} else None,
         )
         publisher.run_forever(
             idle_sleep_seconds=float(os.getenv("OUTBOX_IDLE_SLEEP_SECONDS", "2"))

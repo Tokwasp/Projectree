@@ -26,7 +26,9 @@ from data_pipeline.jobs.outbox import (
     INITIAL_REVIEW_READY,
     PENDING,
     PUBLISHING,
+    SCHEMA_VERSION,
 )
+from data_pipeline.jobs.claiming import utcnow
 from data_pipeline.storage import AnalysisJob, OutboxEvent
 
 
@@ -429,6 +431,46 @@ def test_publisher_publishes_a_batch(session_factory) -> None:
     assert result.claimed == 3
     assert result.published == 3
     assert publish_pending_events(session_factory, transport).published == 2
+
+
+def test_publisher_can_isolate_result_event_v3_rows(session_factory) -> None:
+    _emit(session_factory, aggregate_id="legacy")
+    with session_factory() as session:
+        row = OutboxEvent(
+            event_type="PROJECT_GRAPH_CHANGED",
+            aggregate_type="project",
+            aggregate_id="15",
+            project_id="15",
+            schema_version="3",
+            payload={
+                "meetingId": 35,
+                "commandId": str(uuid.uuid4()),
+                "payload": {"graphVersion": 1, "snapshotArtifactId": str(uuid.uuid4())},
+            },
+            status=PENDING,
+            attempt_count=0,
+            available_at=utcnow(),
+            created_at=utcnow(),
+        )
+        session.add(row)
+        session.commit()
+
+    transport = FakeOutboxTransport()
+    result = publish_pending_events(
+        session_factory,
+        transport,
+        schema_versions=("3",),
+    )
+
+    assert result.claimed == 1
+    assert transport.published[0].schema_version == "3"
+    with session_factory() as session:
+        statuses = {
+            row.schema_version: row.status
+            for row in session.execute(select(OutboxEvent)).scalars()
+        }
+    assert statuses["3"] == PUBLISHED
+    assert statuses[SCHEMA_VERSION] == PENDING
 
 
 def test_a_claimed_event_is_not_re_claimed_before_the_stall_timeout(

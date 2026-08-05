@@ -1,5 +1,7 @@
 # OpenVidu egress → Python Worker 수신 계약
 
+> Legacy compatibility contract. 현재 제품 경로는 [Meeting Analysis Command Join v1](meeting-analysis-command-join-v1.md)을 사용한다. 이 문서의 장시간 Worker 경로는 `ENABLE_LEGACY_OPENVIDU_AUDIO_WORKER=true`와 bucket을 모두 명시한 경우에만 활성화된다.
+
 **Contract version**: `openvidu-egress/1.0`
 **작성일**: 2026-07-31
 **상태**: 구현 완료. 단, **projectId 매핑 미해결**과 **IAM 권한 부족**으로 실제 E2E는 미완료.

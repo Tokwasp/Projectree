@@ -38,6 +38,7 @@ class WorkerSettings:
     llm_adapter: str
     embedding_adapter: str
     b_model_adapter: str
+    enable_legacy_openvidu_audio_worker: bool
     openvidu_recording_bucket: str
     openvidu_recording_prefix: str
     openvidu_supported_kinds: tuple[str, ...]
@@ -46,7 +47,10 @@ class WorkerSettings:
     def openvidu_enabled(self) -> bool:
         """OpenVidu ingestion is opt-in: it needs an explicit recording bucket."""
 
-        return bool(self.openvidu_recording_bucket)
+        return (
+            self.enable_legacy_openvidu_audio_worker
+            and bool(self.openvidu_recording_bucket)
+        )
 
     def validate_runtime(self) -> None:
         if not self.aws_region:
@@ -109,6 +113,10 @@ def load_worker_settings() -> WorkerSettings:
         llm_adapter=_env("LLM_ADAPTER", "fake").strip().lower(),
         embedding_adapter=_env("EMBEDDING_ADAPTER", "fake").strip().lower(),
         b_model_adapter=_env("B_MODEL_ADAPTER", "fake").strip().lower(),
+        enable_legacy_openvidu_audio_worker=(
+            _env("ENABLE_LEGACY_OPENVIDU_AUDIO_WORKER", "false").strip().lower()
+            in {"1", "true", "yes", "on"}
+        ),
         openvidu_recording_bucket=_env("OPENVIDU_RECORDING_BUCKET"),
         openvidu_recording_prefix=openvidu_prefix,
         openvidu_supported_kinds=_csv("OPENVIDU_SUPPORTED_KINDS", "MIXED"),

@@ -163,6 +163,216 @@ class AnalysisDeliveryState(Base):
     )
 
 
+class RecordingReadyEvent(Base):
+    """Durable OpenVidu recording notification waiting for a Java command."""
+
+    __tablename__ = "recording_ready_event"
+    __table_args__ = (
+        UniqueConstraint("egress_id", name="uq_recording_ready_egress"),
+        UniqueConstraint(
+            "recording_bucket",
+            "object_key",
+            name="uq_recording_ready_object",
+        ),
+        CheckConstraint("length(trim(room_name)) > 0", name="ck_recording_ready_room"),
+        CheckConstraint("kind = 'MIXED'", name="ck_recording_ready_kind"),
+        CheckConstraint(
+            "status IN ('WAITING_FOR_COMMAND', 'READY', 'CLAIMED', "
+            "'PROCESSING', 'COMPLETED', 'FAILED')",
+            name="ck_recording_ready_status",
+        ),
+        Index(
+            "ix_recording_ready_join",
+            "project_id",
+            "room_name",
+            "status",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    room_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    egress_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    member_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    recording_bucket: Mapped[str] = mapped_column(String(255), nullable=False)
+    object_key: Mapped[str] = mapped_column(Text, nullable=False)
+    ended_at_raw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="WAITING_FOR_COMMAND"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
+    )
+
+
+class MeetingAnalysisCommand(Base):
+    """Idempotent Java request joined to a recording by project and room."""
+
+    __tablename__ = "meeting_analysis_command"
+    __table_args__ = (
+        UniqueConstraint("command_id", name="uq_meeting_analysis_command_id"),
+        UniqueConstraint(
+            "project_id",
+            "meeting_id",
+            name="uq_meeting_analysis_command_project_meeting",
+        ),
+        UniqueConstraint(
+            "project_id",
+            "command_id",
+            name="uq_meeting_analysis_command_project_id",
+        ),
+        CheckConstraint("length(trim(room_name)) > 0", name="ck_analysis_command_room"),
+        CheckConstraint("length(payload_hash) = 64", name="ck_analysis_command_hash"),
+        CheckConstraint(
+            "status IN ('WAITING_FOR_RECORDING', 'READY', 'CLAIMED', "
+            "'PROCESSING', 'COMPLETED', 'FAILED')",
+            name="ck_analysis_command_status",
+        ),
+        Index(
+            "ix_meeting_analysis_command_join",
+            "project_id",
+            "room_name",
+            "status",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    command_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    meeting_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    room_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    generate_summary: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    generate_nodes: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="WAITING_FOR_RECORDING"
+    )
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
+    )
+
+
+class MeetingAnalysisTask(Base):
+    """Independent SUMMARY or NODES work item for one Java command."""
+
+    __tablename__ = "meeting_analysis_task"
+    __table_args__ = (
+        UniqueConstraint(
+            "command_id",
+            "task_type",
+            name="uq_meeting_analysis_task_type",
+        ),
+        ForeignKeyConstraint(
+            ["command_id"],
+            ["meeting_analysis_command.command_id"],
+            name="fk_meeting_analysis_task_command",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            "task_type IN ('SUMMARY', 'NODES')",
+            name="ck_meeting_analysis_task_type",
+        ),
+        CheckConstraint(
+            "status IN ('WAITING_INPUT', 'READY', 'PROCESSING', "
+            "'SUCCEEDED', 'FAILED', 'SKIPPED')",
+            name="ck_meeting_analysis_task_status",
+        ),
+        CheckConstraint("attempt_count >= 0", name="ck_meeting_analysis_task_attempt"),
+        CheckConstraint("max_attempts = 3", name="ck_meeting_analysis_task_max_attempts"),
+        CheckConstraint(
+            "(status = 'PROCESSING' AND claim_token IS NOT NULL) OR "
+            "(status <> 'PROCESSING' AND claim_token IS NULL)",
+            name="ck_meeting_analysis_task_claim",
+        ),
+        Index(
+            "ix_meeting_analysis_task_claimable",
+            "status",
+            "available_at",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    command_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    task_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    claim_token: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
+    )
+    failure_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
+    )
+
+
+class GraphSnapshotArtifact(Base):
+    """Immutable deterministic full-graph snapshot staged with its outbox row."""
+
+    __tablename__ = "graph_snapshot_artifact"
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id",
+            "graph_version",
+            name="uq_graph_snapshot_project_version",
+        ),
+        UniqueConstraint(
+            "command_id",
+            "graph_version",
+            name="uq_graph_snapshot_command_version",
+        ),
+        ForeignKeyConstraint(
+            ["project_id", "command_id"],
+            [
+                "meeting_analysis_command.project_id",
+                "meeting_analysis_command.command_id",
+            ],
+            name="fk_graph_snapshot_command_project",
+        ),
+        CheckConstraint("graph_version >= 1", name="ck_graph_snapshot_version"),
+        CheckConstraint("snapshot_schema_version = 1", name="ck_graph_snapshot_schema"),
+        CheckConstraint("size_bytes >= 0", name="ck_graph_snapshot_size"),
+        CheckConstraint("length(sha256) = 64", name="ck_graph_snapshot_sha256"),
+        CheckConstraint(
+            "status IN ('PENDING', 'UPLOADED', 'FAILED')",
+            name="ck_graph_snapshot_status",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    meeting_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    command_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    graph_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot_schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    payload_json: Mapped[dict] = mapped_column(JSONB_or_JSON, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    content_type: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="application/json"
+    )
+    object_key: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="PENDING")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
+    )
+    uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Request(Base):
     """Generation claim and processing-state boundary."""
 

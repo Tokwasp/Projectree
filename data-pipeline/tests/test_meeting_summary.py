@@ -11,10 +11,16 @@ from data_pipeline.api.app import create_app
 from data_pipeline.api.dependencies import get_session_factory
 from data_pipeline.meeting_summary import (
     FakeMeetingSummaryGenerator,
+    GmsMeetingSummaryGenerator,
     GeneratedMeetingSummary,
     MeetingSummaryConflictError,
+    MeetingSummaryInput,
+    MeetingSummaryResponseError,
+    SummarySegment,
+    build_meeting_summary_generator,
     generate_meeting_summary,
 )
+from data_pipeline.llm import LLMResponse
 from data_pipeline.provider_safety import ExternalAIProviderBlockedError
 from data_pipeline.pipeline.event_contract import (
     mark_graph_ready,
@@ -73,6 +79,106 @@ def _generator() -> FakeMeetingSummaryGenerator:
             issues=tuple(payload["issues"]),
         )
     )
+
+
+class _SummaryChatClient:
+    def __init__(self, raw_response: str) -> None:
+        self.raw_response = raw_response
+        self.messages: list[list[dict[str, str]]] = []
+
+    def complete(self, messages: list[dict[str, str]]) -> LLMResponse:
+        self.messages.append(messages)
+        return LLMResponse(
+            raw_response=self.raw_response,
+            input_tokens=10,
+            output_tokens=20,
+            total_tokens=30,
+            latency_ms=1,
+        )
+
+
+def _summary_input() -> MeetingSummaryInput:
+    return MeetingSummaryInput(
+        project_id=PROJECT,
+        external_meeting_id=MEETING,
+        segments=(
+            SummarySegment(
+                segment_id="s1",
+                sequence_no=1,
+                speaker_label="Backend",
+                text="PostgreSQL을 그래프 원본으로 사용하기로 결정했습니다.",
+            ),
+        ),
+    )
+
+
+def test_gms_summary_adapter_parses_strict_grounded_document_without_network():
+    client = _SummaryChatClient(
+        json.dumps(
+            {
+                "title": "그래프 저장소 회의",
+                "body": "## 결정\nPostgreSQL을 그래프 원본으로 사용한다.",
+                "decisions": ["PostgreSQL을 그래프 원본으로 사용한다."],
+                "actions": [],
+                "issues": [],
+            },
+            ensure_ascii=False,
+        )
+    )
+    generator = GmsMeetingSummaryGenerator(client)
+
+    result = generator.generate(_summary_input())
+
+    assert result.title == "그래프 저장소 회의"
+    assert result.decisions == ("PostgreSQL을 그래프 원본으로 사용한다.",)
+    request_payload = json.loads(client.messages[0][1]["content"])
+    assert request_payload["transcript"][0]["text"].startswith("PostgreSQL")
+
+
+@pytest.mark.parametrize(
+    "raw_response",
+    [
+        "not-json",
+        json.dumps({"title": "missing fields"}),
+        json.dumps(
+            {
+                "title": "title",
+                "body": "body",
+                "decisions": "not-an-array",
+                "actions": [],
+                "issues": [],
+            }
+        ),
+    ],
+)
+def test_gms_summary_adapter_rejects_invalid_provider_contract(raw_response):
+    with pytest.raises(MeetingSummaryResponseError):
+        GmsMeetingSummaryGenerator(_SummaryChatClient(raw_response)).generate(
+            _summary_input()
+        )
+
+
+def test_summary_factory_rejects_fake_in_production_and_accepts_injected_gms():
+    with pytest.raises(RuntimeError, match="forbidden"):
+        build_meeting_summary_generator("fake", app_env="production")
+
+    client = _SummaryChatClient(
+        json.dumps(
+            {
+                "title": "title",
+                "body": "body",
+                "decisions": [],
+                "actions": [],
+                "issues": [],
+            }
+        )
+    )
+    generator = build_meeting_summary_generator(
+        "gms",
+        app_env="production",
+        chat_client=client,
+    )
+    assert isinstance(generator, GmsMeetingSummaryGenerator)
 
 
 def test_fake_summary_persistence_outbox_and_idempotent_replay(session_factory):

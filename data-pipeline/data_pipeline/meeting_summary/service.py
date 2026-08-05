@@ -13,7 +13,15 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from data_pipeline.pipeline.event_contract import mark_summary_ready, stage_meeting_summary_ready
-from data_pipeline.storage import Meeting, MeetingSummary, TranscriptSegment
+from data_pipeline.storage import (
+    Meeting,
+    MeetingAnalysisCommand,
+    MeetingSummary,
+    TranscriptSegment,
+)
+from data_pipeline.meeting_analysis.result_events import (
+    stage_meeting_summary_ready_v3,
+)
 
 from .contracts import (
     GeneratedMeetingSummary,
@@ -153,6 +161,15 @@ def _existing(
     ).scalar_one_or_none()
 
 
+def _analysis_command(session, *, project_id: str, meeting_id: str):
+    return session.execute(
+        select(MeetingAnalysisCommand).where(
+            MeetingAnalysisCommand.project_id == project_id,
+            MeetingAnalysisCommand.meeting_id == meeting_id,
+        )
+    ).scalar_one_or_none()
+
+
 def generate_meeting_summary(
     session_factory,
     *,
@@ -184,8 +201,14 @@ def generate_meeting_summary(
                 raise MeetingSummaryConflictError(
                     "summary_version already belongs to different transcript input"
                 )
-            mark_summary_ready(session, summary=existing)
-            session.commit()
+            command = _analysis_command(
+                session,
+                project_id=project_id,
+                meeting_id=external_meeting_id,
+            )
+            if command is None:
+                mark_summary_ready(session, summary=existing)
+                session.commit()
             return _result(existing, replayed=True)
 
     document = generator.generate(request)
@@ -206,15 +229,29 @@ def generate_meeting_summary(
         )
         session.add(row)
         session.flush()
-        stage_meeting_summary_ready(
-            session,
-            summary=row,
-            api_path=(
-                "/api/v1/meetings/"
-                f"{quote(external_meeting_id, safe='')}/summary"
-                f"?summaryVersion={summary_version}"
-            ),
+        api_path = (
+            "/api/v1/meetings/"
+            f"{quote(external_meeting_id, safe='')}/summary"
+            f"?summaryVersion={summary_version}"
         )
+        command = _analysis_command(
+            session,
+            project_id=project_id,
+            meeting_id=external_meeting_id,
+        )
+        if command is None:
+            stage_meeting_summary_ready(
+                session,
+                summary=row,
+                api_path=api_path,
+            )
+        else:
+            stage_meeting_summary_ready_v3(
+                session,
+                command=command,
+                summary=row,
+                api_path=api_path,
+            )
         session.commit()
         return _result(row)
     except IntegrityError:
@@ -226,8 +263,14 @@ def generate_meeting_summary(
             summary_version=summary_version,
         )
         if winner is not None and winner.source_hash == source_hash:
-            mark_summary_ready(session, summary=winner)
-            session.commit()
+            command = _analysis_command(
+                session,
+                project_id=project_id,
+                meeting_id=external_meeting_id,
+            )
+            if command is None:
+                mark_summary_ready(session, summary=winner)
+                session.commit()
             return _result(winner, replayed=True)
         raise MeetingSummaryConflictError(
             "summary_version was concurrently claimed by different input"

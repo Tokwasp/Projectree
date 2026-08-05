@@ -12,6 +12,7 @@ from data_pipeline.storage import (
     GraphChangeEvent,
     MergeOperation,
     MergeOperationDependency,
+    MeetingAnalysisCommand,
     Node,
     NodeMergeHistory,
     NodeRevision,
@@ -205,6 +206,7 @@ def _audit_and_outbox(
     request_id: str | None,
     before: dict,
     detail: dict,
+    emit_legacy_outbox: bool = True,
 ) -> None:
     after = {
         "nodeId": str(node.id),
@@ -228,8 +230,9 @@ def _audit_and_outbox(
             detail=detail,
         )
     )
-    session.add(
-        OutboxEvent(
+    if emit_legacy_outbox:
+        session.add(
+            OutboxEvent(
             event_type="GRAPH_CHANGED",
             aggregate_type="node",
             aggregate_id=str(node.id),
@@ -241,8 +244,8 @@ def _audit_and_outbox(
                 **detail,
             },
             status="PENDING",
+            )
         )
-    )
 
 
 def apply_logical_merge(
@@ -382,6 +385,15 @@ def apply_logical_merge(
             "resolvedTargetNodeId": str(canonical_target.id),
             "reasonCode": reason_code,
         },
+        emit_legacy_outbox=(
+            session.execute(
+                select(MeetingAnalysisCommand.id).where(
+                    MeetingAnalysisCommand.project_id == project_id,
+                    MeetingAnalysisCommand.meeting_id == source.source_meeting_id,
+                )
+            ).scalar_one_or_none()
+            is None
+        ),
     )
     session.flush()
     return operation

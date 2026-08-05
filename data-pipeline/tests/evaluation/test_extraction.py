@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from data_pipeline.evaluation.extraction import extract_pilot_cases
+from tests.evaluation_support.extraction import extract_pilot_cases
 from data_pipeline.pipeline import seed_node
 
 

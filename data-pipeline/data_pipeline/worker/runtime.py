@@ -51,6 +51,19 @@ def build_worker_runtime(
     app_settings = load_settings()
     if settings.app_env == "test" and app_settings.stt.adapter != "fake":
         raise ValueError("APP_ENV=test requires STT_ADAPTER=fake")
+    if settings.app_env not in {"test", "local", "development", "dev"}:
+        configured = {
+            "STT_ADAPTER": app_settings.stt.adapter,
+            "LLM_ADAPTER": settings.llm_adapter,
+            "EMBEDDING_ADAPTER": settings.embedding_adapter,
+            "B_MODEL_ADAPTER": settings.b_model_adapter,
+        }
+        fake_adapters = [name for name, value in configured.items() if value == "fake"]
+        if fake_adapters:
+            raise RuntimeError(
+                "production worker forbids fake adapters: "
+                + ", ".join(fake_adapters)
+            )
 
     import boto3
 
@@ -64,13 +77,13 @@ def build_worker_runtime(
         llm_client_factory = lambda record: FakeMeetingChatClient(
             record.external_meeting_id
         )
-    elif settings.llm_adapter == "openai":
+    elif settings.llm_adapter in {"gms", "openai"}:
         client = OpenAIChatClient(load_llm_settings())
         llm_client_factory = lambda record: client
     else:
         engine.dispose()
         raise ValueError(
-            "LLM_ADAPTER must be either 'fake' or 'openai'"
+            "LLM_ADAPTER must be 'fake', 'gms', or 'openai'"
         )
 
     parser = S3EventParser(
@@ -93,7 +106,8 @@ def build_worker_runtime(
             # and stay on the queue. Say so once at startup instead of only
             # once per redelivery.
             logger.warning(
-                "OpenVidu ingestion is enabled (OPENVIDU_RECORDING_BUCKET is set) "
+                "Legacy OpenVidu ingestion is enabled "
+                "(ENABLE_LEGACY_OPENVIDU_AUDIO_WORKER=true) "
                 "but no MeetingContextResolver was supplied, so every OpenVidu "
                 "message will fail with MeetingContextUnresolvedError and remain "
                 "on the queue. Supply a resolver before enabling this path."

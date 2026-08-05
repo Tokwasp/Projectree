@@ -1158,11 +1158,15 @@ def test_multiple_action_sources_merge_into_one_target(
         target = session.get(Node, target_id)
         assert target.graph_state == "ACTIVE"
         assert target.parent_id == parent_id
-        assert target.version == before_version
+        assert target.version == before_version + 2
+        assert target.title == "repeat action item-3"
+        assert session.execute(
+            select(NodeEmbedding.status).where(NodeEmbedding.node_id == target_id)
+        ).scalar_one() == "STALE"
 
 
 @pytest.mark.parametrize("node_type", ["DECISION", "ISSUE"])
-def test_non_action_same_target_multi_merge_has_no_target_revision(
+def test_non_action_same_target_multi_merge_absorbs_each_source_revision(
     session_factory,
     node_type,
 ):
@@ -1237,12 +1241,12 @@ def test_non_action_same_target_multi_merge_has_no_target_revision(
         )
         assert all(source.graph_state == "MERGED" for source in sources)
         target = session.get(Node, target_id)
-        assert target.version == before_version
+        assert target.version == before_version + 2
         assert session.scalar(
             select(func.count(NodeRevision.id)).where(
                 NodeRevision.node_id == target_id
             )
-        ) == before_revision_count
+        ) == before_revision_count + 2
 
 
 def test_automatic_merge_does_not_mix_source_and_target_types(
@@ -1541,7 +1545,7 @@ def test_action_merge_plan_apply_is_idempotent(session_factory):
             select(func.count(NodeRevision.id)).where(
                 NodeRevision.node_id == action_id
             )
-        ) == 1
+        ) == 2
         assert session.scalar(
             select(func.count(MergeOperation.id)).where(
                 MergeOperation.generation_run_id == run_id
@@ -1616,7 +1620,7 @@ def test_multi_source_plan_replay_does_not_duplicate_group_artifacts(
             select(func.count(NodeRevision.id)).where(
                 NodeRevision.node_id == target_id
             )
-        ) == 1
+        ) == 3
         assert session.scalar(
             select(func.count(MergeOperation.id)).where(
                 MergeOperation.generation_run_id == run_id
@@ -1755,7 +1759,7 @@ def test_multi_source_partial_recovery_skips_already_merged_source(
             select(func.count(NodeRevision.id)).where(
                 NodeRevision.node_id == target_id
             )
-        ) == 1
+        ) == 4
 
 
 def test_logical_merge_unmerge_keeps_target_user_edit(session_factory):
@@ -2013,6 +2017,7 @@ def test_summary_failure_after_graph_commit_emits_compensating_failed_state(
             b_model_client=CreateOnlyB(),
             retrieval_settings=_settings(),
             meeting_summary_generator=FailingSummary(),
+            generate_summary=True,
         )
     with session_factory() as session:
         run = session.execute(select(GenerationRun)).scalar_one()

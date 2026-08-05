@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from data_pipeline.config import RetrievalSettings
-from data_pipeline.evaluation.contracts import EvaluationCase
-from data_pipeline.evaluation.runner import run_read_only_pilot
+from tests.evaluation_support.contracts import EvaluationCase
+from tests.evaluation_support.runner import run_read_only_pilot
 from data_pipeline.pipeline import seed_node
 from data_pipeline.storage import NodeEmbedding
 from data_pipeline.retrieval.embedding import EMBEDDING_CONTRACT_VERSION

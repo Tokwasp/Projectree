@@ -34,6 +34,7 @@ from data_pipeline.api.schemas import (
     UserNodeCreateRequest,
 )
 from data_pipeline.pipeline.graph import unmerge_operation
+from data_pipeline.pipeline.legacy_guard import require_legacy_manual_merge_enabled
 from data_pipeline.pipeline.user_graph import (
     create_user_node,
     delete_node,
@@ -206,6 +207,7 @@ def merge_node(
     actor_id: str = Depends(get_actor_id),
     session_factory=Depends(get_session_factory),
 ) -> GraphMutationResponse:
+    require_legacy_manual_merge_enabled("user_merge_nodes")
     result = user_merge_nodes(
         session_factory,
         project_id=project_id,
@@ -235,6 +237,7 @@ def unmerge(
     actor_id: str = Depends(get_actor_id),
     session_factory=Depends(get_session_factory),
 ) -> GraphMutationResponse:
+    require_legacy_manual_merge_enabled("unmerge_operation")
     operation = unmerge_operation(
         session_factory,
         project_id=project_id,
@@ -265,6 +268,7 @@ def remerge(
     actor_id: str = Depends(get_actor_id),
     session_factory=Depends(get_session_factory),
 ) -> GraphMutationResponse:
+    require_legacy_manual_merge_enabled("remerge_operation")
     result = remerge_operation(
         session_factory,
         project_id=project_id,

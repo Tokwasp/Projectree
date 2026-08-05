@@ -1,5 +1,32 @@
 # data-pipeline
 
+## Java Command · OpenVidu Recording Join (현재 제품 경로)
+
+현재 제품 경로는 녹화 완료 SQS를 잡은 채 STT/LLM을 실행하지 않는다. 두 짧은 consumer가 입력을 PostgreSQL에 commit한 뒤 ACK하고, 별도 coordinator가 `(projectId, roomName)`으로 Java command와 recording을 join한다.
+
+```text
+Recording Ready SQS ─→ recording-ready-consumer ─┐
+                                                 ├→ DB join → coordinator
+Java Command SQS ────→ analysis-command-consumer ┘            ├→ SUMMARY
+                                                              └→ NODES
+NODES 성공 → Full Snapshot v1 → S3 → Result Event v3(snapshotRef) → Java
+SUMMARY 성공 → Result Event v3(apiPath) → Java
+```
+
+```powershell
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m data_pipeline.meeting_analysis recording-ready-consumer
+.\.venv\Scripts\python.exe -m data_pipeline.meeting_analysis analysis-command-consumer
+.\.venv\Scripts\python.exe -m data_pipeline.meeting_analysis coordinator
+.\.venv\Scripts\python.exe -m data_pipeline.outbox_publisher
+```
+
+필수 설정은 `RECORDING_READY_QUEUE_URL`, `ANALYSIS_COMMAND_QUEUE_URL`, `OPENVIDU_RECORDING_BUCKET`, `PROJECTREE_ANALYSIS_RESULT_QUEUE_URL`, `AWS_S3_BUCKET`, `PROJECTREE_GRAPH_SNAPSHOT_PREFIX`, `PROJECTREE_GRAPH_SNAPSHOT_MAX_SIZE_BYTES=10485760`과 공통 AWS/DB 설정이다. Snapshot 제한은 Java의 10 MiB(`10,485,760` bytes)와 같으며 실제 S3에 올릴 canonical UTF-8 JSON byte 배열에 적용한다. OpenVidu Recording Queue, Java Command Queue, Java Result Queue는 역할이 다른 별도 Queue다. `OUTBOX_TRANSPORT=result-sqs`는 v3 row만 발행한다. Legacy OpenVidu 장시간 Worker와 수동 merge API는 각각 `ENABLE_LEGACY_OPENVIDU_AUDIO_WORKER`, `ENABLE_LEGACY_MANUAL_MERGE_API`를 명시하지 않으면 비활성이다.
+
+SUMMARY와 NODES는 STT 결과만 공유하고 동시에 실행되는 독립 작업이다. Java command의 `generateSummary`, `generateNodes`가 각각 task 생성을 결정한다. 성공은 각각 `MEETING_SUMMARY_READY`, `PROJECT_GRAPH_CHANGED`, 최종 실패는 task별 `ANALYSIS_TASK_STATUS_CHANGED`로 통지하며 통합 성공 barrier는 사용하지 않는다. 상세 계약은 [Command Join v1](docs/contracts/meeting-analysis-command-join-v1.md), [Result Event v3](docs/contracts/java-result-event-v3.md), [자동 흡수 병합](docs/contracts/automatic-node-merge.md), [Meeting Summary](docs/contracts/meeting-summary-contract.md)을 따른다.
+
+`SUMMARY_ADAPTER=gms`는 기존 OpenAI 호환 GMS Client를 사용해 제목·본문·Decision·Action·Issue를 JSON 계약으로 생성한다. `fake`는 `tests/config/fake/`에서만 허용되며 production coordinator는 모든 Fake AI adapter를 시작 단계에서 거부한다. `NO_EXTERNAL_AI_CALLS=1`이면 GMS Client 생성 전에 차단되므로 기본 테스트는 크레딧을 사용하지 않는다.
+
 ## Clova STT 어댑터
 
 `data_pipeline.stt.Transcriber`는 로컬 음성 `Path`와 `meeting_id`를 받아
@@ -122,9 +149,10 @@ FastAPI 제품 경로는 그래프 조회·사용자 직접 편집·논리 병�
 회의록 본문은 그래프 실행 통계인 `GenerationRun.result_summary`와 분리된
 `meeting_summary`에 versioned immutable 문서로 저장한다. 저장과
 `MEETING_SUMMARY_READY` Outbox는 한 트랜잭션이며 Spring은 이벤트의 `apiPath` 또는
-`GET /api/v1/meetings/{meetingId}/summary`로 조회한다. 현재는 deterministic
-`FakeMeetingSummaryGenerator`만 검증했고 실제 GMS 호출은 credit 정책으로
-차단되어 있다. 상세 계약은
+`GET /api/v1/meetings/{meetingId}/summary`로 조회한다. 실제 제품 경로는
+`GmsMeetingSummaryGenerator`, 테스트 경로는 deterministic
+`FakeMeetingSummaryGenerator`를 사용한다. 기본 검증에서는 실제 GMS 호출이
+안전 스위치로 차단된다. 상세 계약은
 [`docs/contracts/meeting-summary-contract.md`](docs/contracts/meeting-summary-contract.md)다.
 
 ## 레거시 호환: Candidate 1차 검토 경계
@@ -290,10 +318,10 @@ $env:DATABASE_URL = "postgresql+psycopg://pipeline:pipeline@localhost:5432/pipel
 ```
 
 `docker compose ps`가 `healthy`,
-`alembic current`가 `0009_graph_event_contract_v1 (head)`인지 확인한다.
+`alembic current`가 `0010_meeting_analysis_join_v3 (head)`인지 확인한다.
 
 실제 배포 설정 예시는 루트 `.env.example`, 외부 호출이 완전히 차단된
-개발/CI 예시는 `env/fake/.env.example.fake`를 사용한다. 두 파일을 섞지 않는다.
+개발/CI 예시는 `tests/config/fake/.env.example.fake`를 사용한다. 두 파일을 섞지 않는다.
 
 Spring 재동기화용 Python 내부 조회는
 `GET /internal/projects/{projectId}/graph-snapshot`이다. 전체 Event v1과
@@ -360,7 +388,7 @@ Fake Meeting Summary 완료 장벽을 테스트 전용 PostgreSQL에서 확인�
 $env:NO_EXTERNAL_AI_CALLS = "1"
 $env:ALLOW_GMS_FATAL_SMOKE = "1"
 
-.\.venv\Scripts\python.exe scripts\gms_fatal_smoke.py `
+.\.venv\Scripts\python.exe tests\tools\smoke\gms_fatal_smoke.py `
   --env-file .env `
   --max-candidate-calls 2 `
   --max-b-model-calls 4 `
@@ -381,6 +409,8 @@ data-pipeline/
 │   ├── api/            # FastAPI Graph 조회·사용자 직접 편집 내부 경계
 │   ├── analysis_worker/# 레거시 승인 흐름용 비동기 분석 호환 Worker
 │   ├── outbox_publisher/# Spring 통지 relay
+│   ├── meeting_analysis/# Command·Recording join 및 병렬 task coordinator
+│   ├── meeting_summary/# 회의록 port·GMS adapter·저장 service
 │   ├── worker/         # S3/SQS 음성 입력 Worker
 │   ├── stt/            # Fake/Clova Transcriber
 │   ├── b_model/        # B 모델 port와 GMS adapter
@@ -394,10 +424,15 @@ data-pipeline/
 │   ├── operations/     # FastAPI·Worker·B 모델·AWS 실행
 │   ├── handoffs/       # Spring 등 다른 담당자 인수인계
 │   └── reports/        # 시점이 고정된 E2E·품질 결과
-├── evaluation/         # 품질 평가용 gold/scorer
 ├── outputs/            # E2E 결과(Git 제외)
-├── scripts/            # 로컬 실행·평가 도구
-├── tests/              # 단위 + PostgreSQL 통합 + Fake E2E
+├── scripts/            # 운영 backfill 등 제품 유지보수 CLI
+├── tests/
+│   ├── config/         # 외부 호출 차단 Fake 환경
+│   ├── fixtures/       # STT·계약·평가 gold 입력
+│   ├── evaluation_support/ # 제품 패키지와 분리된 평가 지원 코드
+│   ├── tools/          # evaluation·integration·smoke 수동 검증 CLI
+│   ├── evaluation/     # 평가 코드 회귀 테스트
+│   └── operations/     # 운영 도구 안전성 테스트
 ├── alembic.ini, docker-compose.yml, .env.example, .gitlab-ci.yml
 ```
 
@@ -427,22 +462,22 @@ data-pipeline/
   UPDATE·same/reverses/resolved_by 는 M3. 그래서 ② 입력에 candidates 가 없다.
 - **판정 공간**: NEW_DECISION / ATTACH(이번 회의 itemId만) / UNATTACHED(NO_RELATED_DECISION | NOT_CONFIRMED).
   PoC 의 MINUTES_ONLY 개념은 **graph_state=UNATTACHED 노드 보존**으로 구현(버리지 않음 — 재판정 대상).
-- **프롬프트**: `data_pipeline/prompts/`(정본 템플릿+sha), PoC↔M2 규칙 대응은 `prompts/RULE_MAP.md`.
+- **프롬프트**: `data_pipeline/prompts/`(정본 템플릿+sha), 과거 PoC↔M2 규칙 대응은 `docs/reference/legacy-prompts/RULE_MAP.md`.
   granularity 규칙은 이식하지 않음(폐기 실험). R8 은 §T-1 대기 중이라 현행 유지.
 - **체인**: `data_pipeline/pipeline/chain.py` — 세그먼트 → ① → itemId 유일성/evidence 검증 → ②(후보 없음)
   → 모든 item을 `NodeCandidate`로 PG에 저장한다. 사용자 승인 전에는 정식 Node/Relation/NodeEvidence를
   만들지 않는다. ①/② 프롬프트·raw·sha·토큰·lineage는 선택적으로 `outputs/<run>/<meeting>/`에 저장한다.
 - **LLM 어댑터**: `data_pipeline/llm/` (GMS OpenAI 호환, gpt-5.2, json_object, timeout 180s, retry 2).
   키는 `.env`(GMS_KEY)로만. 오프라인 테스트는 FakeClient — openai 미설치여도 green.
-- **회귀**: `scripts/run_m2_regression.py` (gold 5회의). gold 어댑터가 회의 간 판정(ATTACH D-*/A-*, UPDATE_ACTION)을
-  **UNATTACHED 기대값으로 변환**한다(gold 원본 무수정, `evaluation/gold_adapter.py`). 회귀 결과는
+- **회귀**: `tests/tools/evaluation/run_m2_regression.py` (gold 5회의). gold 어댑터가 회의 간 판정(ATTACH D-*/A-*, UPDATE_ACTION)을
+  **UNATTACHED 기대값으로 변환**한다(gold 원본 무수정, `tests/fixtures/evaluation/gold_adapter.py`). 회귀 결과는
   Git에 커밋하지 않는 `outputs/`에 기록한다.
 - **실행**:
   ```bash
   # 오프라인 (LLM 없이) — 체인/어댑터 로직 검증
   pytest
   # 실 LLM 회귀 (크레딧 소비, .env 의 GMS_KEY 필요)
-  python scripts/run_m2_regression.py --meetings M2X,M2Y,M1,M2,M3 --max-credits 8000 \
+  python tests/tools/evaluation/run_m2_regression.py --meetings M2X,M2Y,M1,M2,M3 --max-credits 8000 \
     --env-file /path/to/.env
   ```
 

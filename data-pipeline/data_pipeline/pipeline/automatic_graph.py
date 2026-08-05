@@ -39,6 +39,7 @@ from data_pipeline.storage import (
     Category,
     GenerationRun,
     Meeting,
+    MeetingAnalysisCommand,
     Node,
     NodeAnalysisRun,
     NodeCandidate,
@@ -71,6 +72,9 @@ from .revisions import (
     mark_node_embedding_stale,
     reconcile_embedding_status_after_revision,
     validated_candidate_evidence,
+)
+from data_pipeline.meeting_analysis.result_events import (
+    stage_project_graph_changed_v3,
 )
 
 _NODE_TYPES = {"DECISION", "ACTION", "ISSUE"}
@@ -238,11 +242,17 @@ def _claim_generation_run(
                 started_at=datetime.now(timezone.utc),
             )
             session.add(existing)
-            stage_analysis_processing(
-                session,
-                project_id=project_id,
-                external_meeting_id=external_meeting_id,
-            )
+            if session.execute(
+                select(MeetingAnalysisCommand.id).where(
+                    MeetingAnalysisCommand.project_id == project_id,
+                    MeetingAnalysisCommand.meeting_id == external_meeting_id,
+                )
+            ).scalar_one_or_none() is None:
+                stage_analysis_processing(
+                    session,
+                    project_id=project_id,
+                    external_meeting_id=external_meeting_id,
+                )
             try:
                 session.commit()
             except IntegrityError:
@@ -269,11 +279,17 @@ def _claim_generation_run(
             existing.completed_at = None
             existing.started_at = datetime.now(timezone.utc)
             existing.updated_at = datetime.now(timezone.utc)
-            stage_analysis_processing(
-                session,
-                project_id=project_id,
-                external_meeting_id=external_meeting_id,
-            )
+            if session.execute(
+                select(MeetingAnalysisCommand.id).where(
+                    MeetingAnalysisCommand.project_id == project_id,
+                    MeetingAnalysisCommand.meeting_id == external_meeting_id,
+                )
+            ).scalar_one_or_none() is None:
+                stage_analysis_processing(
+                    session,
+                    project_id=project_id,
+                    external_meeting_id=external_meeting_id,
+                )
             session.commit()
             return _GenerationClaim(existing, True, False)
         session.rollback()
@@ -335,15 +351,24 @@ def _mark_generation_failed(
         if run is None:
             session.rollback()
             return
-        if run.status in _PUBLISHED_STATES:
-            stage_analysis_failed(
-                session,
-                project_id=project_id,
-                external_meeting_id=run.external_meeting_id,
-                failure_code=code,
-                failure_message=type(error).__name__,
+        product_command = session.execute(
+            select(MeetingAnalysisCommand.id).where(
+                MeetingAnalysisCommand.project_id == project_id,
+                MeetingAnalysisCommand.meeting_id == run.external_meeting_id,
             )
-            session.commit()
+        ).scalar_one_or_none()
+        if run.status in _PUBLISHED_STATES:
+            if product_command is None:
+                stage_analysis_failed(
+                    session,
+                    project_id=project_id,
+                    external_meeting_id=run.external_meeting_id,
+                    failure_code=code,
+                    failure_message=type(error).__name__,
+                )
+                session.commit()
+            else:
+                session.rollback()
             return
         if run.status == "FAILED":
             session.rollback()
@@ -353,8 +378,9 @@ def _mark_generation_failed(
         run.failure_message = f"{type(error).__name__}: {error}"[:2000]
         run.completed_at = datetime.now(timezone.utc)
         run.updated_at = datetime.now(timezone.utc)
-        session.add(
-            OutboxEvent(
+        if product_command is None:
+            session.add(
+                OutboxEvent(
                 event_type="GRAPH_GENERATION_FAILED",
                 aggregate_type="generation_run",
                 aggregate_id=str(run.id),
@@ -368,15 +394,15 @@ def _mark_generation_failed(
                     "errorType": type(error).__name__,
                 },
                 status="PENDING",
+                )
             )
-        )
-        stage_analysis_failed(
-            session,
-            project_id=project_id,
-            external_meeting_id=run.external_meeting_id,
-            failure_code=code,
-            failure_message=type(error).__name__,
-        )
+            stage_analysis_failed(
+                session,
+                project_id=project_id,
+                external_meeting_id=run.external_meeting_id,
+                failure_code=code,
+                failure_message=type(error).__name__,
+            )
         session.commit()
     except Exception:
         session.rollback()
@@ -1384,6 +1410,56 @@ def _apply_planned_logical_merge(
 ) -> uuid.UUID:
     decision = item.decision
     assert decision is not None
+    if source_node.graph_state != "UNATTACHED" or source_node.parent_id is not None:
+        raise GraphIntegrityError("automatic merge source must be an UNATTACHED leaf")
+    if session.execute(
+        select(Node.id).where(
+            Node.project_id == plan.project_id,
+            Node.parent_id == source_node.id,
+            Node.deleted_at.is_(None),
+        )
+    ).first() is not None:
+        raise GraphIntegrityError("automatic merge source must not have children")
+    canonical_target = resolve_canonical_node(
+        session,
+        project_id=plan.project_id,
+        node_id=target_node.id,
+        expected_node_type=source_node.node_type,
+        for_update=True,
+    )
+    if (
+        canonical_target.graph_state != "ACTIVE"
+        or canonical_target.category != source_node.category
+    ):
+        raise GraphMutationValidationError(
+            "automatic merge target must be ACTIVE with the same category"
+        )
+    suggested_title = decision.suggestedTitle.strip()
+    if not suggested_title:
+        raise GraphMutationValidationError("automatic merge title must not be blank")
+    evidence_specs = _deduplicate_evidence_specs(
+        project_id=plan.project_id,
+        specs=[
+            *current_revision_evidence_specs(session, node=canonical_target),
+            *current_revision_evidence_specs(session, node=source_node),
+        ],
+    )
+    create_node_revision(
+        session,
+        node=canonical_target,
+        title=suggested_title,
+        content=decision.suggestedContent,
+        node_type=canonical_target.node_type,
+        category=canonical_target.category,
+        due_date=canonical_target.due_date,
+        created_by_type="SYSTEM",
+        created_by_id="AUTOMATIC_PIPELINE",
+        generation_run_id=plan.generation_run_id,
+        evidence_specs=evidence_specs,
+        requires_evidence=True,
+    )
+    mark_node_embedding_stale(session, node=canonical_target)
+    source_node.parent_id = None
     retrieval = next(
         row
         for row in item.retrieval
@@ -1393,7 +1469,7 @@ def _apply_planned_logical_merge(
         session,
         project_id=plan.project_id,
         source=source_node,
-        target=target_node,
+        target=canonical_target,
         actor_type="SYSTEM",
         actor_id="AUTOMATIC_PIPELINE",
         generation_run_id=plan.generation_run_id,
@@ -1415,6 +1491,26 @@ def _apply_planned_logical_merge(
         ),
     )
     return operation.id
+
+
+def _target_version_valid_for_apply(
+    session,
+    *,
+    plan: GraphMutationPlan,
+    target: Node,
+    expected_version: int | None,
+) -> bool:
+    if expected_version is None or target.version == expected_version:
+        return True
+    if target.version < expected_version or target.current_revision_id is None:
+        return False
+    revision = session.get(NodeRevision, target.current_revision_id)
+    return bool(
+        revision is not None
+        and revision.generation_run_id == plan.generation_run_id
+        and revision.created_by_type == "SYSTEM"
+        and revision.created_by_id == "AUTOMATIC_PIPELINE"
+    )
 
 
 def _apply_planned_merge(
@@ -1440,9 +1536,11 @@ def _apply_planned_merge(
             apply_warnings=apply_warnings,
         )
         return None
-    if (
-        item.target_node_version is not None
-        and target_node.version != item.target_node_version
+    if not _target_version_valid_for_apply(
+        session,
+        plan=plan,
+        target=target_node,
+        expected_version=item.target_node_version,
     ):
         _downgrade_merge_at_apply(
             item=item,
@@ -1457,6 +1555,16 @@ def _apply_planned_merge(
         expected_node_type=source_node.node_type,
         for_update=True,
     )
+    if (
+        canonical_target.graph_state != "ACTIVE"
+        or canonical_target.category != source_node.category
+    ):
+        _downgrade_merge_at_apply(
+            item=item,
+            reason="MERGE_TARGET_NOT_ACTIVE_SAME_CATEGORY_CREATE_NEW",
+            apply_warnings=apply_warnings,
+        )
+        return None
     if source_node.node_type == "ACTION":
         intended_parent = _resolve_action_parent_for_apply(
             session,
@@ -1502,25 +1610,11 @@ def _target_version_matches_plan(
     requested_target: Node,
     canonical_target: Node,
 ) -> bool:
-    expected = item.target_node_version
-    if expected is None or requested_target.version == expected:
-        return True
-    if (
-        requested_target.id != canonical_target.id
-        or canonical_target.node_type != "ACTION"
-        or canonical_target.version != expected + 1
-        or canonical_target.current_revision_id is None
-    ):
-        return False
-    current_revision = session.get(
-        NodeRevision,
-        canonical_target.current_revision_id,
-    )
-    return bool(
-        current_revision is not None
-        and current_revision.generation_run_id == plan.generation_run_id
-        and current_revision.created_by_type == "SYSTEM"
-        and current_revision.created_by_id == "AUTOMATIC_PIPELINE"
+    return _target_version_valid_for_apply(
+        session,
+        plan=plan,
+        target=canonical_target,
+        expected_version=item.target_node_version,
     )
 
 
@@ -1794,9 +1888,7 @@ def apply_graph_mutation_plan(
                 category=source.category,
                 title=source.title,
                 content=source.content,
-                graph_state=(
-                    "ACTIVE" if source.node_type == "DECISION" else "UNATTACHED"
-                ),
+                graph_state="UNATTACHED",
                 analysis_status="PENDING",
                 due_date=source.due_date,
                 version=1,
@@ -1853,6 +1945,9 @@ def apply_graph_mutation_plan(
             )
             if operation_id is not None:
                 merge_operation_ids.append(operation_id)
+            elif item.applied_action != "MERGE":
+                # CREATE_NEW/LINK Decision roots are independently valid.
+                nodes_by_planned_id[item.source.node_id].graph_state = "ACTIVE"
 
         # Resolve LINKs after Decision canonicalization so dependent Nodes
         # become ACTIVE only with the final valid structural parent. Relation
@@ -2033,8 +2128,15 @@ def apply_graph_mutation_plan(
         ]
         meeting.status = "COMPLETED"
         meeting.updated_at = run.completed_at
-        session.add(
-            OutboxEvent(
+        analysis_command = session.execute(
+            select(MeetingAnalysisCommand).where(
+                MeetingAnalysisCommand.project_id == plan.project_id,
+                MeetingAnalysisCommand.meeting_id == plan.external_meeting_id,
+            )
+        ).scalar_one_or_none()
+        if analysis_command is None:
+            session.add(
+                OutboxEvent(
                 event_type="GRAPH_GENERATION_COMPLETED",
                 aggregate_type="generation_run",
                 aggregate_id=str(run.id),
@@ -2049,25 +2151,32 @@ def apply_graph_mutation_plan(
                     "warnings": apply_warnings,
                 },
                 status="PENDING",
+                )
             )
-        )
         graph_nodes = {
             node.id: node
             for node in [*nodes_by_planned_id.values(), *locked_targets.values()]
         }
-        _, graph_version = stage_project_graph_changed(
-            session,
-            project_id=plan.project_id,
-            upserted_nodes=list(graph_nodes.values()),
-        )
+        if analysis_command is None:
+            _, graph_version = stage_project_graph_changed(
+                session,
+                project_id=plan.project_id,
+                upserted_nodes=list(graph_nodes.values()),
+            )
+        else:
+            _, _, graph_version = stage_project_graph_changed_v3(
+                session,
+                command=analysis_command,
+            )
         summary["graphVersion"] = graph_version
         run.result_summary = dict(summary)
-        mark_graph_ready(
-            session,
-            project_id=plan.project_id,
-            external_meeting_id=plan.external_meeting_id,
-            graph_version=graph_version,
-        )
+        if analysis_command is None:
+            mark_graph_ready(
+                session,
+                project_id=plan.project_id,
+                external_meeting_id=plan.external_meeting_id,
+                graph_version=graph_version,
+            )
         session.commit()
         return AutomaticGraphResult(
             generation_run_id=run.id,
@@ -2178,12 +2287,17 @@ def run_automatic_meeting(
     force_retry: bool = False,
     meeting_runner=None,
     meeting_summary_generator=None,
+    generate_summary: bool = False,
     **meeting_runner_kwargs,
 ):
     """SQS-facing orchestration wrapper around the existing ``run_meeting``."""
 
     if meeting_runner is None:
         from .chain import run_meeting as meeting_runner
+    if generate_summary and meeting_summary_generator is None:
+        raise ValueError(
+            "meeting_summary_generator is required when generate_summary is true"
+        )
 
     project_id = canonical_storage_identifier(
         meeting_input["projectId"],
@@ -2216,19 +2330,16 @@ def run_automatic_meeting(
             **meeting_runner_kwargs,
         )
         if claim.replayed:
-            if meeting_summary_generator is None:
-                from data_pipeline.meeting_summary import FakeMeetingSummaryGenerator
+            if generate_summary:
+                from data_pipeline.meeting_summary import generate_meeting_summary
 
-                meeting_summary_generator = FakeMeetingSummaryGenerator()
-            from data_pipeline.meeting_summary import generate_meeting_summary
-
-            generate_meeting_summary(
-                session_factory,
-                project_id=project_id,
-                external_meeting_id=meeting_id,
-                summary_version=1,
-                generator=meeting_summary_generator,
-            )
+                generate_meeting_summary(
+                    session_factory,
+                    project_id=project_id,
+                    external_meeting_id=meeting_id,
+                    summary_version=1,
+                    generator=meeting_summary_generator,
+                )
             result.proposal_result = result.proposal_result.model_copy(
                 update={
                     "status": "COMPLETED",
@@ -2253,19 +2364,16 @@ def run_automatic_meeting(
             merge_policy=merge_policy,
             b_model=b_model,
         )
-        if meeting_summary_generator is None:
-            from data_pipeline.meeting_summary import FakeMeetingSummaryGenerator
+        if generate_summary:
+            from data_pipeline.meeting_summary import generate_meeting_summary
 
-            meeting_summary_generator = FakeMeetingSummaryGenerator()
-        from data_pipeline.meeting_summary import generate_meeting_summary
-
-        generate_meeting_summary(
-            session_factory,
-            project_id=project_id,
-            external_meeting_id=meeting_id,
-            summary_version=1,
-            generator=meeting_summary_generator,
-        )
+            generate_meeting_summary(
+                session_factory,
+                project_id=project_id,
+                external_meeting_id=meeting_id,
+                summary_version=1,
+                generator=meeting_summary_generator,
+            )
         result.proposal_result = proposal.model_copy(
             update={
                 "status": "COMPLETED",

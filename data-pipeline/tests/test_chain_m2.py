@@ -1,7 +1,7 @@
 """M2 ①② 체인 오프라인 테스트 (FakeClient — LLM 결정론적 모사).
 
 회의 내 전용 판정(UNATTACHED 포함)이 review candidate로 정확히 보존되는지 검증한다.
-실제 GMS 호출은 scripts/run_m2_meeting.py / run_m2_regression.py 로 수행(크레딧 소비).
+실제 GMS 호출은 tests/tools/evaluation/run_m2_regression.py로 수행(크레딧 소비).
 """
 
 from __future__ import annotations

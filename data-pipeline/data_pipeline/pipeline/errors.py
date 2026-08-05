@@ -163,6 +163,10 @@ class GraphMutationValidationError(AutomaticGraphError):
     """A requested graph mutation is invalid and must be rolled back."""
 
 
+class NodeHasChildrenError(GraphMutationValidationError):
+    """Leaf-only deletion rejected a representative with structural children."""
+
+
 class GenerationRunNotFoundError(AutomaticGraphError):
     pass
 
