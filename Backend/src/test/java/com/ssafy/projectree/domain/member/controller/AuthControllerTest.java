@@ -1,6 +1,7 @@
 package com.ssafy.projectree.domain.member.controller;
 
 import com.ssafy.projectree.ControllerTestSupport;
+import com.ssafy.projectree.domain.member.LoginMember;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.controller.request.GoogleLoginRequest;
 import com.ssafy.projectree.domain.member.controller.request.NaverLoginRequest;
@@ -10,7 +11,10 @@ import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 
+import static com.ssafy.projectree.global.config.session.SessionConst.SESSION_LOGIN_MEMBER;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -199,6 +203,69 @@ class AuthControllerTest extends ControllerTestSupport {
                 .andDo(print())
                 .andExpect(status().isBadRequest())
         ;
+    }
+
+    @DisplayName("로그인한 회원이 로그아웃하면 세션이 무효화된다.")
+    @Test
+    void logout() throws Exception {
+        // given
+        MockHttpSession session = loginSession();
+
+        // when // then
+        mockMvc.perform(
+                        post("/api/auth/logout")
+                                .session(session)
+                )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("성공"))
+                .andExpect(jsonPath("$.data").isEmpty())
+        ;
+
+        assertThat(session.isInvalid()).isTrue();
+    }
+
+    @DisplayName("세션 없이 로그아웃을 요청하면 401을 응답한다.")
+    @Test
+    void logoutWithoutSession() throws Exception {
+        // when // then
+        mockMvc.perform(
+                        post("/api/auth/logout")
+                )
+                .andDo(print())
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
+        ;
+    }
+
+    @DisplayName("세션에 로그인 정보가 없으면 로그아웃 시 401을 응답하고 세션을 무효화하지 않는다.")
+    @Test
+    void logoutWithSessionButNoLoginMember() throws Exception {
+        // given
+        MockHttpSession session = new MockHttpSession();
+
+        // when // then
+        mockMvc.perform(
+                        post("/api/auth/logout")
+                                .session(session)
+                )
+                .andDo(print())
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
+        ;
+
+        assertThat(session.isInvalid()).isFalse();
+    }
+
+    private MockHttpSession loginSession() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(SESSION_LOGIN_MEMBER, LoginMember.builder()
+                .id(1)
+                .name("김싸피")
+                .email("ssafy@gmail.com")
+                .build());
+        return session;
     }
 
 }

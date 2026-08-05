@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -137,6 +138,20 @@ class MemberControllerTest extends ControllerTestSupport {
         then(memberService).should().deleteMember(1);
     }
 
+    @DisplayName("탈퇴하면 세션이 무효화된다.")
+    @Test
+    void deleteMember_invalidatesSession() throws Exception {
+        // given
+        MockHttpSession session = loginSession();
+
+        // when
+        mockMvc.perform(delete("/api/members/me").session(session))
+                .andExpect(status().isOk());
+
+        // then
+        assertThat(session.isInvalid()).isTrue();
+    }
+
     @DisplayName("로그인하지 않고 탈퇴를 요청하면 401을 응답하고 탈퇴를 실행하지 않는다.")
     @Test
     void deleteMember_withoutLogin_returnsUnauthorized() throws Exception {
@@ -148,17 +163,21 @@ class MemberControllerTest extends ControllerTestSupport {
         then(memberService).should(never()).deleteMember(anyInt());
     }
 
-    @DisplayName("세션은 유효하지만 회원이 없으면 탈퇴 시 404를 응답한다.")
+    @DisplayName("세션은 유효하지만 회원이 없으면 탈퇴 시 404를 응답하고 세션을 무효화하지 않는다.")
     @Test
     void deleteMember_whenMemberRemoved_returnsNotFound() throws Exception {
         // given
+        MockHttpSession session = loginSession();
+
         willThrow(new CustomException(CommonErrorCode.MEMBER_NOT_FOUND))
                 .given(memberService).deleteMember(1);
 
         // when & then
-        mockMvc.perform(delete("/api/members/me").session(loginSession()))
+        mockMvc.perform(delete("/api/members/me").session(session))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("MEMBER_NOT_FOUND"));
+
+        assertThat(session.isInvalid()).isFalse();
     }
 
     private MemberSearchResponse createResponse() {
