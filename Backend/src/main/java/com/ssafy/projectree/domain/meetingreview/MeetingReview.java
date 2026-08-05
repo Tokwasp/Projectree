@@ -3,6 +3,7 @@ package com.ssafy.projectree.domain.meetingreview;
 import com.ssafy.projectree.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -64,6 +65,31 @@ public class MeetingReview extends BaseEntity {
 
     public static MeetingReview of(String roomName, int projectId, int memberId) {
         return new MeetingReview(roomName, projectId, memberId);
+    }
+
+    @Builder
+    private MeetingReview(String roomName, int projectId, int memberId, int speakingSeconds,
+                           String speedFeedback, String personalFeedback, String overallFeedback) {
+        this.roomName = roomName;
+        this.projectId = projectId;
+        this.memberId = memberId;
+        this.speakingSeconds = speakingSeconds;
+        this.speedFeedback = speedFeedback;
+        this.personalFeedback = personalFeedback;
+        this.overallFeedback = overallFeedback;
+    }
+
+    public static MeetingReview of(String roomName, int projectId, int memberId, int speakingSeconds,
+                                    String speedFeedback, String personalFeedback, String overallFeedback) {
+        return MeetingReview.builder()
+                .roomName(roomName)
+                .projectId(projectId)
+                .memberId(memberId)
+                .speakingSeconds(speakingSeconds)
+                .speedFeedback(speedFeedback)
+                .personalFeedback(personalFeedback)
+                .overallFeedback(overallFeedback)
+                .build();
     }
 
 }
