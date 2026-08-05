@@ -5,11 +5,29 @@
   width: 100%;
 }
 
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 .title {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--text-2xl);
+  font-size: var(--text-3xl);
   font-weight: var(--font-semibold);
+}
+
+.description {
+  margin: 0;
+  color: var(--color-gray-600);
+  font-size: var(--text-sm);
+}
+
+.projectCount {
+  color: var(--color-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
 }
 
 .toolbar {
@@ -20,52 +38,95 @@
 }
 
 .createButton {
+  display: flex;
   height: var(--space-10);
-  padding: 0 var(--space-5);
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
   color: var(--color-white);
   background: var(--color-primary);
   border: 0;
   border-radius: var(--radius-md);
+  font-family: inherit;
   font-weight: var(--font-semibold);
   cursor: pointer;
+  transition: filter var(--transition-fast);
 }
 
 .createButton:hover {
   filter: brightness(0.95);
 }
 
+.createButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.createIconBox {
+  position: relative;
+  width: var(--space-6);
+  height: var(--space-6);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.createIcon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 76px;
+  height: 76px;
+  max-width: none;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+  filter: brightness(0) invert(1);
+}
+
 .pagination {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  margin-top: var(--space-2);
 }
 
 .pageButton {
-  min-width: var(--space-8);
-  height: var(--space-8);
+  min-width: 36px;
+  height: 36px;
   padding: 0 var(--space-2);
-  color: var(--color-secondary);
-  background: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  color: var(--color-gray-600);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .pageButton:hover:not(:disabled) {
   color: var(--color-primary);
-  border-color: var(--color-primary);
+  background: var(--color-gray-50);
 }
 
 .pageButtonActive {
   color: var(--color-primary);
-  border-color: var(--color-primary);
-  background: rgb(203 98 255 / 8%);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-white));
+  font-weight: var(--font-semibold);
+}
+
+.pageButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
 .pageButton:disabled {
   cursor: not-allowed;
-  opacity: 0.4;
+  opacity: 0.35;
 }
 
 @media (max-width: 768px) {
