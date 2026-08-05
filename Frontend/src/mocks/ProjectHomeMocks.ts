@@ -1,7 +1,8 @@
 import type {
+  AiFeedbackSummary,
   ProjectHomeSummary,
-  RecentDecisionSummary,
   RecentMeetingSummary,
+  SpeakingTimeSummary,
 } from "../types/ProjectHome";
 
 export const mockProjectHome: ProjectHomeSummary = {
@@ -44,33 +45,18 @@ export const mockRecentMeetings: RecentMeetingSummary[] = [
   },
 ];
 
-export const mockRecentDecisions: RecentDecisionSummary[] = [
-  {
-    decisionId: 1,
-    title: "사용자 인증 방식을 소셜 로그인 기반으로 결정",
-    sourceMeetingTitle: "요구사항 검토 회의",
-    authorName: "이싸피",
-    decidedAt: "2026-07-22T15:30:00",
-  },
-  {
-    decisionId: 2,
-    title: "메인 컬러를 디자인 시스템의 보라색으로 결정",
-    sourceMeetingTitle: "UI/UX 디자인 리뷰",
-    authorName: "박싸피",
-    decidedAt: "2026-07-24T12:00:00",
-  },
-  {
-    decisionId: 3,
-    title: "프로젝트 목록 조회를 서버 페이지네이션으로 처리",
-    sourceMeetingTitle: "개발 진행 상황 공유",
-    authorName: "김싸피",
-    decidedAt: "2026-07-25T10:00:00",
-  },
-  {
-    decisionId: 4,
-    title: "핵심 기능별 API와 Hook 책임 분리",
-    sourceMeetingTitle: "개발 진행 상황 공유",
-    authorName: "최싸피",
-    decidedAt: "2026-07-25T11:00:00",
-  },
+export const mockAiFeedback: AiFeedbackSummary = {
+  details: [
+    { label: "말하기 속도", description: "안정적인 속도로 핵심 내용을 전달했어요." },
+    { label: "목소리 톤", description: "명확하고 편안한 톤을 유지했어요." },
+    { label: "총평", description: "질문과 의견 제시의 균형이 좋았어요." },
+  ],
+};
+
+export const mockSpeakingTimes: SpeakingTimeSummary[] = [
+  { memberId: 1, name: "나", percentage: 28, isCurrentUser: true },
+  { memberId: 2, name: "최싸피", percentage: 18, isCurrentUser: false },
+  { memberId: 3, name: "박싸피", percentage: 22, isCurrentUser: false },
+  { memberId: 4, name: "이싸피", percentage: 12, isCurrentUser: false },
+  { memberId: 5, name: "김싸피", percentage: 20, isCurrentUser: false },
 ];

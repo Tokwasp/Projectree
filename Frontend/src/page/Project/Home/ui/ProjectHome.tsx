@@ -1,12 +1,15 @@
-import MeetingCard from "../components/MeetingCard/MeetingCard";
+import AiFeedback from "../components/AiFeedback/AiFeedback";
+import SpeakingDistribution from "../components/SpeakingDistribution/SpeakingDistribution";
+import recentMinutesIcon from "../assets/recent_minutes_icon.png";
 import style from "../css/ProjectHome.module.css";
 import {
+  mockAiFeedback,
   mockProjectHome,
-  mockRecentDecisions,
   mockRecentMeetings,
+  mockSpeakingTimes,
 } from "../../../../mocks/ProjectHomeMocks";
 
-function formatDecisionDate(date: string) {
+function formatProjectDate(date: string) {
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
@@ -14,11 +17,10 @@ function formatDecisionDate(date: string) {
   }).format(new Date(date));
 }
 
-function formatProjectDate(date: string) {
+function formatMeetingDate(date: string) {
   return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
+    month: "long",
+    day: "numeric",
   }).format(new Date(date));
 }
 
@@ -50,60 +52,39 @@ export default function ProjectHome() {
         </dl>
       </section>
 
-      <section
-        className={style.section}
-        aria-labelledby="recent-meetings-heading"
-      >
-        <h2 className={style.sectionTitle} id="recent-meetings-heading">
-          최근 회의
-        </h2>
+      <div className={style.dashboardGrid}>
+        <AiFeedback feedback={mockAiFeedback} />
 
-        {mockRecentMeetings.length === 0 ? (
-          <p className={style.meetingEmpty}>최근 회의가 없습니다.</p>
-        ) : (
-          <div className={style.meetingGrid}>
-            {mockRecentMeetings.map((meeting) => (
-              <MeetingCard meeting={meeting} key={meeting.meetingId} />
-            ))}
-          </div>
-        )}
-      </section>
+        <div className={style.dashboardAside}>
+          <section
+            className={style.meetingSection}
+            aria-labelledby="recent-minutes-heading"
+          >
+            <div className={style.sectionHeading}>
+              <img src={recentMinutesIcon} alt="" />
+              <h2 className={style.sectionTitle} id="recent-minutes-heading">
+                최근 회의록
+              </h2>
+            </div>
 
-      <section
-        className={style.section}
-        aria-labelledby="recent-decisions-heading"
-      >
-        <h2 className={style.sectionTitle} id="recent-decisions-heading">
-          최근 결정사항
-        </h2>
+            {mockRecentMeetings.length === 0 ? (
+              <p className={style.meetingEmpty}>최근 회의록이 없습니다.</p>
+            ) : (
+              <ul className={style.meetingList}>
+                {mockRecentMeetings.slice(0, 2).map((meeting) => (
+                  <li className={style.meetingItem} key={meeting.meetingId}>
+                    <strong>
+                      {formatMeetingDate(meeting.scheduledAt)} 회의록
+                    </strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-        {mockRecentDecisions.length === 0 ? (
-          <p className={style.decisionEmpty}>최근 결정사항이 없습니다.</p>
-        ) : (
-          <div className={style.decisionList}>
-            {mockRecentDecisions.map((decision) => (
-              <article
-                className={style.decisionItem}
-                key={decision.decisionId}
-              >
-                <div className={style.decisionContent}>
-                  <h3 className={style.decisionTitle}>{decision.title}</h3>
-                  <p className={style.decisionSource}>
-                    {decision.sourceMeetingTitle}
-                  </p>
-                </div>
-
-                <div className={style.decisionMeta}>
-                  <span>{decision.authorName}</span>
-                  <time dateTime={decision.decidedAt}>
-                    {formatDecisionDate(decision.decidedAt)}
-                  </time>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+          <SpeakingDistribution speakingTimes={mockSpeakingTimes} />
+        </div>
+      </div>
     </div>
   );
 }
