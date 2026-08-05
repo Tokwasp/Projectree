@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import ProjectInvitePopover from "../components/ProjectInvitePopover/ProjectInvitePopover";
+import ProjectRoleFilter, {
+  type RoleFilter,
+} from "../components/ProjectRoleFilter/ProjectRoleFilter";
 import useProjectMembers from "../hooks/useProjectMembers";
 import style from "../css/ProjectMember.module.css";
-
-type RoleFilter = "ALL" | "OWNER" | "MEMBER";
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("ko-KR", {
@@ -47,7 +48,7 @@ export default function ProjectMember() {
         <div>
           <h1 className={style.title}>팀 멤버</h1>
           <p className={style.description}>
-            총 {members.length}명의 팀원이 참여 중입니다.
+            총 <strong>{members.length}</strong>명의 팀원이 참여 중입니다.
           </p>
         </div>
 
@@ -67,16 +68,10 @@ export default function ProjectMember() {
           onChange={(event) => setSearchKeyword(event.target.value)}
         />
 
-        <select
-          className={style.roleFilter}
+        <ProjectRoleFilter
           value={roleFilter}
-          aria-label="팀원 역할 필터"
-          onChange={(event) => setRoleFilter(event.target.value as RoleFilter)}
-        >
-          <option value="ALL">전체 역할</option>
-          <option value="OWNER">오너</option>
-          <option value="MEMBER">멤버</option>
-        </select>
+          onChange={setRoleFilter}
+        />
       </div>
 
       {isLoading ? (

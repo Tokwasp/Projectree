@@ -4,7 +4,7 @@
 }
 
 .inviteButton {
-  min-height: var(--space-10);
+  height: 44px;
   padding: 0 var(--space-5);
   flex-shrink: 0;
   color: var(--color-white);
