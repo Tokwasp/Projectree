@@ -1,0 +1,18 @@
+{
+  "requestId": "req-out-of-candidate",
+  "projectId": "proj-01",
+  "externalMeetingId": "M-OUT-OF-CAND",
+  "runType": "NODE_GENERATION",
+  "segments": [
+    {"segmentId": "seg-1", "startMs": 1000, "speakerLabel": "SPK_1", "text": "이 이슈는 지난 회의 결정에 붙여 주세요 아마도."}
+  ],
+  "items": [
+    {"id": "m1", "type": "ISSUE", "predictedCategory": "BACKEND",
+     "title": "존재하지 않는 결정에 연결 시도", "content": "후보에 없는 실제 ID 를 가리키는 이슈.",
+     "evidence": [{"segmentId": "seg-1", "quote": "이 이슈는 지난 회의 결정에 붙여 주세요 아마도."}]}
+  ],
+  "judgments": [
+    {"itemId": "m1", "result": "ATTACH", "attachTo": "decision-does-not-exist"}
+  ],
+  "candidates": {"decisions": []}
+}

@@ -1,0 +1,8 @@
+{
+  "eventSchemaVersion": 1,
+  "eventId": "00000000-0000-0000-0000-000000000005",
+  "eventType": "MEETING_SUMMARY_READY",
+  "occurredAt": "2026-08-03T01:04:00.000000Z",
+  "projectId": 10,
+  "payload": {"meetingSummaryId":"20000000-0000-0000-0000-000000000001","projectId":10,"externalMeetingId":501,"summaryVersion":2,"status":"READY","apiPath":"/api/v1/meetings/501/summary?summaryVersion=2"}
+}
