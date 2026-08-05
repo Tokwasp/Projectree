@@ -1,4 +1,4 @@
-import { NavLink, useParams } from "react-router-dom";
+import { NavLink, useLocation, useParams } from "react-router-dom";
 import useProjectMembers from "../../page/Project/Member/hooks/useProjectMembers";
 import type { ProjectSummary } from "../../types/Project";
 import ProjectSwitcher from "../ProjectSwitcher/ProjectSwitcher";
@@ -16,10 +16,14 @@ export default function ProjectSidebar({
   currentProjectName,
 }: ProjectSidebarProps) {
   const { projectId } = useParams<{ projectId: string }>();
+  const { pathname } = useLocation();
   const parsedProjectId = Number(projectId);
   const validProjectId = Number.isInteger(parsedProjectId)
     ? parsedProjectId
     : null;
+  const isDark =
+    pathname === `/projects/${projectId}/tree` ||
+    pathname === `/projects/${projectId}/meeting`;
   const { members } = useProjectMembers(validProjectId);
   const visibleMembers = members.slice(0, 4);
   const hiddenMemberCount = Math.max(members.length - visibleMembers.length, 0);
@@ -33,11 +37,12 @@ export default function ProjectSidebar({
   ];
 
   return (
-    <div className={style.container}>
+    <div className={`${style.container} ${isDark ? style.containerDark : ""}`}>
       <ProjectSwitcher
         projects={projects}
         currentProjectId={currentProjectId}
         currentProjectName={currentProjectName}
+        isDark={isDark}
       />
 
       <div className={style.memberSection}>
