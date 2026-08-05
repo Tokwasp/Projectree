@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.BDDMockito.given;
+import static com.ssafy.projectree.global.config.session.SessionConst.SESSION_LOGIN_MEMBER;
 
 class AuthServiceTest extends IntegrationTestSupport {
 
@@ -246,6 +247,54 @@ class AuthServiceTest extends IntegrationTestSupport {
         assertThat(session.getAttribute("loginMember")).isNull();
     }
 
+    @DisplayName("탈퇴한 회원의 이메일로 구글 로그인을 하면 예외가 발생하고 회원을 새로 저장하지 않는다.")
+    @Test
+    void googleLoginWithDeletedMember() {
+        // given
+        memberRepository.save(createDeletedMember("quit@gmail.com", "탈퇴한 회원"));
+
+        GoogleLoginRequest request = createRequest("authorization-code");
+        MockHttpSession session = new MockHttpSession();
+
+        given(googleOAuthClient.getUserAccessToken("authorization-code", REDIRECT_URI))
+                .willReturn(createToken("google-access-token"));
+        given(googleOAuthClient.getUserInfo("google-access-token"))
+                .willReturn(createUserInfo("quit@gmail.com", "탈퇴한 회원"));
+
+        // when // then
+        assertThatThrownBy(() -> authService.googleLogin(request, session))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.DELETED_MEMBER);
+
+        assertThat(memberRepository.findAll()).hasSize(1);
+        assertThat(session.getAttribute(SESSION_LOGIN_MEMBER)).isNull();
+    }
+
+    @DisplayName("탈퇴한 회원의 이메일로 네이버 로그인을 하면 예외가 발생하고 세션에 로그인 회원 정보를 담지 않는다.")
+    @Test
+    void naverLoginWithDeletedMember() {
+        // given
+        memberRepository.save(createDeletedMember("quit@naver.com", "탈퇴한 회원"));
+
+        NaverLoginRequest request = createNaverRequest("authorization-code");
+        MockHttpSession session = new MockHttpSession();
+
+        given(naverOAuthClient.getUserAccessToken("authorization-code", STATE))
+                .willReturn(createNaverToken("naver-access-token"));
+        given(naverOAuthClient.getUserInfo("naver-access-token"))
+                .willReturn(createNaverUserInfo("quit@naver.com", "탈퇴한 회원"));
+
+        // when // then
+        assertThatThrownBy(() -> authService.naverLogin(request, session))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.DELETED_MEMBER);
+
+        assertThat(memberRepository.findAll()).hasSize(1);
+        assertThat(session.getAttribute(SESSION_LOGIN_MEMBER)).isNull();
+    }
+
     private GoogleLoginRequest createRequest(String code) {
         return GoogleLoginRequest.builder()
                 .code(code)
@@ -301,6 +350,12 @@ class AuthServiceTest extends IntegrationTestSupport {
                 .email(email)
                 .name(name)
                 .build();
+    }
+
+    private Member createDeletedMember(String email, String name) {
+        Member member = createMember(email, name);
+        member.delete();
+        return member;
     }
 
 }

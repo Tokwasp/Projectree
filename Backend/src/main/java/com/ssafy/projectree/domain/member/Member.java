@@ -23,6 +23,9 @@ public class Member extends BaseEntity {
     @Column(nullable = false, length = 50)
     private String name;
 
+    @Column(nullable = false)
+    private boolean isDeleted;
+
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "upload_file_id")
     private UploadFile uploadFile;
@@ -42,5 +45,9 @@ public class Member extends BaseEntity {
             return null;
         }
         return uploadFile.getUrl();
+    }
+
+    public void delete() {
+        this.isDeleted = true;
     }
 }

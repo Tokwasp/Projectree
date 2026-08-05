@@ -1,5 +1,6 @@
 package com.ssafy.projectree.domain.member.service;
 
+import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.controller.response.MemberSearchResponse;
 import com.ssafy.projectree.domain.member.controller.response.MemberProfileResponse;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
@@ -30,5 +31,13 @@ public class MemberService {
         return memberRepository.findById(memberId)
                 .map(MemberProfileResponse::from)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Transactional
+    public void deleteMember(int memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        member.delete();
     }
 }
