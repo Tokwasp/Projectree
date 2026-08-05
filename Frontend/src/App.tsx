@@ -12,6 +12,7 @@ import ProjectCreate from "./page/Project/Create/ui/ProjectCreate";
 import ProjectHome from "./page/Project/Home/ui/ProjectHome";
 import InvitationLanding from "./page/Project/Invitation/ui/InvitationLanding";
 import ProjectMember from "./page/Project/Member/ui/ProjectMember";
+import PrivateLayout from "./layout/PrivateLayout";
 import ProjectMeeting from "./page/Project/Meeting/ui/ProjectMeeting";
 import ProjectTree from "./page/Project/Tree/ui/ProjectTree";
 import MeetingOverlay from "./page/Project/Meeting/components/MeetingOverlay/MeetingOverlay";
@@ -26,21 +27,22 @@ function App() {
           <Route path="/invitations/:token" element={<InvitationLanding />} />
         </Route>
 
-        <Route element={<AppLayout />}>
-          <Route path="/home" element={<Home />} />
-          <Route path="/projects/create" element={<ProjectCreate />} />
-          <Route path="/mypage" element={<MyPage />} />
-          <Route path="/projects" element={<ProjectList />} />
-        </Route>
+        <Route element={<PrivateLayout />}>
+          <Route element={<AppLayout />}>
+            <Route path="/home" element={<Home />} />
+            <Route path="/projects/create" element={<ProjectCreate />} />
+            <Route path="/mypage" element={<MyPage />} />
+            <Route path="/projects" element={<ProjectList />} />
+          </Route>
 
-        <Route path="/projects/:projectId" element={<ProjectLayout />}>
-          <Route index element={<ProjectHome />} />
-          <Route path="members" element={<ProjectMember />} />
-          <Route path="meeting" element={<ProjectMeeting />} />
-          <Route path="tree" element={<ProjectTree />} />
+          <Route path="/projects/:projectId" element={<ProjectLayout />}>
+            <Route index element={<ProjectHome />} />
+            <Route path="members" element={<ProjectMember />} />
+            <Route path="meeting" element={<ProjectMeeting />} />
+            <Route path="tree" element={<ProjectTree />} />
+          </Route>
         </Route>
       </Routes>
-
       <MeetingOverlay />
     </>
   );
