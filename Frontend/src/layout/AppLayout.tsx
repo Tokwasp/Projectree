@@ -6,17 +6,19 @@ import style from "./AppLayout.module.css";
 
 interface AppLayoutProps {
   sidebar?: ReactNode;
+  headerStart?: ReactNode;
 }
 
-export default function AppLayout({ sidebar }: AppLayoutProps) {
+export default function AppLayout({ sidebar, headerStart }: AppLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const canCollapseSidebar = sidebar === undefined;
+  const hasProjectSidebar = sidebar !== undefined;
 
   return (
     <div className={style.layout}>
       <aside
-        className={`${style.sidebar} ${canCollapseSidebar && isSidebarCollapsed ? style.sidebarCollapsed : ""}`}
+        className={`${style.sidebar} ${canCollapseSidebar && isSidebarCollapsed ? style.sidebarCollapsed : ""} ${hasProjectSidebar ? style.projectSidebar : ""}`}
       >
         {sidebar ?? (
           <Sidebar
@@ -27,12 +29,12 @@ export default function AppLayout({ sidebar }: AppLayoutProps) {
       </aside>
 
       <div
-        className={`${style.mainArea} ${canCollapseSidebar && isSidebarCollapsed ? style.mainAreaExpanded : ""}`}
+        className={`${style.mainArea} ${canCollapseSidebar && isSidebarCollapsed ? style.mainAreaExpanded : ""} ${hasProjectSidebar ? style.projectMainArea : ""}`}
       >
         <header
           className={`${style.header} ${isScrolled ? style.headerScrolled : ""}`}
         >
-          <AppHeader />
+          <AppHeader startContent={headerStart} />
         </header>
 
         <div

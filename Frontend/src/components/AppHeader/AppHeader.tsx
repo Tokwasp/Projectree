@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import NotificationMenu from "../NotificationMenu/NotificationMenu";
 import style from "./AppHeader.module.css";
 
-export default function AppHeader() {
+interface AppHeaderProps {
+  startContent?: ReactNode;
+}
+
+export default function AppHeader({ startContent }: AppHeaderProps) {
   const navigate = useNavigate();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const name = useAuthStore((state) => state.name);
@@ -18,6 +22,10 @@ export default function AppHeader() {
 
   return (
     <div className={style.container}>
+      {startContent && (
+        <div className={style.startContent}>{startContent}</div>
+      )}
+
       <div className={style.searchArea}>
         <input
           className={style.searchInput}

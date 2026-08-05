@@ -11,6 +11,16 @@
 
 .searchArea {
   width: min(30vw, 360px);
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.startContent {
+  display: flex;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  margin-right: auto;
 }
 
 .searchInput {
@@ -120,6 +130,14 @@
 
 .logoutButton:hover {
   background: color-mix(in srgb, var(--color-error) 7%, transparent);
+}
+
+@media (max-width: 1600px) {
+  .startContent {
+    min-width: var(--space-8);
+    overflow: visible;
+    flex: 0 0 var(--space-8);
+  }
 }
 
 @media (max-width: 768px) {

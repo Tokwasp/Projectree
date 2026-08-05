@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import ProjectCreateAside from "../components/projectCreateAside/ProjectCreateAside";
-import ProjectImageSelector from "../components/projectImageSelector/ProjectImageSelector";
+import ProjectCreateAside from "../components/ProjectCreateAside/ProjectCreateAside";
+import ProjectImageSelector from "../components/ProjectImageSelector/ProjectImageSelector";
 import style from "../css/ProjectCreate.module.css";
 import useCategories from "../hooks/useCategories";
 import useCreateProject from "../hooks/useCreateProject";

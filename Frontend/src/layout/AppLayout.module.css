@@ -18,6 +18,10 @@
   width: 72px;
 }
 
+.projectSidebar {
+  width: var(--app-sidebar-width);
+}
+
 .mainArea {
   display: flex;
   width: calc(100% - var(--app-sidebar-width));
@@ -33,6 +37,11 @@
 .mainAreaExpanded {
   width: calc(100% - 72px);
   margin-left: 72px;
+}
+
+.projectMainArea {
+  width: calc(100% - var(--app-sidebar-width));
+  margin-left: var(--app-sidebar-width);
 }
 
 .header {
