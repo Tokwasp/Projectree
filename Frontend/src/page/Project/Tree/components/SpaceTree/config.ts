@@ -120,6 +120,39 @@ export const LABEL_FADE_DISTANCE: Record<NodeType, LabelFadeRange> = {
   root: { start: 58, end: 64 },
 };
 
+/**
+ * 처음부터 라벨을 붙이는 타입. 작업·이슈까지 라벨을 다 띄우면 DOM이 감당하지 못하므로,
+ * 그 둘은 결정 노드를 선택했을 때 해당 가지만 붙는다.
+ */
+export const ALWAYS_LABELED_TYPES: NodeType[] = [
+  "root",
+  "category",
+  "decision",
+];
+
+/** 결정을 선택했을 때 연관 노드와 나머지 노드에 곱하는 밝기. */
+export const SELECTION_BRIGHTNESS = {
+  HIGHLIGHT: 1.35,
+  DIM: 0.22,
+  /** 마우스를 올린 결정 노드 — 어둡게 깔린 상태에서도 눈에 들어와야 한다. */
+  HOVER: 1.8,
+};
+
+/** 마우스를 올린 결정 노드를 키우는 배율. 누를 수 있다는 신호는 커서만으로는 약하다. */
+export const HOVER_SCALE = 1.3;
+
+/** 연관 없는 노드의 라벨에 곱하는 투명도. 아예 감추면 트리 모양이 읽히지 않는다. */
+export const SELECTION_LABEL_DIM = 0.3;
+
+/**
+ * 강조된 라벨이 버티는 거리. 작업·이슈 라벨은 원래 가까이서만 보이는데,
+ * 멀리서 결정을 클릭했을 때 아무것도 안 나타나면 선택이 먹은 줄 모른다.
+ */
+export const highlightFadeRange = (type: NodeType): LabelFadeRange =>
+  LABEL_FADE_DISTANCE[type].end < LABEL_FADE_DISTANCE.decision.end
+    ? LABEL_FADE_DISTANCE.decision
+    : LABEL_FADE_DISTANCE[type];
+
 export const CAMERA = {
   INITIAL_POSITION: [10, 8, 22] as [number, number, number],
   FOV: 50,

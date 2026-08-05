@@ -26,9 +26,19 @@ import { boundingRadius, buildTree } from "./treeEngine";
 
 interface SpaceTreeProps {
   data: TreeNodeInput;
+  /** 선택된 결정과 연관된 노드 id. null이면 선택 없음. */
+  highlightIds: Set<string> | null;
+  onSelectDecision: (id: string) => void;
+  /** 우측 패널이 덮는 폭 — 줌·보기 전환 버튼을 그만큼 왼쪽으로 밀어낸다. */
+  rightInset?: number;
 }
 
-export function SpaceTree({ data }: SpaceTreeProps) {
+export function SpaceTree({
+  data,
+  highlightIds,
+  onSelectDecision,
+  rightInset = 0,
+}: SpaceTreeProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const [is2D, setIs2D] = useState(false);
 
@@ -63,6 +73,8 @@ export function SpaceTree({ data }: SpaceTreeProps) {
           planar={planar}
           controlsRef={controlsRef}
           is2D={is2D}
+          highlightIds={highlightIds}
+          onSelectDecision={onSelectDecision}
         />
 
         <OrbitControls
@@ -96,8 +108,12 @@ export function SpaceTree({ data }: SpaceTreeProps) {
         </EffectComposer>
       </Canvas>
 
-      <ZoomControl controlsRef={controlsRef} />
-      <ViewModeToggle is2D={is2D} onToggle={() => setIs2D((prev) => !prev)} />
+      <ZoomControl controlsRef={controlsRef} rightInset={rightInset} />
+      <ViewModeToggle
+        is2D={is2D}
+        onToggle={() => setIs2D((prev) => !prev)}
+        rightInset={rightInset}
+      />
     </div>
   );
 }
@@ -194,9 +210,11 @@ function ViewModeController({
 function ViewModeToggle({
   is2D,
   onToggle,
+  rightInset,
 }: {
   is2D: boolean;
   onToggle: () => void;
+  rightInset: number;
 }) {
   return (
     <button
@@ -205,7 +223,8 @@ function ViewModeToggle({
       style={{
         position: "absolute",
         top: 24,
-        right: 24,
+        right: 24 + rightInset,
+        transition: "right 0.2s ease",
         zIndex: 20,
         padding: "8px 18px",
         borderRadius: 999,
@@ -226,7 +245,13 @@ function ViewModeToggle({
  * 우하단 세로 줌 슬라이더. OrbitControls의 거리를 rAF로 직접 읽고 쓰므로
  * 휠 줌과 항상 동기화되고 리렌더는 발생하지 않는다.
  */
-function ZoomControl({ controlsRef }: { controlsRef: OrbitControlsRef }) {
+function ZoomControl({
+  controlsRef,
+  rightInset,
+}: {
+  controlsRef: OrbitControlsRef;
+  rightInset: number;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const draggingRef = useRef(false);
   const { MIN_DISTANCE, MAX_DISTANCE, ZOOM_STEP } = CAMERA;
@@ -269,8 +294,9 @@ function ZoomControl({ controlsRef }: { controlsRef: OrbitControlsRef }) {
     <div
       style={{
         position: "absolute",
-        right: 24,
+        right: 24 + rightInset,
         bottom: 28,
+        transition: "right 0.2s ease",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

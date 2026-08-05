@@ -65,6 +65,15 @@ export default function NodeTypeLegend({
           </span>
         </label>
       ))}
+
+      {/* 결정 노드를 누를 수 있다는 걸 마우스를 올려보기 전에도 알아야 한다 */}
+      <p className={style.hint}>
+        <span
+          className={style.dot}
+          style={{ background: NODE_VISUALS.decision.glowColor }}
+        />
+        결정 노드를 클릭하면 하위 작업·이슈가 보입니다
+      </p>
     </div>
   );
 }

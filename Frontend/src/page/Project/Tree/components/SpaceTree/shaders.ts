@@ -4,9 +4,18 @@
  * 호출부에서 분기하지 않고 한 소스로 둘 다 처리된다.
  */
 export const nodeVertexShader = /* glsl */ `
+  // 밝기는 인스턴스마다 달라야 한다(결정 선택 시 일부만 강조) — uniform으로는 표현할 수 없어
+  // 인스턴스 어트리뷰트로 받고, 인스턴싱이 아닌 root는 uniform만 쓴다
+  uniform float uBrightness;
+
+  #ifdef USE_INSTANCING
+    attribute float aBrightness;
+  #endif
+
   varying vec3 vLocalPos;
   varying vec3 vWorldNormal;
   varying vec3 vWorldPos;
+  varying float vBrightness;
 
   void main() {
     vLocalPos = position;
@@ -14,9 +23,11 @@ export const nodeVertexShader = /* glsl */ `
     #ifdef USE_INSTANCING
       vec4 worldPos = instanceMatrix * vec4(position, 1.0);
       vec3 worldNormal = normalize(mat3(instanceMatrix) * normal);
+      vBrightness = uBrightness * aBrightness;
     #else
       vec4 worldPos = vec4(position, 1.0);
       vec3 worldNormal = normalize(normal);
+      vBrightness = uBrightness;
     #endif
 
     vWorldNormal = worldNormal;
@@ -62,6 +73,7 @@ export const planetFragmentShader = /* glsl */ `
   varying vec3 vLocalPos;
   varying vec3 vWorldNormal;
   varying vec3 vWorldPos;
+  varying float vBrightness;
 
   ${noiseFn}
 
@@ -80,7 +92,7 @@ export const planetFragmentShader = /* glsl */ `
     float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.5);
     vec3 color = surfaceColor + uGlowColor * fresnel * 1.3;
 
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(color * vBrightness, 1.0);
   }
 `;
 
@@ -94,6 +106,7 @@ export const starFragmentShader = /* glsl */ `
   varying vec3 vLocalPos;
   varying vec3 vWorldNormal;
   varying vec3 vWorldPos;
+  varying float vBrightness;
 
   ${noiseFn}
 
@@ -108,7 +121,7 @@ export const starFragmentShader = /* glsl */ `
     float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 1.8);
     vec3 color = core + uGlowColor * fresnel * 2.1;
 
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(color * vBrightness, 1.0);
   }
 `;
 

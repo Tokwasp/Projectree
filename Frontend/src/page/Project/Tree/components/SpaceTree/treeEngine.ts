@@ -1,5 +1,5 @@
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Vector3 } from "three";
 import {
   CHILD_RING_BASE_RADIUS,
@@ -290,6 +290,35 @@ export function useTreeRuntime(flat: FlatTree): TreeRuntime {
     }
     return states;
   }, [flat]);
+
+  /** 지난 배치의 위치. 값이 아니라 Vector3 참조를 담으므로 항상 마지막 프레임 위치다. */
+  const lastPositions = useRef(new Map<string, Vector3>());
+
+  /**
+   * 트리가 다시 만들어질 때(필터 변경, 선택된 결정의 하위 복원) 시작 위치를 손본다.
+   * 그냥 두면 관계없는 노드까지 새 좌표에서 다시 출발해 화면 전체가 튄다.
+   *
+   * 이미 있던 노드는 마지막 위치에서 이어가고, 새로 생긴 노드는 부모 자리에서 출발해
+   * 스프링이 제 위치까지 밀어낸다 — 결정을 누르면 하위가 뻗어 나오는 모션이 된다.
+   */
+  useEffect(() => {
+    const previous = lastPositions.current;
+
+    // nodeStates는 top-down 순서라 부모의 위치가 항상 먼저 확정된다
+    for (const state of nodeStates.values()) {
+      const carried = previous.get(state.id);
+
+      if (carried) {
+        state.current.copy(carried);
+      } else if (state.parentId) {
+        const parentState = nodeStates.get(state.parentId);
+        if (parentState) state.current.copy(parentState.current);
+      }
+
+      state.velocity.set(0, 0, 0);
+      previous.set(state.id, state.current);
+    }
+  }, [nodeStates]);
 
   const order = useMemo(() => flat.order.map((n) => n.id), [flat]);
 
