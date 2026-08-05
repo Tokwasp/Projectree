@@ -1,7 +1,8 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 .sectionHeader {
@@ -14,13 +15,13 @@
 .title {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
   font-weight: var(--font-semibold);
 }
 
 .viewAllLink {
   color: var(--color-primary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
   text-decoration: none;
 }
@@ -31,50 +32,60 @@
 
 .projectCard {
   overflow: hidden;
-  padding: var(--space-4);
-  background: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-}
-
-.listHeader,
-.projectRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(80px, 120px) 24px;
-  align-items: center;
-  gap: var(--space-4);
-  padding: 0 var(--space-5);
-}
-
-.listHeader {
-  min-height: var(--space-12);
-  color: var(--color-secondary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
 }
 
 .projectList {
-  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  max-height: 240px;
+  padding: 0 var(--space-2) 0 0;
   margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  overflow-x: hidden;
+  overflow-y: auto;
   list-style: none;
+  scrollbar-color: var(--color-gray-300) transparent;
+  scrollbar-width: thin;
 }
 
-.projectList li + li {
-  border-top: 1px solid var(--color-border);
+.projectList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.projectList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.projectList::-webkit-scrollbar-thumb {
+  background: var(--color-gray-300);
+  border-radius: var(--radius-full);
+}
+
+.projectList li {
+  min-width: 0;
 }
 
 .projectRow {
-  min-height: 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: var(--space-3);
+  height: 72px;
+  box-sizing: border-box;
+  padding: var(--space-3) var(--space-4);
   color: var(--color-secondary);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   text-decoration: none;
-  transition: background-color 0.2s ease;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
 }
 
 .projectRow:hover {
-  background: var(--color-gray-50);
+  background: color-mix(in srgb, var(--color-primary) 3%, var(--color-white));
+  border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .projectRow:focus-visible {
@@ -87,6 +98,13 @@
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
+}
+
+.projectCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .projectThumbnail,
@@ -107,25 +125,29 @@
   align-items: center;
   justify-content: center;
   color: var(--color-primary);
-  background: rgb(203 98 255 / 12%);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-white));
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
 }
 
 .projectName {
   overflow: hidden;
   color: var(--color-text);
+  font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .memberCount {
-  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+  font-size: var(--text-xs);
+  white-space: nowrap;
 }
 
 .arrow {
-  color: var(--color-text);
-  font-size: var(--text-xl);
+  color: var(--color-gray-500);
+  font-size: var(--text-lg);
   text-align: right;
 }
 
@@ -139,18 +161,12 @@
   text-align: center;
 }
 
-@media (max-width: 768px) {
-  .listHeader {
-    display: none;
+@media (max-width: 900px) {
+  .projectList {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .projectRow {
-    grid-template-columns: minmax(0, 1fr) auto 16px;
-    gap: var(--space-3);
-    padding: 0 var(--space-4);
-  }
-
-  .memberCount {
-    white-space: nowrap;
+    padding: var(--space-3);
   }
 }

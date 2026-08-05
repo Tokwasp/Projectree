@@ -1,13 +1,13 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-6);
   width: 100%;
 }
 
 .pageHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-6);
 }
@@ -15,7 +15,7 @@
 .title {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--text-2xl);
+  font-size: var(--text-3xl);
   font-weight: var(--font-semibold);
   line-height: var(--leading-tight);
 }
@@ -25,6 +25,12 @@
   color: var(--color-secondary);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
+}
+
+.description strong {
+  color: var(--color-primary);
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
 }
 
 .toolbar {
@@ -58,35 +64,18 @@
   box-shadow: 0 0 0 3px rgba(203, 98, 255, 0.12);
 }
 
-.roleFilter {
-  width: 136px;
-  height: 44px;
-  padding: 0 var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-white);
-  color: var(--color-text);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  cursor: pointer;
-  outline: none;
-}
-
-.roleFilter:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(203, 98, 255, 0.12);
-}
-
 /* 팀원 목록 테이블 */
 .tableContainer {
-  overflow: hidden;
+  overflow-x: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-white);
+  box-shadow: var(--shadow-sm);
 }
 
 .table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -135,11 +124,11 @@
 }
 
 .table tbody tr {
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-fast);
 }
 
 .table tbody tr:hover {
-  background: var(--color-surface);
+  background: var(--color-gray-50);
 }
 
 .member {
@@ -225,8 +214,7 @@
     flex-direction: column;
   }
 
-  .searchInput,
-  .roleFilter {
+  .searchInput {
     width: 100%;
   }
 }

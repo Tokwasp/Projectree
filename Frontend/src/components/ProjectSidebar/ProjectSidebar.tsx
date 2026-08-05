@@ -1,86 +1,87 @@
-import { Link, NavLink, useParams } from "react-router-dom";
-import Logo from "../../assets/logo.svg";
-import MemberIcon from "../../assets/icons/sidebar/member.png";
-import MeetingIcon from "../../assets/icons/sidebar/meeting.png";
-import NodeIcon from "../../assets/icons/sidebar/node.png";
-import ProjectHomeIcon from "../../assets/icons/sidebar/project-home.png";
-import SettingsIcon from "../../assets/icons/sidebar/settings.png";
-import style from "../Sidebar/Sidebar.module.css";
+import { NavLink, useParams } from "react-router-dom";
+import useProjectMembers from "../../page/Project/Member/hooks/useProjectMembers";
+import type { ProjectSummary } from "../../types/Project";
+import ProjectSwitcher from "../ProjectSwitcher/ProjectSwitcher";
+import style from "./ProjectSidebar.module.css";
 
-export default function ProjectSidebar() {
+interface ProjectSidebarProps {
+  projects: ProjectSummary[];
+  currentProjectId: number | null;
+  currentProjectName: string;
+}
+
+export default function ProjectSidebar({
+  projects,
+  currentProjectId,
+  currentProjectName,
+}: ProjectSidebarProps) {
   const { projectId } = useParams<{ projectId: string }>();
+  const parsedProjectId = Number(projectId);
+  const validProjectId = Number.isInteger(parsedProjectId)
+    ? parsedProjectId
+    : null;
+  const { members } = useProjectMembers(validProjectId);
+  const visibleMembers = members.slice(0, 4);
+  const hiddenMemberCount = Math.max(members.length - visibleMembers.length, 0);
 
-  const menus = [
-    {
-      label: "프로젝트 홈",
-      icon: ProjectHomeIcon,
-      to: `/projects/${projectId}`,
-      end: true,
-    },
-    {
-      label: "회의",
-      icon: MeetingIcon,
-      to: `/projects/${projectId}/meeting`,
-    },
-    {
-      label: "노드",
-      icon: NodeIcon,
-      to: `/projects/${projectId}/tree`,
-    },
-    {
-      label: "팀원",
-      icon: MemberIcon,
-      to: `/projects/${projectId}/members`,
-    },
-    {
-      label: "설정",
-      icon: SettingsIcon,
-      onClick: () => {
-        // TODO: 설정 페이지 이동 또는 기능 추가
-      },
-    },
+  const projectMenus = [
+    { label: "프로젝트 홈", to: `/projects/${projectId}`, end: true },
+    { label: "회의", to: `/projects/${projectId}/meeting` },
+    { label: "노드", to: `/projects/${projectId}/tree` },
+    { label: "팀원", to: `/projects/${projectId}/members` },
+    { label: "설정" },
   ];
 
   return (
     <div className={style.container}>
-      <Link className={style.brand} to="/home" aria-label="서비스 홈으로 이동">
-        <img className={style.logo} src={Logo} alt="" />
-        <span>Projectree</span>
-      </Link>
+      <ProjectSwitcher
+        projects={projects}
+        currentProjectId={currentProjectId}
+        currentProjectName={currentProjectName}
+      />
 
-      <nav className={style.navigation} aria-label="프로젝트 메뉴">
-        {menus.map((menu) =>
+      <div className={style.memberSection}>
+        <span className={style.memberLabel}>팀원 {members.length}명</span>
+        <div
+          className={style.memberList}
+          aria-label={`팀원 ${members.length}명`}
+        >
+          {visibleMembers.map((member) => (
+            <span
+              className={style.memberAvatar}
+              key={member.memberId}
+              title={member.name}
+            >
+              {member.name.charAt(0)}
+            </span>
+          ))}
+          {hiddenMemberCount > 0 && (
+            <span className={style.memberMore}>+{hiddenMemberCount}</span>
+          )}
+        </div>
+      </div>
+
+      <nav className={style.projectNavigation} aria-label="프로젝트 메뉴">
+        {projectMenus.map((menu) =>
           menu.to ? (
             <NavLink
+              className={({ isActive }) =>
+                `${style.projectMenuButton} ${isActive ? style.projectMenuButtonActive : ""}`
+              }
+              end={menu.end}
               key={menu.label}
               to={menu.to}
-              end={menu.end}
-              className={({ isActive }) =>
-                `${style.menuButton} ${isActive ? style.menuButtonActive : ""}`
-              }
             >
-              <img
-                className={style.menuIcon}
-                src={menu.icon}
-                alt=""
-                aria-hidden="true"
-              />
-              <span>{menu.label}</span>
+              {menu.label}
             </NavLink>
           ) : (
             <button
+              className={style.projectMenuButton}
               key={menu.label}
-              className={style.menuButton}
               type="button"
-              onClick={menu.onClick}
+              disabled
             >
-              <img
-                className={style.menuIcon}
-                src={menu.icon}
-                alt=""
-                aria-hidden="true"
-              />
-              <span>{menu.label}</span>
+              {menu.label}
             </button>
           ),
         )}

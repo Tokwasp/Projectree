@@ -77,6 +77,41 @@
   background: var(--color-gray-100);
 }
 
+.cardMenu {
+  position: absolute;
+  top: 44px;
+  right: var(--space-2);
+  z-index: 2;
+  min-width: 128px;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-md);
+}
+
+.deleteButton {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-error);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.deleteButton:hover {
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+}
+
+.deleteButton:focus-visible {
+  outline: 2px solid var(--color-error);
+  outline-offset: -2px;
+}
+
 .cardContent {
   display: flex;
   flex: 1 1 0;
@@ -97,8 +132,30 @@
 
 .projectMeta {
   display: flex;
+  justify-content: flex-end;
   gap: var(--space-6);
   margin-top: auto;
   color: var(--color-secondary);
   font-size: var(--text-sm);
+}
+
+.cardCompact {
+  height: 208px;
+}
+
+.cardCompact .cardContent {
+  padding: var(--space-3);
+}
+
+.cardCompact .projectName {
+  font-size: var(--text-sm);
+}
+
+.cardCompact .projectMeta {
+  font-size: var(--text-xs);
+}
+
+.cardCompact .menuButton {
+  width: var(--space-6);
+  height: var(--space-6);
 }
