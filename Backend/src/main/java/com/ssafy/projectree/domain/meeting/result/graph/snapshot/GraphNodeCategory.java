@@ -6,6 +6,5 @@ public enum GraphNodeCategory {
     DESIGN,
     INFRA,
     PLANNING,
-    AI,
-    ETC
+    AI
 }
