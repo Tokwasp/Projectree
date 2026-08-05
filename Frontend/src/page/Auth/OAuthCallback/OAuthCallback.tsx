@@ -7,6 +7,9 @@ import {
   popNaverState,
 } from "../hooks/useSocialLogin";
 import { useAuthStore } from "../../../store/authStore";
+import { prefetchProjectList } from "../../Project/List/api/projectListApi";
+
+const PROJECT_LIST_SIZE = 8;
 
 export default function OAuthCallback() {
   const { provider } = useParams<{ provider: string }>();
@@ -47,8 +50,13 @@ export default function OAuthCallback() {
     const state = returnedState ?? undefined;
 
     request({ code, redirectUri, state })
-      .then((user) => {
+      .then(async (user) => {
         login(user);
+
+        await prefetchProjectList(0, PROJECT_LIST_SIZE).catch(
+          () => undefined,
+        );
+
         navigate("/home", { replace: true });
       })
       .catch((error) => {

@@ -4,6 +4,13 @@
   gap: var(--space-4);
 }
 
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
 .title {
   margin: 0;
   color: var(--color-text);
@@ -11,38 +18,68 @@
   font-weight: var(--font-semibold);
 }
 
-.tableWrapper {
-  width: 100%;
-  overflow-x: auto;
+.viewAllLink {
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  text-decoration: none;
 }
 
-.table {
-  width: 100%;
-  min-width: 720px;
-  border-collapse: collapse;
+.viewAllLink:hover {
+  text-decoration: underline;
+}
+
+.projectCard {
+  overflow: hidden;
+  padding: var(--space-4);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.listHeader,
+.projectRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(80px, 120px) 24px;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-5);
+}
+
+.listHeader {
+  min-height: var(--space-12);
   color: var(--color-secondary);
   font-size: var(--text-sm);
-  text-align: left;
-}
-
-.table th,
-.table td {
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.table th {
-  color: var(--color-secondary);
   font-weight: var(--font-medium);
 }
 
-.table th:first-child,
-.table td:first-child {
-  width: 45%;
+.projectList {
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  list-style: none;
 }
 
-.table tbody tr:hover {
+.projectList li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.projectRow {
+  min-height: 64px;
+  color: var(--color-secondary);
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.projectRow:hover {
   background: var(--color-gray-50);
+}
+
+.projectRow:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .projectInfo {
@@ -82,11 +119,38 @@
   white-space: nowrap;
 }
 
+.memberCount {
+  font-size: var(--text-sm);
+}
+
+.arrow {
+  color: var(--color-text);
+  font-size: var(--text-xl);
+  text-align: right;
+}
+
 .emptyMessage {
   margin: 0;
   padding: var(--space-12);
   color: var(--color-secondary);
+  background: var(--color-white);
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-lg);
   text-align: center;
+}
+
+@media (max-width: 768px) {
+  .listHeader {
+    display: none;
+  }
+
+  .projectRow {
+    grid-template-columns: minmax(0, 1fr) auto 16px;
+    gap: var(--space-3);
+    padding: 0 var(--space-4);
+  }
+
+  .memberCount {
+    white-space: nowrap;
+  }
 }

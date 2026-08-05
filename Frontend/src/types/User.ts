@@ -4,12 +4,3 @@ export interface UserProfile {
   email: string;
   profileImageUrl?: string;
 }
-
-export interface UserProjectSummary {
-  projectId: number;
-  title: string;
-  role: string;
-  joinedAt: string;
-  lastActivityAt: string;
-  thumbnailUrl?: string;
-}

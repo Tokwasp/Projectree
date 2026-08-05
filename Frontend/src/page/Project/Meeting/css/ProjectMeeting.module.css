@@ -1,0 +1,12 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.connecting {
+  padding: var(--space-16);
+  color: var(--color-gray-500);
+  font-size: var(--text-md);
+}

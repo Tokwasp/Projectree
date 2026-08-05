@@ -9,85 +9,83 @@ import style from "../Sidebar/Sidebar.module.css";
 
 export default function ProjectSidebar() {
   const { projectId } = useParams<{ projectId: string }>();
-  const projectHomePath = `/projects/${projectId}`;
-  const projectMembersPath = `/projects/${projectId}/members`;
+
+  const menus = [
+    {
+      label: "프로젝트 홈",
+      icon: ProjectHomeIcon,
+      to: `/projects/${projectId}`,
+      end: true,
+    },
+    {
+      label: "회의",
+      icon: MeetingIcon,
+      to: `/projects/${projectId}/meeting`,
+    },
+    {
+      label: "노드",
+      icon: NodeIcon,
+      onClick: () => {
+        // TODO: 노드 페이지 이동 또는 기능 추가
+      },
+    },
+    {
+      label: "팀원",
+      icon: MemberIcon,
+      to: `/projects/${projectId}/members`,
+    },
+    {
+      label: "설정",
+      icon: SettingsIcon,
+      onClick: () => {
+        // TODO: 설정 페이지 이동 또는 기능 추가
+      },
+    },
+  ];
 
   return (
     <div className={style.container}>
-      <Link
-        className={style.brand}
-        to="/home"
-        aria-label="서비스 홈으로 이동"
-      >
+      <Link className={style.brand} to="/home" aria-label="서비스 홈으로 이동">
         <img className={style.logo} src={Logo} alt="" />
         <span>Projectree</span>
       </Link>
 
       <nav className={style.navigation} aria-label="프로젝트 메뉴">
-        <NavLink
-          className={({ isActive }) =>
-            `${style.menuButton} ${
-              isActive ? style.menuButtonActive : ""
-            }`
-          }
-          to={projectHomePath}
-          end
-        >
-          <img
-            className={style.menuIcon}
-            src={ProjectHomeIcon}
-            alt=""
-            aria-hidden="true"
-          />
-          <span>프로젝트 홈</span>
-        </NavLink>
-
-        <button className={style.menuButton} type="button">
-          <img
-            className={style.menuIcon}
-            src={MeetingIcon}
-            alt=""
-            aria-hidden="true"
-          />
-          <span>회의</span>
-        </button>
-
-        <button className={style.menuButton} type="button">
-          <img
-            className={style.menuIcon}
-            src={NodeIcon}
-            alt=""
-            aria-hidden="true"
-          />
-          <span>노드</span>
-        </button>
-
-        <NavLink
-          className={({ isActive }) =>
-            `${style.menuButton} ${
-              isActive ? style.menuButtonActive : ""
-            }`
-          }
-          to={projectMembersPath}
-        >
-          <img
-            className={style.menuIcon}
-            src={MemberIcon}
-            alt=""
-            aria-hidden="true"
-          />
-          <span>팀원</span>
-        </NavLink>
-
-        <button className={style.menuButton} type="button">
-          <img
-            className={style.menuIcon}
-            src={SettingsIcon}
-            alt=""
-            aria-hidden="true"
-          />
-          <span>설정</span>
-        </button>
+        {menus.map((menu) =>
+          menu.to ? (
+            <NavLink
+              key={menu.label}
+              to={menu.to}
+              end={menu.end}
+              className={({ isActive }) =>
+                `${style.menuButton} ${isActive ? style.menuButtonActive : ""}`
+              }
+            >
+              <img
+                className={style.menuIcon}
+                src={menu.icon}
+                alt=""
+                aria-hidden="true"
+              />
+              <span>{menu.label}</span>
+            </NavLink>
+          ) : (
+            <button
+              key={menu.label}
+              className={style.menuButton}
+              type="button"
+              onClick={menu.onClick}
+            >
+              <img
+                className={style.menuIcon}
+                src={menu.icon}
+                alt=""
+                aria-hidden="true"
+              />
+              <span>{menu.label}</span>
+            </button>
+          ),
+        )}
       </nav>
     </div>
   );
