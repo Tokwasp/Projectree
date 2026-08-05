@@ -9,7 +9,7 @@ export default function HomeIntro({ name, projectCount }: HomeIntroProps) {
   return (
     <section className={style.intro} aria-labelledby="home-greeting">
       <h1 className={style.title} id="home-greeting">
-        안녕하세요, {name} 님!
+        안녕하세요, <span className={style.userName}>{name}</span> 님!
       </h1>
       <p className={style.description}>
         {projectCount > 0 ? (

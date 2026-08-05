@@ -9,6 +9,15 @@
   font-weight: var(--font-bold);
 }
 
+.userName {
+  padding: 0 var(--space-1);
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--color-primary) 18%, transparent) 0 42%,
+    transparent 42% 100%
+  );
+}
+
 .description {
   margin: 0;
   color: var(--color-gray-600);

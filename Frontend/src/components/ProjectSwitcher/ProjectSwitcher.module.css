@@ -85,6 +85,26 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) transparent;
+}
+
+.dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown::-webkit-scrollbar-thumb {
+  background: var(--color-gray-300);
+  border: 2px solid var(--color-white);
+  border-radius: var(--radius-full);
+}
+
+.dropdown::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-400);
 }
 
 .dropdownItem {
