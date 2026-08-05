@@ -14,7 +14,9 @@ public record AnalysisResultConsumerProperties(
     public AnalysisResultConsumerProperties {
         queueUrl = queueUrl == null ? "" : queueUrl;
         if (enabled && queueUrl.isBlank()) {
-            throw new IllegalArgumentException("Analysis result queue URL is required when the consumer is enabled");
+            throw new IllegalArgumentException(
+                    "AWS_ANALYSIS_RESULT_QUEUE_URL is required when meeting analysis result consumer is enabled."
+            );
         }
         if (waitTimeSeconds < 0 || waitTimeSeconds > 20) {
             throw new IllegalArgumentException("SQS wait time seconds must be between 0 and 20");

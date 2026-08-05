@@ -11,6 +11,7 @@ import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisComm
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventEnvelope;
 import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventType;
+import com.ssafy.projectree.domain.meeting.result.config.AnalysisResultConsumerProperties;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.AnalysisGraphProjectionApplier;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.NodeEvidenceProjectionRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
@@ -70,10 +71,12 @@ class AnalysisResultConsumerGraphIntegrationTest {
     @MockitoBean private NaverOAuthClient naverOAuthClient;
     @MockitoBean(name = "graphSnapshotS3Client") private S3Client s3Client;
     @MockitoBean private AnalysisResultSqsGateway sqsGateway;
+    @MockitoBean private AnalysisResultConsumerScheduler scheduler;
     @MockitoBean private GraphSnapshotLoader snapshotLoader;
     @MockitoSpyBean private AnalysisGraphProjectionApplier projectionApplier;
 
     @Autowired private AnalysisResultConsumer consumer;
+    @Autowired private AnalysisResultConsumerProperties consumerProperties;
     @Autowired private ProjectRepository projectRepository;
     @Autowired private MeetingRepository meetingRepository;
     @Autowired private MeetingAnalysisCommandOutboxRepository commandRepository;
@@ -94,6 +97,14 @@ class AnalysisResultConsumerGraphIntegrationTest {
         commandRepository.deleteAll();
         meetingRepository.deleteAll();
         projectRepository.deleteAll();
+    }
+
+    @Test
+    void configuresActiveConsumerAndGatewayWhenQueueUrlIsConfigured() {
+        assertThat(consumerProperties.enabled()).isTrue();
+        assertThat(consumerProperties.queueUrl()).isEqualTo("https://example.invalid/result-queue");
+        assertThat(consumer).isNotNull();
+        assertThat(sqsGateway).isNotNull();
     }
 
     @Test
