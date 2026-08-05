@@ -73,10 +73,6 @@ from .revisions import (
     reconcile_embedding_status_after_revision,
     validated_candidate_evidence,
 )
-from data_pipeline.meeting_analysis.result_events import (
-    stage_project_graph_changed_v3,
-)
-
 _NODE_TYPES = {"DECISION", "ACTION", "ISSUE"}
 _PUBLISHED_STATES = {"COMPLETED", "COMPLETED_WITH_WARNINGS"}
 _MERGE_ACTION_PARENT_CONFLICT = "MERGE_ACTION_PARENT_CONFLICT"
@@ -2164,6 +2160,13 @@ def apply_graph_mutation_plan(
                 upserted_nodes=list(graph_nodes.values()),
             )
         else:
+            # Keep meeting_analysis out of this module's import graph. Snapshot
+            # imports the low-level event contract through the pipeline package,
+            # so a module-level reverse import would partially initialize both.
+            from data_pipeline.meeting_analysis.result_events import (
+                stage_project_graph_changed_v3,
+            )
+
             _, _, graph_version = stage_project_graph_changed_v3(
                 session,
                 command=analysis_command,
