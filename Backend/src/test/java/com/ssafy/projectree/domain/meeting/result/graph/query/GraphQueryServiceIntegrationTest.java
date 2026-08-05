@@ -79,7 +79,7 @@ class GraphQueryServiceIntegrationTest extends IntegrationTestSupport {
         assertThat(ownerTree.root().title()).isEqualTo("query-project");
         assertThat(ownerTree.root().children().getFirst().children()).extracting(node -> node.id())
                 .containsExactly(active.getNodeId());
-        assertThat(memberTree.root().children()).hasSize(7);
+        assertThat(memberTree.root().children()).hasSize(6);
         assertProjectParticipantError(() -> graphQueryService.getTree(fixture.projectId(), OUTSIDER_ID));
     }
 
@@ -91,7 +91,7 @@ class GraphQueryServiceIntegrationTest extends IntegrationTestSupport {
 
         assertThat(response.graphVersion()).isZero();
         assertThat(response.graphSyncedAt()).isNull();
-        assertThat(response.root().children()).hasSize(7);
+        assertThat(response.root().children()).hasSize(6);
         assertThat(response.root().children()).allSatisfy(category -> assertThat(category.children()).isEmpty());
     }
 

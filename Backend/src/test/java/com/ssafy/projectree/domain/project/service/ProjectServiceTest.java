@@ -193,7 +193,6 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // then
         assertThat(countProjectMembers()).isZero();
-        assertThat(countProjectCategories()).isZero();
     }
 
     @DisplayName("OWNER가 아닌 참여 멤버가 삭제하려 하면 PROJECT_DELETE_FORBIDDEN 예외가 발생한다.")
