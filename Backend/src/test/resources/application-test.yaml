@@ -20,6 +20,14 @@ spring:
   # Session Mock
   session:
     store-type: none
+  # AWS — 실제 호출은 하지 않지만 S3Client 빈 생성에 자격증명·리전이 필요하다.
+  cloud:
+    aws:
+      credentials:
+        access-key: test-access-key
+        secret-key: test-secret-key
+      region:
+        static: ap-northeast-2
   mail:
     host: localhost
     port: 2525
@@ -71,12 +79,23 @@ app:
       max-number-of-messages: 10
       polling-delay-ms: 1000
       region: ap-northeast-2
+  # 통합 테스트 중 백그라운드 스케줄러가 테스트 데이터를 건드리지 않도록 비활성화한다.
+  scheduling:
+    enabled: false
+  notification:
+    enabled: false
+    sse:
+      timeout: 30m
+      heartbeat-interval: 30s
   cors:
     allowed-origins: http://localhost:5173
   session:
     cookie:
       secure: false
       same-site: Lax
+  s3:
+    bucket: test-bucket
+    presigned-url-expire-seconds: 300
 
 # Google Oauth
 google:

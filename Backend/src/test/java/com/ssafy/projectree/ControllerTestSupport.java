@@ -10,11 +10,15 @@ import com.ssafy.projectree.domain.meeting.result.graph.query.GraphQueryService;
 import com.ssafy.projectree.domain.meeting.service.MeetingAnalysisRequestService;
 import com.ssafy.projectree.domain.nodeCategory.controller.NodeCategoryController;
 import com.ssafy.projectree.domain.nodeCategory.service.NodeCategoryService;
+import com.ssafy.projectree.domain.notification.controller.NotificationController;
+import com.ssafy.projectree.domain.notification.service.NotificationService;
 import com.ssafy.projectree.domain.project.controller.ProjectController;
 import com.ssafy.projectree.domain.project.controller.InvitationController;
 import com.ssafy.projectree.domain.project.controller.ProjectInvitationController;
 import com.ssafy.projectree.domain.project.service.ProjectInvitationService;
 import com.ssafy.projectree.domain.project.service.ProjectService;
+import com.ssafy.projectree.global.s3.S3Controller;
+import com.ssafy.projectree.global.s3.S3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -29,7 +33,9 @@ import tools.jackson.databind.ObjectMapper;
         InvitationController.class,
         NodeCategoryController.class,
         MeetingController.class,
-        GraphQueryController.class
+        GraphQueryController.class,
+        NotificationController.class,
+        S3Controller.class
 })
 public abstract class ControllerTestSupport {
 
@@ -59,5 +65,11 @@ public abstract class ControllerTestSupport {
 
     @MockitoBean
     protected GraphQueryService graphQueryService;
+
+    @MockitoBean
+    protected NotificationService notificationService;
+
+    @MockitoBean
+    protected S3Service s3Service;
 
 }

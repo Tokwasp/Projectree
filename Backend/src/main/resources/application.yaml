@@ -39,6 +39,14 @@ spring:
   session:
     store-type: redis
     timeout: 30m
+  # AWS
+  cloud:
+    aws:
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
   mail:
     host: smtp.gmail.com
     port: 587
@@ -89,12 +97,25 @@ app:
       max-number-of-messages: ${MEETING_ANALYSIS_RESULT_MAX_NUMBER_OF_MESSAGES:10}
       polling-delay-ms: ${MEETING_ANALYSIS_RESULT_POLLING_DELAY_MS:1000}
       region: ${AWS_REGION:ap-northeast-2}
+  # 초대 메일 스위퍼와 알림 하트비트가 함께 이 스위치를 쓴다.
+  scheduling:
+    enabled: true
+  notification:
+    sse:
+      # 세션 타임아웃과 맞춘다. 브라우저가 자동 재연결하므로 죽은 연결을 청소하는 주기에 가깝다.
+      timeout: 30m
+      # ALB idle timeout(60초)의 절반.
+      heartbeat-interval: 30s
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   session:
     cookie:
       secure: ${SESSION_COOKIE_SECURE}
       same-site: ${SESSION_COOKIE_SAME_SITE}
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    # presigned URL 유효 시간. 업로드 한 번에 필요한 만큼만 짧게 준다.
+    presigned-url-expire-seconds: 300
 
 # 구글 Oauth
 google:
