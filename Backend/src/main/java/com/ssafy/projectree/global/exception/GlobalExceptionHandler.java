@@ -1,12 +1,15 @@
 package com.ssafy.projectree.global.exception;
 
+import com.ssafy.projectree.domain.meeting.record.exception.MeetingRecordErrorCode;
 import com.ssafy.projectree.global.response.ApiErrorResponse;
+import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -64,6 +67,15 @@ public class GlobalExceptionHandler {
         log.warn("constraint validation failed: {}", e.getMessage());
 
         return errorResponse(CommonErrorCode.INVALID_REQUEST);
+    }
+
+    @ExceptionHandler({
+            OptimisticLockingFailureException.class,
+            OptimisticLockException.class
+    })
+    public ResponseEntity<ApiErrorResponse> handleOptimisticLock(Exception e) {
+        log.warn("optimistic lock conflict: {}", e.getMessage());
+        return errorResponse(MeetingRecordErrorCode.MEETING_RECORD_VERSION_CONFLICT);
     }
 
     @ExceptionHandler(Exception.class)
