@@ -17,7 +17,7 @@ export const useSseStore = create<SseState>((set, get) => ({
     if (get().eventSource) return;
 
     const eventSource = new EventSource(
-      `${import.meta.env.VITE_BASE_URL}/api/notifications/subscribe`,
+      `${import.meta.env.VITE_BASE_URL}/notifications/subscribe`,
       {
         withCredentials: true,
       },
