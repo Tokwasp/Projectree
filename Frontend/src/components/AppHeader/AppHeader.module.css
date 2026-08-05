@@ -1,25 +1,33 @@
 .container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   width: 100%;
   max-width: var(--container-width);
   height: 100%;
   margin: 0 auto;
-  padding: 0 var(--space-8);
+  padding: 0 calc(var(--space-8) + var(--space-12));
 }
 
 .searchArea {
+  width: min(30vw, 360px);
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.startContent {
   display: flex;
+  overflow: hidden;
   flex: 1;
-  justify-content: center;
+  min-width: 0;
+  margin-right: auto;
 }
 
 .searchInput {
   width: 100%;
-  max-width: 420px;
-  height: var(--space-10);
-  padding: 0 var(--space-4);
+  max-width: 360px;
+  height: var(--space-8);
+  padding: 0 var(--space-3);
   color: var(--color-text);
   background: var(--color-white);
   border: 1px solid var(--color-border);
@@ -38,20 +46,102 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  margin-left: var(--space-6);
+  gap: var(--space-3);
+  margin-left: var(--space-4);
 }
 
-.actionButton {
-  height: var(--space-10);
-  padding: 0 var(--space-3);
+.profileButton:focus-visible,
+.profileMenuItem:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.profileMenuWrapper {
+  position: relative;
+}
+
+.profileButton {
+  display: flex;
+  width: var(--space-8);
+  height: var(--space-8);
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-white);
   color: var(--color-text);
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-md);
+  font-family: inherit;
   cursor: pointer;
 }
 
-.actionButton:hover {
-  background: var(--color-surface);
+.profileImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profileFallback {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.profileMenu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 20;
+  display: flex;
+  min-width: 108px;
+  flex-direction: column;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-md);
+}
+
+.profileMenuItem {
+  display: flex;
+  width: 100%;
+  height: var(--space-8);
+  align-items: center;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.profileMenuItem:hover {
+  background: var(--color-gray-50);
+}
+
+.logoutButton {
+  border-top: 1px solid var(--color-gray-100);
+  color: var(--color-error);
+}
+
+.logoutButton:hover {
+  background: color-mix(in srgb, var(--color-error) 7%, transparent);
+}
+
+@media (max-width: 900px) {
+  .startContent {
+    min-width: var(--space-8);
+    overflow: visible;
+    flex: 0 0 var(--space-8);
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--space-6);
+  }
 }

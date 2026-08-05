@@ -14,7 +14,13 @@
 }
 
 @media (max-width: 1200px) {
-  .projectGrid {
+  .projectGrid:not(.projectGridCompact) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .projectGridCompact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

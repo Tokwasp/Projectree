@@ -1,24 +1,29 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProjectGrid from "../../../../components/ProjectGrid/ProjectGrid";
+import CreateProjectIcon from "../../../Home/assets/create_project_icon.png";
 import useProjectList from "../hooks/useProjectList";
 import style from "../css/ProjectList.module.css";
 
-const PROJECTS_PER_PAGE = 8;
+const PROJECTS_PER_PAGE = 12;
 
 export default function ProjectList() {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
-  const { projects, totalPages, isLoading, error } = useProjectList(
-    currentPage,
-    PROJECTS_PER_PAGE,
-  );
+  const { projects, totalElements, totalPages, isLoading, error } =
+    useProjectList(currentPage, PROJECTS_PER_PAGE);
 
   const pages = Array.from({ length: totalPages }, (_, index) => index);
 
   return (
     <section className={style.section}>
-      <h1 className={style.title}>프로젝트</h1>
+      <div className={style.heading}>
+        <h1 className={style.title}>프로젝트</h1>
+        <p className={style.description}>
+          총 <strong className={style.projectCount}>{totalElements}</strong>개의
+          프로젝트에 참여하고 있어요.
+        </p>
+      </div>
 
       <div className={style.toolbar}>
         <button
@@ -26,6 +31,13 @@ export default function ProjectList() {
           type="button"
           onClick={() => navigate("/projects/create")}
         >
+          <span className={style.createIconBox} aria-hidden="true">
+            <img
+              className={style.createIcon}
+              src={CreateProjectIcon}
+              alt=""
+            />
+          </span>
           프로젝트 만들기
         </button>
       </div>

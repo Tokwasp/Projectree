@@ -2,6 +2,8 @@ export interface ProjectHomeSummary {
   projectId: number;
   title: string;
   description: string;
+  createdAt: string;
+  memberCount: number;
 }
 
 export interface RecentMeetingSummary {
@@ -12,10 +14,16 @@ export interface RecentMeetingSummary {
   hostName: string;
 }
 
-export interface RecentDecisionSummary {
-  decisionId: number;
-  title: string;
-  sourceMeetingTitle: string;
-  authorName: string;
-  decidedAt: string;
+export interface AiFeedbackSummary {
+  details: {
+    label: string;
+    description: string;
+  }[];
+}
+
+export interface SpeakingTimeSummary {
+  memberId: number;
+  name: string;
+  percentage: number;
+  isCurrentUser: boolean;
 }

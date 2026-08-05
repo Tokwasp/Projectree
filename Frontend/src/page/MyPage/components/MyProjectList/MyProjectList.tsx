@@ -27,12 +27,6 @@ export default function MyProjectList({
         </p>
       ) : (
         <div className={style.projectCard}>
-          <div className={style.listHeader} aria-hidden="true">
-            <span>프로젝트 이름</span>
-            <span>참여 인원</span>
-            <span />
-          </div>
-
           <ul className={style.projectList}>
             {projects.map((project) => (
               <li key={project.projectId}>
@@ -57,13 +51,14 @@ export default function MyProjectList({
                       </span>
                     )}
 
-                    <span className={style.projectName}>
-                      {project.title}
+                    <span className={style.projectCopy}>
+                      <span className={style.projectName}>
+                        {project.title}
+                      </span>
+                      <span className={style.memberCount}>
+                        참여 인원 {project.memberCount}명
+                      </span>
                     </span>
-                  </span>
-
-                  <span className={style.memberCount}>
-                    {project.memberCount}명
                   </span>
 
                   <span className={style.arrow} aria-hidden="true">

@@ -7,13 +7,15 @@ export default function Header() {
 
   return (
     <header className={style.header}>
-      <div className={style.logoContainer}>
-        <img src={Logo} alt="Logo" className={style.logo} />
-        <span>Projectree</span>
+      <div className={style.headerInner}>
+        <div className={style.logoContainer}>
+          <img src={Logo} alt="Logo" className={style.logo} />
+          <span>Projectree</span>
+        </div>
+        <button className={style.loginBtn} onClick={openLoginModal}>
+          로그인
+        </button>
       </div>
-      <button className={style.loginBtn} onClick={openLoginModal}>
-        로그인
-      </button>
     </header>
   );
 }
