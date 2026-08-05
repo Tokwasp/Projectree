@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import NotificationIcon from "../../assets/icons/header/notification.png";
 import { useAuthStore } from "../../store/authStore";
+import NotificationMenu from "../NotificationMenu/NotificationMenu";
 import style from "./AppHeader.module.css";
 
 export default function AppHeader() {
@@ -28,18 +28,7 @@ export default function AppHeader() {
       </div>
 
       <div className={style.actions}>
-        <button
-          className={style.actionButton}
-          type="button"
-          aria-label="알림"
-        >
-          <img
-            className={style.notificationIcon}
-            src={NotificationIcon}
-            alt=""
-            aria-hidden="true"
-          />
-        </button>
+        <NotificationMenu />
 
         <div
           className={style.profileMenuWrapper}
