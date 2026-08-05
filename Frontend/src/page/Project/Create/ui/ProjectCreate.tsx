@@ -18,18 +18,15 @@ export default function ProjectCreate() {
     isCreating,
     error: createError,
   } = useCreateProject();
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
 
   const isSubmittable =
     Boolean(title.trim()) &&
     Boolean(description.trim()) &&
-    selectedCategoryIds.length > 0 &&
+    categories.length > 0 &&
+    !isLoading &&
+    !error &&
     !isUploadingImage &&
     !isCreating;
-
-  const selectedCategories = categories.filter((category) =>
-    selectedCategoryIds.includes(category.id),
-  );
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,20 +39,12 @@ export default function ProjectCreate() {
       title: title.trim(),
       content: description.trim(),
       photoUrl: imageUrl || null,
-      categoryIds: selectedCategoryIds,
+      categoryIds: categories.map((category) => category.id),
     });
 
     if (projectId !== null) {
       navigate("/projects");
     }
-  };
-
-  const handleCategoryChange = (categoryId: number) => {
-    setSelectedCategoryIds((selectedIds) =>
-      selectedIds.includes(categoryId)
-        ? selectedIds.filter((selectedId) => selectedId !== categoryId)
-        : [...selectedIds, categoryId],
-    );
   };
 
   return (
@@ -70,7 +59,7 @@ export default function ProjectCreate() {
               새 프로젝트 만들기
             </h1>
             <p className={style.description}>
-              프로젝트의 기본 정보와 시작 노드를 설정해주세요.
+              프로젝트의 기본 정보와 대표 이미지를 설정해주세요.
             </p>
           </div>
 
@@ -124,42 +113,11 @@ export default function ProjectCreate() {
               onUploadingChange={setIsUploadingImage}
             />
 
-              <fieldset className={style.categoryField}>
-                <legend className={style.label}>루트 노드</legend>
-
-              <div className={style.categoryGrid}>
-                {isLoading && (
-                  <p className={style.categoryMessage}>
-                    카테고리를 불러오는 중입니다.
-                  </p>
-                )}
-
-                {error && (
-                  <p className={style.categoryError} role="alert">
-                    {error}
-                  </p>
-                )}
-
-                {!isLoading &&
-                  !error &&
-                  categories.map((category) => (
-                    <label
-                      className={style.categoryOption}
-                      key={category.id}
-                    >
-                      <input
-                        type="checkbox"
-                        name="root-categories"
-                        value={category.id}
-                        checked={selectedCategoryIds.includes(category.id)}
-                        onChange={() => handleCategoryChange(category.id)}
-                      />
-
-                      <span>{category.category}</span>
-                    </label>
-                  ))}
-              </div>
-              </fieldset>
+            {error && (
+              <p className={style.categoryError} role="alert">
+                {error}
+              </p>
+            )}
             </div>
 
             <div className={style.footer}>
@@ -190,9 +148,8 @@ export default function ProjectCreate() {
 
         <ProjectCreateAside
           projectTitle={title}
-          rootNodeNames={selectedCategories.map(
-            (category) => category.category,
-          )}
+          nodeNames={categories.map((category) => category.category)}
+          isLoading={isLoading}
         />
       </div>
     </section>
