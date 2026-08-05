@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import static com.ssafy.projectree.global.config.session.SessionConst.SESSION_LOGIN_MEMBER;
 
 @Service
@@ -65,6 +66,7 @@ public class AuthService {
 
     private Member findByEmailOrSave(GoogleUserInfoResponse userInfo) {
         return memberRepository.findByEmail(userInfo.getEmail())
+                .map(this::validateActiveMember)
                 .orElseGet(() -> memberRepository.save(userInfo.toMember()));
     }
 
@@ -73,6 +75,14 @@ public class AuthService {
             throw new CustomException(AuthErrorCode.NAVER_EMAIL_REQUIRED);
         }
         return memberRepository.findByEmail(userInfo.getEmail())
+                .map(this::validateActiveMember)
                 .orElseGet(() -> memberRepository.save(userInfo.toMember()));
+    }
+
+    private Member validateActiveMember(Member member) {
+        if (member.isDeleted()) {
+            throw new CustomException(AuthErrorCode.DELETED_MEMBER);
+        }
+        return member;
     }
 }
