@@ -136,6 +136,18 @@
   opacity: 0.88;
 }
 
+.cancelButton:disabled,
+.endButton:disabled,
+.checkbox:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelButton:disabled:active,
+.endButton:disabled:active {
+  transform: none;
+}
+
 .cancelButton:active,
 .endButton:active {
   transform: translateY(1px);

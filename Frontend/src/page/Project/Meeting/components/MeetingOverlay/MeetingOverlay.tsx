@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import type { CSSProperties } from "react";
 import style from "./MeetingOverlay.module.css";
 import MeetingParticipantTile from "../MeetingParticipantTile/MeetingParticipantTile";
+import MeetingEndModal from "../MeetingEndModal/MeetingEndModal";
 import {
   CamOffIcon,
   CamOnIcon,
@@ -61,6 +62,11 @@ export default function MeetingOverlay() {
     handlePointerUp,
     expand,
     leave,
+    isCreator,
+    endModalOpen,
+    ending,
+    requestFinish,
+    cancelFinish,
     finish,
     toggleMic,
     toggleCam,
@@ -192,115 +198,137 @@ export default function MeetingOverlay() {
   };
 
   return (
-    <section className={containerClass} style={position} aria-label="화상 회의">
-      <header
-        className={style.header}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
+    <>
+      <section
+        className={containerClass}
+        style={position}
+        aria-label="화상 회의"
       >
-        <span className={style.recording}>녹음 중</span>
-        {isImmersive && (
-          <span className={style.roomName}>
-            회의방 · {roomName?.slice(0, 8)}…
+        <header
+          className={style.header}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+        >
+          <span className={style.recording}>녹음 중</span>
+          {isImmersive && (
+            <span className={style.roomName}>
+              회의방 · {roomName?.slice(0, 8)}…
+            </span>
+          )}
+          <span className={style.meta}>
+            {formatElapsed(elapsed)} · {participants.length}명
           </span>
-        )}
-        <span className={style.meta}>
-          {formatElapsed(elapsed)} · {participants.length}명
-        </span>
-        {!isImmersive && (
-          <button className={style.expand} type="button" onClick={expand}>
-            펼치기
+          {!isImmersive && (
+            <button className={style.expand} type="button" onClick={expand}>
+              펼치기
+            </button>
+          )}
+        </header>
+
+        {needSound && (
+          <button
+            className={style.soundBanner}
+            type="button"
+            onClick={activateSound}
+          >
+            브라우저가 소리를 막았습니다 — 눌러서 상대 목소리 듣기
           </button>
         )}
-      </header>
 
-      {needSound && (
-        <button
-          className={style.soundBanner}
-          type="button"
-          onClick={activateSound}
-        >
-          브라우저가 소리를 막았습니다 — 눌러서 상대 목소리 듣기
-        </button>
-      )}
-
-      <div className={screenTile ? style.stageSpotlight : style.stage}>
-        {screenTile && (
-          <div className={style.spotlight}>
-            <video
-              key={screenTile.id}
-              data-tile={screenTile.id}
-              ref={attachVideo}
-              autoPlay
-              playsInline
-              muted
-            />
-            <span className={style.tileLabel}>{screenTile.label}</span>
-          </div>
-        )}
-
-        <div
-          className={screenTile ? style.filmstrip : style.grid}
-          style={screenTile ? undefined : gridStyle}
-        >
-          {visibleCells.map(renderCell)}
-          {hiddenCount > 0 && (
-            <div className={style.overflowCell}>+{hiddenCount}명</div>
+        <div className={screenTile ? style.stageSpotlight : style.stage}>
+          {screenTile && (
+            <div className={style.spotlight}>
+              <video
+                key={screenTile.id}
+                data-tile={screenTile.id}
+                ref={attachVideo}
+                autoPlay
+                playsInline
+                muted
+              />
+              <span className={style.tileLabel}>{screenTile.label}</span>
+            </div>
           )}
+
+          <div
+            className={screenTile ? style.filmstrip : style.grid}
+            style={screenTile ? undefined : gridStyle}
+          >
+            {visibleCells.map(renderCell)}
+            {hiddenCount > 0 && (
+              <div className={style.overflowCell}>+{hiddenCount}명</div>
+            )}
+          </div>
         </div>
-      </div>
 
-      <footer className={style.controls}>
-        <button
-          className={micOn ? style.control : style.controlDanger}
-          type="button"
-          onClick={toggleMic}
-          aria-pressed={micOn}
-          aria-label={micOn ? "마이크 끄기" : "마이크 켜기"}
-          title={micOn ? "마이크 켜짐" : "음소거됨"}
-        >
-          {micOn ? <MicOnIcon /> : <MicOffIcon />}
-        </button>
+        <footer className={style.controls}>
+          <button
+            className={micOn ? style.control : style.controlDanger}
+            type="button"
+            onClick={toggleMic}
+            aria-pressed={micOn}
+            aria-label={micOn ? "마이크 끄기" : "마이크 켜기"}
+            title={micOn ? "마이크 켜짐" : "음소거됨"}
+          >
+            {micOn ? <MicOnIcon /> : <MicOffIcon />}
+          </button>
 
-        {isImmersive && (
-          <>
+          {isImmersive && (
+            <>
+              <button
+                className={camOn ? style.control : style.controlDanger}
+                type="button"
+                onClick={toggleCam}
+                aria-pressed={camOn}
+                aria-label={camOn ? "카메라 끄기" : "카메라 켜기"}
+                title={camOn ? "카메라 켜짐" : "카메라 꺼짐"}
+              >
+                {camOn ? <CamOnIcon /> : <CamOffIcon />}
+              </button>
+              <button
+                className={screenOn ? style.controlActive : style.control}
+                type="button"
+                onClick={toggleScreen}
+                aria-pressed={screenOn}
+                aria-label={screenOn ? "화면 공유 중지" : "화면 공유"}
+                title={screenOn ? "화면 공유 중" : "화면 공유"}
+              >
+                {screenOn ? <ScreenOnIcon /> : <ScreenOffIcon />}
+              </button>
+            </>
+          )}
+
+          <button
+            className={style.leave}
+            type="button"
+            onClick={leave}
+            aria-label="회의에서 나가기"
+            title="나가기"
+          >
+            <LeaveIcon />
+          </button>
+          {isCreator && (
             <button
-              className={camOn ? style.control : style.controlDanger}
+              className={style.finish}
               type="button"
-              onClick={toggleCam}
-              aria-pressed={camOn}
-              aria-label={camOn ? "카메라 끄기" : "카메라 켜기"}
-              title={camOn ? "카메라 켜짐" : "카메라 꺼짐"}
+              onClick={requestFinish}
             >
-              {camOn ? <CamOnIcon /> : <CamOffIcon />}
+              회의 종료
             </button>
-            <button
-              className={screenOn ? style.controlActive : style.control}
-              type="button"
-              onClick={toggleScreen}
-              aria-pressed={screenOn}
-              aria-label={screenOn ? "화면 공유 중지" : "화면 공유"}
-              title={screenOn ? "화면 공유 중" : "화면 공유"}
-            >
-              {screenOn ? <ScreenOnIcon /> : <ScreenOffIcon />}
-            </button>
-          </>
-        )}
+          )}
+        </footer>
+      </section>
 
-        <button
-          className={style.leave}
-          type="button"
-          onClick={leave}
-          aria-label="회의에서 나가기"
-          title="나가기"
-        >
-          <LeaveIcon />
-        </button>
-        <button className={style.finish} type="button" onClick={finish}>
-          회의 종료
-        </button>
-      </footer>
-    </section>
+      {/* 열 때마다 새로 마운트한다 — 안 그러면 지난 회의의 체크가 남는다 */}
+      {endModalOpen && (
+        <MeetingEndModal
+          isOpen={endModalOpen}
+          pending={ending}
+          onClose={cancelFinish}
+          onEnd={finish}
+        />
+      )}
+    </>
   );
 }
