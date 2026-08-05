@@ -10,6 +10,7 @@ import com.ssafy.projectree.domain.meeting.record.codec.MeetingRecordContentCode
 import com.ssafy.projectree.domain.meeting.record.dto.request.MeetingRecordCallbackRequest;
 import com.ssafy.projectree.domain.meeting.record.dto.response.MeetingRecordCallbackResponse;
 import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
+import com.ssafy.projectree.domain.meeting.record.event.MeetingRecordCreatedNotificationEvent;
 import com.ssafy.projectree.domain.meeting.record.exception.MeetingRecordContentCodecException;
 import com.ssafy.projectree.domain.meeting.record.exception.MeetingRecordErrorCode;
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
@@ -18,6 +19,8 @@ import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.member.service.GoogleOAuthClient;
 import com.ssafy.projectree.domain.member.service.NaverOAuthClient;
+import com.ssafy.projectree.domain.notification.repository.NotificationRepository;
+import com.ssafy.projectree.domain.notification.service.NotificationPublisher;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
@@ -39,6 +42,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -59,6 +64,7 @@ import static org.mockito.Mockito.reset;
 
 @ActiveProfiles("test")
 @SpringBootTest
+@RecordApplicationEvents
 class MeetingRecordCallbackServiceTest {
 
     private static final String ROOM_NAME = "c6db7ac7-d3c7-4f18-928c-ce376ccfabba";
@@ -71,11 +77,20 @@ class MeetingRecordCallbackServiceTest {
     @MockitoBean
     private NaverOAuthClient naverOAuthClient;
 
+    @MockitoBean
+    private NotificationPublisher notificationPublisher;
+
+    @Autowired
+    private ApplicationEvents applicationEvents;
+
     @Autowired
     private MeetingRecordCallbackService service;
 
     @Autowired
     private MeetingRecordRepository meetingRecordRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @MockitoSpyBean
     private MeetingRecordRepository meetingRecordRepositorySpy;
@@ -103,6 +118,7 @@ class MeetingRecordCallbackServiceTest {
 
     @AfterEach
     void cleanUp() {
+        notificationRepository.deleteAll();
         meetingRecordRepository.deleteAll();
         outboxRepository.deleteAll();
         meetingRepository.deleteAll();
@@ -142,6 +158,11 @@ class MeetingRecordCallbackServiceTest {
         assertThat(contentCodec.decode(saved.getIssuesJson()))
                 .containsExactly("첫 번째 이슈");
         assertThat(summaryStatus(fixture.meetingId())).isEqualTo(AnalysisTaskStatus.SUCCEEDED);
+
+        assertThat(publishedEvents())
+                .singleElement()
+                .extracting(MeetingRecordCreatedNotificationEvent::receiverId)
+                .isEqualTo(fixture.memberId());
     }
 
     @DisplayName("빈 배열은 TEXT 컬럼에 빈 JSON 배열로 저장된다.")
@@ -182,6 +203,7 @@ class MeetingRecordCallbackServiceTest {
         assertThat(stored.getTitle()).isEqualTo(TITLE);
         assertThat(stored.getVersion()).isZero();
         assertThat(summaryStatus(fixture.meetingId())).isEqualTo(AnalysisTaskStatus.SUCCEEDED);
+        assertThat(publishedEvents()).hasSize(1);
     }
 
     @DisplayName("사용자가 수정한 회의록은 동일 Callback 재시도로 덮어써지지 않는다.")
@@ -215,6 +237,7 @@ class MeetingRecordCallbackServiceTest {
                 .containsExactly("사용자가 고친 요약");
         assertThat(stored.getVersion()).isEqualTo(editedVersion);
         assertThat(meetingRecordRepository.count()).isEqualTo(1);
+        assertThat(publishedEvents()).hasSize(1);
     }
 
     /**
@@ -382,6 +405,7 @@ class MeetingRecordCallbackServiceTest {
                 .isEqualTo(HttpStatus.CONFLICT);
         assertThat(meetingRecordRepository.count()).isZero();
         assertThat(summaryStatus(fixture.meetingId())).isEqualTo(AnalysisTaskStatus.FAILED);
+        assertThat(publishedEvents()).isEmpty();
     }
 
     /**
@@ -439,6 +463,7 @@ class MeetingRecordCallbackServiceTest {
                 .isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(meetingRecordRepository.count()).isZero();
         assertThat(summaryStatus(fixture.meetingId())).isEqualTo(AnalysisTaskStatus.PROCESSING);
+        assertThat(publishedEvents()).isEmpty();
     }
 
     @DisplayName("앞 영역이 정상이어도 뒤 영역이 한도를 넘으면 어떤 회의록도 저장되지 않는다.")
@@ -461,6 +486,7 @@ class MeetingRecordCallbackServiceTest {
 
         assertThat(meetingRecordRepository.count()).isZero();
         assertThat(summaryStatus(fixture.meetingId())).isEqualTo(AnalysisTaskStatus.PROCESSING);
+        assertThat(publishedEvents()).isEmpty();
     }
 
     @DisplayName("한도 이하의 큰 본문은 정상 저장되고 UTF-8 바이트 기준을 만족한다.")
@@ -510,6 +536,7 @@ class MeetingRecordCallbackServiceTest {
 
         assertThat(meetingRecordRepository.count()).isZero();
         assertThat(summaryStatus(fixture.meetingId())).isEqualTo(AnalysisTaskStatus.PROCESSING);
+        assertThat(publishedEvents()).isEmpty();
     }
 
     @DisplayName("동시에 같은 Callback이 도착해도 회의록은 정확히 1건이고 두 요청 모두 성공한다.")
@@ -689,6 +716,12 @@ class MeetingRecordCallbackServiceTest {
 
     private interface TransactionCallback<T> {
         T execute();
+    }
+
+    private List<MeetingRecordCreatedNotificationEvent> publishedEvents() {
+        return applicationEvents
+                .stream(MeetingRecordCreatedNotificationEvent.class)
+                .toList();
     }
 
     private void assertBusinessError(ThrowingCallable callable, ErrorCode errorCode) {

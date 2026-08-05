@@ -9,12 +9,14 @@ import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisComm
 import com.ssafy.projectree.domain.meeting.record.dto.request.MeetingRecordCallbackRequest;
 import com.ssafy.projectree.domain.meeting.record.dto.response.MeetingRecordCallbackResponse;
 import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
+import com.ssafy.projectree.domain.meeting.record.event.MeetingRecordCreatedNotificationEvent;
 import com.ssafy.projectree.domain.meeting.record.exception.MeetingRecordErrorCode;
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,7 @@ public class MeetingRecordCallbackService {
     private final MeetingAnalysisCommandOutboxRepository commandOutboxRepository;
     private final MeetingRecordRepository meetingRecordRepository;
     private final MeetingRecordContentEncoder contentEncoder;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public MeetingRecordCallbackResponse receive(
@@ -48,7 +51,7 @@ public class MeetingRecordCallbackService {
         // 두 요청이 동시에 "회의록 없음"으로 판단하는 race를 막는 것이 목적이다.
         Meeting meeting = meetingRepository.findByIdForUpdate(meetingId)
                 .orElseThrow(() -> new CustomException(MeetingErrorCode.MEETING_NOT_FOUND));
-        validateCommand(commandId, meeting);
+        MeetingAnalysisCommandOutbox command = validateCommand(commandId, meeting);
 
         MeetingRecord existing = meetingRecordRepository.findByMeetingId(meetingId).orElse(null);
         if (existing != null) {
@@ -74,6 +77,11 @@ public class MeetingRecordCallbackService {
                 content.nextTodos(),
                 content.issues()
         ));
+        applicationEventPublisher.publishEvent(
+                new MeetingRecordCreatedNotificationEvent(
+                        command.getRequestedByMemberId()
+                )
+        );
 
         return MeetingRecordCallbackResponse.of(created, meetingId, false);
     }
@@ -90,7 +98,7 @@ public class MeetingRecordCallbackService {
      * Callback의 commandId는 Java가 Command SQS로 발행한 분석 요청이어야 한다.
      * Outbox 행은 발행 후에도 보존되므로 Callback 도착 시점에 조회할 수 있다.
      */
-    private void validateCommand(String commandId, Meeting meeting) {
+    private MeetingAnalysisCommandOutbox validateCommand(String commandId, Meeting meeting) {
         MeetingAnalysisCommandOutbox command = commandOutboxRepository
                 .findByCommandIdWithMeetingAndProject(commandId)
                 .orElseThrow(() -> new CustomException(
@@ -105,6 +113,7 @@ public class MeetingRecordCallbackService {
         if (!meeting.isGenerateSummary()) {
             throw new CustomException(MeetingRecordErrorCode.MEETING_RECORD_SUMMARY_NOT_REQUESTED);
         }
+        return command;
     }
 
     /**
