@@ -1,36 +1,72 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-6);
   width: 100%;
-}
-
-.introSection {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
 }
 
 .introHeading {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--text-2xl);
+  font-size: var(--text-3xl);
   font-weight: var(--font-semibold);
 }
 
+.introCard {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
 .projectName {
+  width: fit-content;
   margin: 0;
+  padding: 0 var(--space-1);
   color: var(--color-text);
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--color-primary) 16%, transparent) 0 42%,
+    transparent 42% 100%
+  );
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
 }
 
 .introDescription {
   max-width: 960px;
-  margin: 0;
-  color: var(--color-secondary);
+  margin: var(--space-3) 0 0;
+  color: var(--color-gray-600);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
+}
+
+.projectMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin: auto 0 0;
+  padding-top: var(--space-6);
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.metaItem dt {
+  color: var(--color-gray-500);
+}
+
+.metaItem dd {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: var(--font-medium);
 }
 
 .section {
@@ -44,12 +80,6 @@
   color: var(--color-text);
   font-size: var(--text-xl);
   font-weight: var(--font-semibold);
-}
-
-.meetingGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-4);
 }
 
 .meetingEmpty {
@@ -121,6 +151,12 @@
   .meetingGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.meetingGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
 @media (max-width: 768px) {

@@ -132,7 +132,7 @@
   background: color-mix(in srgb, var(--color-error) 7%, transparent);
 }
 
-@media (max-width: 1600px) {
+@media (max-width: 900px) {
   .startContent {
     min-width: var(--space-8);
     overflow: visible;

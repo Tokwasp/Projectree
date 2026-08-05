@@ -2,6 +2,8 @@ export interface ProjectHomeSummary {
   projectId: number;
   title: string;
   description: string;
+  createdAt: string;
+  memberCount: number;
 }
 
 export interface RecentMeetingSummary {

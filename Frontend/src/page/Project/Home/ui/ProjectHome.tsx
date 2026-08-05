@@ -14,21 +14,40 @@ function formatDecisionDate(date: string) {
   }).format(new Date(date));
 }
 
+function formatProjectDate(date: string) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(date));
+}
+
 export default function ProjectHome() {
   return (
     <div className={style.page}>
+      <h1 className={style.introHeading} id="project-intro-heading">
+        프로젝트 소개
+      </h1>
+
       <section
-        className={style.introSection}
+        className={style.introCard}
         aria-labelledby="project-intro-heading"
       >
-        <h1 className={style.introHeading} id="project-intro-heading">
-          프로젝트 소개
-        </h1>
-
         <h2 className={style.projectName}>{mockProjectHome.title}</h2>
         <p className={style.introDescription}>
           {mockProjectHome.description}
         </p>
+
+        <dl className={style.projectMeta}>
+          <div className={style.metaItem}>
+            <dt>생성일</dt>
+            <dd>{formatProjectDate(mockProjectHome.createdAt)}</dd>
+          </div>
+          <div className={style.metaItem}>
+            <dt>팀원</dt>
+            <dd>{mockProjectHome.memberCount}명</dd>
+          </div>
+        </dl>
       </section>
 
       <section
@@ -44,10 +63,7 @@ export default function ProjectHome() {
         ) : (
           <div className={style.meetingGrid}>
             {mockRecentMeetings.map((meeting) => (
-              <MeetingCard
-                meeting={meeting}
-                key={meeting.meetingId}
-              />
+              <MeetingCard meeting={meeting} key={meeting.meetingId} />
             ))}
           </div>
         )}

@@ -55,7 +55,7 @@
   font-size: var(--text-xs);
 }
 
-@media (max-width: 1600px) {
+@media (max-width: 900px) {
   .path,
   .pathCurrent,
   .divider {

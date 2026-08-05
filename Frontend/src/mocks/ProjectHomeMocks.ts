@@ -9,6 +9,8 @@ export const mockProjectHome: ProjectHomeSummary = {
   title: "Projectree 서비스 구축",
   description:
     "프로젝트의 진행 상황과 주요 정보를 체계적으로 관리하고, 회의와 결정사항을 한눈에 확인할 수 있는 협업 프로젝트입니다.",
+  createdAt: "2026-07-10T00:00:00",
+  memberCount: 9,
 };
 
 export const mockRecentMeetings: RecentMeetingSummary[] = [
