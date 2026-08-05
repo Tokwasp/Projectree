@@ -1,11 +1,10 @@
 package com.ssafy.projectree.domain.project.service;
 
 import com.ssafy.projectree.IntegrationTestSupport;
+import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
 import com.ssafy.projectree.domain.meetingreview.exception.MeetingReviewErrorCode;
 import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
-import com.ssafy.projectree.domain.meeting.entity.Meeting;
-import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.project.controller.dto.response.ProjectHomeResponse;
@@ -603,7 +602,6 @@ class ProjectServiceTest extends IntegrationTestSupport {
                 .title(title)
                 .content("React로 만든 개인 포트폴리오입니다.")
                 .photoUrl(photoUrl)
-                .categoryIds(categoryIds)
                 .build();
     }
 }
