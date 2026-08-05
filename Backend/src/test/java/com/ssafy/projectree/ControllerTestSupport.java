@@ -6,6 +6,8 @@ import com.ssafy.projectree.domain.member.service.AuthService;
 import com.ssafy.projectree.domain.member.service.MemberService;
 import com.ssafy.projectree.domain.nodeCategory.controller.NodeCategoryController;
 import com.ssafy.projectree.domain.nodeCategory.service.NodeCategoryService;
+import com.ssafy.projectree.domain.notification.controller.NotificationController;
+import com.ssafy.projectree.domain.notification.service.NotificationService;
 import com.ssafy.projectree.domain.project.controller.ProjectController;
 import com.ssafy.projectree.domain.project.controller.InvitationController;
 import com.ssafy.projectree.domain.project.controller.ProjectInvitationController;
@@ -26,6 +28,7 @@ import tools.jackson.databind.ObjectMapper;
         ProjectInvitationController.class,
         InvitationController.class,
         NodeCategoryController.class,
+        NotificationController.class,
         S3Controller.class
 })
 public abstract class ControllerTestSupport {
@@ -50,6 +53,9 @@ public abstract class ControllerTestSupport {
 
     @MockitoBean
     protected NodeCategoryService nodeCategoryService;
+
+    @MockitoBean
+    protected NotificationService notificationService;
 
     @MockitoBean
     protected S3Service s3Service;
