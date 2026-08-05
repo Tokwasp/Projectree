@@ -1,6 +1,7 @@
 package com.ssafy.projectree.domain.project.controller;
 
 import com.ssafy.projectree.domain.member.LoginMember;
+import com.ssafy.projectree.domain.project.controller.dto.response.ProjectHomeResponse;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberListResponse;
@@ -25,7 +26,6 @@ import java.util.List;
 public class ProjectController {
 
     private final ProjectService projectService;
-
 
     @PostMapping
     public ResponseEntity<ApiResponse<Integer>> createProject(
@@ -84,5 +84,15 @@ public class ProjectController {
         ProjectListResponse projectList = projectService.getProjectList(pageable, loginMember.getId());
 
         return ResponseEntity.ok(ApiResponse.success(projectList));
+    }
+
+    @GetMapping("/{project-id}/home")
+    public ResponseEntity<ApiResponse<ProjectHomeResponse>> getProjectHome(
+            @PathVariable("project-id") int projectId,
+            @Login LoginMember loginMember,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        ProjectHomeResponse response = projectService.getProjectHome(pageable, projectId, loginMember.getId());
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

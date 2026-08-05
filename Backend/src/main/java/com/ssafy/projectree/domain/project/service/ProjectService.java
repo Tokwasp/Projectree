@@ -1,7 +1,14 @@
 package com.ssafy.projectree.domain.project.service;
 
+import com.ssafy.projectree.domain.meetingreview.exception.MeetingReviewErrorCode;
+import com.ssafy.projectree.domain.meetingreview.MeetingReview;
+import com.ssafy.projectree.domain.meetingreview.dto.response.MyMeetingReviewResponse;
+import com.ssafy.projectree.domain.meetingreview.dto.response.PersonalSpeakingResponse;
+import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
+import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.nodeCategory.entity.Category;
+import com.ssafy.projectree.domain.project.controller.dto.response.ProjectHomeResponse;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
@@ -20,17 +27,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ProjectService {
+
     private final MemberRepository memberRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final MeetingReviewRepository meetingReviewRepository;
 
     @Transactional
     public int createProject(ProjectCreateRequest request, int memberId) {
@@ -88,6 +96,30 @@ public class ProjectService {
         return new ProjectListResponse(projectPage);
     }
 
+    public ProjectHomeResponse getProjectHome(Pageable pageable, int projectId, int memberId) {
+        if(isNotProjectMember(projectId, memberId)){
+            throw new CustomException(MeetingReviewErrorCode.IS_NOT_PROJECT_MEMBER);
+        }
+
+        List<MeetingReview> lastMeetingReviews = meetingReviewRepository.getLastReview(projectId, memberId)
+                .map(MeetingReview::getRoomName)
+                .map(meetingReviewRepository::findAllByRoomName)
+                .orElseGet(List::of);
+
+        if(lastMeetingReviews.isEmpty()){
+            return ProjectHomeResponse.empty();
+        }
+
+        MeetingReview myMeetingReview = lastMeetingReviews.stream()
+                .filter(mr -> mr.getMemberId() == memberId)
+                .findFirst()
+                .get();
+
+        List<PersonalSpeakingResponse> speakingResponses = personalSpeakPercentBy(lastMeetingReviews);
+        MyMeetingReviewResponse myReviewResponse = MyMeetingReviewResponse.of(myMeetingReview);
+        return ProjectHomeResponse.of(null, speakingResponses, myReviewResponse);
+    }
+
     private void validateMember(int memberId) {
         if (!memberRepository.existsById(memberId)) {
             throw new CustomException(ProjectErrorCode.MEMBER_NOT_FOUND);
@@ -111,5 +143,33 @@ public class ProjectService {
         return projectRepository.findById(projectId)
                 .orElseThrow(() ->
                         new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
+    }
+
+    private boolean isNotProjectMember(int projectId, int memberId) {
+        return !projectMemberRepository.existsByProjectIdAndMemberId(projectId, memberId);
+    }
+
+    private double toPercent(int speakingSeconds, int totalSpeakTime) {
+        if(speakingSeconds == 0 || totalSpeakTime == 0) return 0.0;
+        return Math.round(speakingSeconds * 1000.0 / totalSpeakTime) / 10.0;
+    }
+
+    private List<PersonalSpeakingResponse> personalSpeakPercentBy(List<MeetingReview> meetingReviews){
+        List<Integer> memberIds = meetingReviews.stream()
+                .map(MeetingReview::getMemberId)
+                .toList();
+
+        Map<Integer, String> memberIdNameMap = memberRepository.findAllById(memberIds).stream()
+                .collect(Collectors.toMap(Member::getId, Member::getName));
+
+        int totalSpeakTime = meetingReviews.stream()
+                .mapToInt(MeetingReview::getSpeakingSeconds)
+                .sum();
+
+        return meetingReviews.stream()
+                .map(review -> PersonalSpeakingResponse.of(
+                        memberIdNameMap.get(review.getMemberId()),
+                        toPercent(review.getSpeakingSeconds(), totalSpeakTime)))
+                .toList();
     }
 }
