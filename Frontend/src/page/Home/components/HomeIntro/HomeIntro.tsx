@@ -12,9 +12,14 @@ export default function HomeIntro({ name, projectCount }: HomeIntroProps) {
         안녕하세요, {name} 님!
       </h1>
       <p className={style.description}>
-        {projectCount > 0
-          ? `현재 ${projectCount}개의 프로젝트에 참여하고 있어요. 지난 회의의 흐름을 이어가세요.`
-          : "현재 참여 중인 프로젝트가 없어요. 새 프로젝트를 만들거나 초대를 확인해보세요."}
+        {projectCount > 0 ? (
+          <>
+            현재 <strong className={style.projectCount}>{projectCount}</strong>개의
+            프로젝트에 참여하고 있어요. 지난 회의의 흐름을 이어가세요.
+          </>
+        ) : (
+          "현재 참여 중인 프로젝트가 없어요. 새 프로젝트를 만들거나 초대를 확인해보세요."
+        )}
       </p>
     </section>
   );

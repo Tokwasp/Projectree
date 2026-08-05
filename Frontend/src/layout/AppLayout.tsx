@@ -28,7 +28,6 @@ export default function AppLayout({ sidebar }: AppLayoutProps) {
 
       <div
         className={`${style.mainArea} ${canCollapseSidebar && isSidebarCollapsed ? style.mainAreaExpanded : ""}`}
-        onScroll={(event) => setIsScrolled(event.currentTarget.scrollTop > 0)}
       >
         <header
           className={`${style.header} ${isScrolled ? style.headerScrolled : ""}`}
@@ -36,9 +35,14 @@ export default function AppLayout({ sidebar }: AppLayoutProps) {
           <AppHeader />
         </header>
 
-        <main className={style.content}>
-          <Outlet />
-        </main>
+        <div
+          className={style.contentArea}
+          onScroll={(event) => setIsScrolled(event.currentTarget.scrollTop > 0)}
+        >
+          <main className={style.content}>
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );

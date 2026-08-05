@@ -15,6 +15,12 @@
   font-size: var(--text-sm);
 }
 
+.projectCount {
+  color: var(--color-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+}
+
 @media (max-width: 768px) {
   .title {
     font-size: var(--text-2xl);

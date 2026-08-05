@@ -19,11 +19,12 @@
 }
 
 .mainArea {
+  display: flex;
   width: calc(100% - var(--app-sidebar-width));
   height: 100vh;
   margin-left: var(--app-sidebar-width);
-  overflow-y: auto;
-  scrollbar-gutter: stable;
+  flex-direction: column;
+  overflow: hidden;
   transition:
     width var(--transition-normal),
     margin-left var(--transition-normal);
@@ -48,6 +49,33 @@
   border-bottom-color: var(--color-border);
 }
 
+.contentArea {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) transparent;
+}
+
+.contentArea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.contentArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.contentArea::-webkit-scrollbar-thumb {
+  border: 2px solid var(--color-white);
+  border-radius: var(--radius-full);
+  background: var(--color-gray-300);
+}
+
+.contentArea::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-400);
+}
+
 .content {
   position: static;
   top: auto;
@@ -56,7 +84,14 @@
   width: 100%;
   max-width: var(--container-width);
   margin: 0 auto;
-  padding: var(--space-8);
+  padding: var(--space-8)
+    calc(var(--space-8) + var(--space-12));
   color: var(--color-text);
   transform: none;
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: var(--space-6);
+  }
 }

@@ -6,7 +6,7 @@
   max-width: var(--container-width);
   height: 100%;
   margin: 0 auto;
-  padding: 0 var(--space-8);
+  padding: 0 calc(var(--space-8) + var(--space-12));
 }
 
 .searchArea {
@@ -59,7 +59,8 @@
 }
 
 .actionButton:focus-visible,
-.profileLink:focus-visible {
+.profileButton:focus-visible,
+.profileMenuItem:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -70,17 +71,24 @@
   object-fit: contain;
 }
 
-.profileLink {
+.profileMenuWrapper {
+  position: relative;
+}
+
+.profileButton {
   display: flex;
   width: var(--space-8);
   height: var(--space-8);
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  padding: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
+  background: var(--color-white);
   color: var(--color-text);
-  text-decoration: none;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .profileImage {
@@ -92,4 +100,55 @@
 .profileFallback {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
+}
+
+.profileMenu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 20;
+  display: flex;
+  min-width: 108px;
+  flex-direction: column;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-md);
+}
+
+.profileMenuItem {
+  display: flex;
+  width: 100%;
+  height: var(--space-8);
+  align-items: center;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.profileMenuItem:hover {
+  background: var(--color-gray-50);
+}
+
+.logoutButton {
+  border-top: 1px solid var(--color-gray-100);
+  color: var(--color-error);
+}
+
+.logoutButton:hover {
+  background: color-mix(in srgb, var(--color-error) 7%, transparent);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--space-6);
+  }
 }
