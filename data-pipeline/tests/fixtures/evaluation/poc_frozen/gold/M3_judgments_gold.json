@@ -1,0 +1,74 @@
+{
+  "meetingId": "M3",
+  "judgments": [
+    {
+      "itemId": "m1",
+      "result": "NEW_DECISION",
+      "category": "AI"
+    },
+    {
+      "itemId": "m2",
+      "result": "ATTACH",
+      "attachTo": "m1"
+    },
+    {
+      "itemId": "m3",
+      "result": "NEW_DECISION",
+      "category": "AI"
+    },
+    {
+      "itemId": "m4",
+      "result": "ATTACH",
+      "attachTo": "m6"
+    },
+    {
+      "itemId": "m5",
+      "result": "ATTACH",
+      "attachTo": "m6"
+    },
+    {
+      "itemId": "m6",
+      "result": "NEW_DECISION",
+      "category": "AI"
+    },
+    {
+      "itemId": "m7",
+      "result": "NEW_DECISION",
+      "category": "AI",
+      "note": "R7 확정: 직후 진행 합의 존재하여 DECISION 인정"
+    },
+    {
+      "itemId": "m8",
+      "result": "ATTACH",
+      "attachTo": "m7"
+    },
+    {
+      "itemId": "m9",
+      "result": "MINUTES_ONLY",
+      "reason": "NOT_CONFIRMED",
+      "note": "R6 확정: 미채택 제안은 회의록만"
+    },
+    {
+      "itemId": "m10",
+      "result": "NEW_DECISION",
+      "category": "INFRA"
+    },
+    {
+      "itemId": "m11",
+      "result": "ATTACH",
+      "attachTo": "m10"
+    },
+    {
+      "itemId": "m12",
+      "result": "MINUTES_ONLY",
+      "reason": "NOT_CONFIRMED",
+      "note": "R8 확정: 전달 화법 외부 방침은 정보 공유"
+    },
+    {
+      "itemId": "m13",
+      "result": "ATTACH",
+      "attachTo": "m7",
+      "note": "R5 적용: 구조 유지 결정(m7)의 리스크 이슈로 귀속"
+    }
+  ]
+}

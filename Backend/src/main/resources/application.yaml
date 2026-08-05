@@ -62,6 +62,41 @@ spring:
 app:
   invitation:
     base-url: ${INVITATION_BASE_URL}
+  invitation-mail:
+    scheduling-enabled: true
+  meeting-sync:
+    enabled: ${MEETING_SYNC_ENABLED:true}
+    fixed-delay-ms: ${MEETING_SYNC_FIXED_DELAY_MS:5000}
+    scan-count: ${MEETING_SYNC_SCAN_COUNT:200}
+    key-prefix: ${MEETING_SYNC_KEY_PREFIX:meeting:project:}
+  meeting-analysis:
+    graph-snapshot:
+      max-size-bytes: ${MEETING_ANALYSIS_GRAPH_SNAPSHOT_MAX_SIZE_BYTES:10485760}
+      s3:
+        enabled: ${MEETING_ANALYSIS_GRAPH_SNAPSHOT_S3_ENABLED:false}
+        expected-bucket: ${AWS_ANALYSIS_RESULT_BUCKET:}
+        allowed-object-key-prefix: ${MEETING_ANALYSIS_GRAPH_SNAPSHOT_S3_PREFIX:graph-snapshots/}
+        region: ${AWS_REGION:ap-northeast-2}
+        endpoint-override: ${MEETING_ANALYSIS_GRAPH_SNAPSHOT_S3_ENDPOINT:}
+    publisher:
+      enabled: ${MEETING_ANALYSIS_PUBLISHER_ENABLED:false}
+      fixed-delay-ms: ${MEETING_ANALYSIS_PUBLISHER_FIXED_DELAY_MS:1000}
+      batch-size: ${MEETING_ANALYSIS_PUBLISHER_BATCH_SIZE:20}
+      max-attempts: ${MEETING_ANALYSIS_PUBLISHER_MAX_ATTEMPTS:3}
+      lease-duration-seconds: ${MEETING_ANALYSIS_PUBLISHER_LEASE_SECONDS:60}
+      first-retry-delay-seconds: ${MEETING_ANALYSIS_FIRST_RETRY_DELAY_SECONDS:30}
+      second-retry-delay-seconds: ${MEETING_ANALYSIS_SECOND_RETRY_DELAY_SECONDS:120}
+      api-call-attempt-timeout-seconds: ${MEETING_ANALYSIS_API_CALL_ATTEMPT_TIMEOUT_SECONDS:5}
+      api-call-timeout-seconds: ${MEETING_ANALYSIS_API_CALL_TIMEOUT_SECONDS:10}
+      queue-url: ${MEETING_ANALYSIS_COMMAND_QUEUE_URL:}
+      region: ${AWS_REGION:ap-northeast-2}
+    result-consumer:
+      enabled: ${MEETING_ANALYSIS_RESULT_CONSUMER_ENABLED:false}
+      queue-url: ${AWS_ANALYSIS_RESULT_QUEUE_URL:}
+      wait-time-seconds: ${MEETING_ANALYSIS_RESULT_WAIT_TIME_SECONDS:20}
+      max-number-of-messages: ${MEETING_ANALYSIS_RESULT_MAX_NUMBER_OF_MESSAGES:10}
+      polling-delay-ms: ${MEETING_ANALYSIS_RESULT_POLLING_DELAY_MS:1000}
+      region: ${AWS_REGION:ap-northeast-2}
   # 초대 메일 스위퍼와 알림 하트비트가 함께 이 스위치를 쓴다.
   scheduling:
     enabled: true

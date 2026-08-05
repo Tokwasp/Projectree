@@ -6,7 +6,6 @@ import com.ssafy.projectree.domain.mail.repository.InvitationMailRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -24,7 +23,6 @@ public class InvitationMailSweeper {
     private final InvitationMailRepository invitationMailRepository;
     private final InvitationMailClient mailClient;
 
-    @Scheduled(fixedDelay = 30_000)
     public void sweep() {
         LocalDateTime now = LocalDateTime.now();
         int recoveredCount = processor.recoverInterruptedSends(now.minus(STALE_CLAIM_CUTOFF));

@@ -18,6 +18,10 @@ repositories {
 }
 
 dependencies {
+    implementation platform('software.amazon.awssdk:bom:2.46.17')
+    implementation 'software.amazon.awssdk:sqs'
+    implementation 'software.amazon.awssdk:s3'
+
     // Lombok & mvc
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -70,5 +74,18 @@ clean {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'smoke'
+    }
+}
+
+tasks.register('smokeTest', Test) {
+    group = 'verification'
+    description = 'Runs opt-in tests against the configured staging Redis.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'smoke'
+    }
+    shouldRunAfter tasks.named('test')
 }

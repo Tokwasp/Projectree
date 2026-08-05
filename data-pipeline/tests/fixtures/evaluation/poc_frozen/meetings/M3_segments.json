@@ -1,0 +1,2063 @@
+{
+  "meetingId": "M3",
+  "segments": [
+    {
+      "segmentId": "M3-seg-001",
+      "startMs": 0,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "되기 시작하겠습니다. 진짜 저희가 얘기했던 게 뭐고 이거죠?"
+    },
+    {
+      "segmentId": "M3-seg-002",
+      "startMs": 9000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "저희 경영 씨가 연구하셨던 그"
+    },
+    {
+      "segmentId": "M3-seg-003",
+      "startMs": 13000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "연구소."
+    },
+    {
+      "segmentId": "M3-seg-004",
+      "startMs": 14000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "유튜버를 이용하는 전략에서 그 기술 용어 사전집 말씀하셨는데 그걸 이제 클로바 키워드 부스팅에 썼던 키워드 목록들을 재활용하는 거 어떤가에 대해서 이야기하고 있습니다."
+    },
+    {
+      "segmentId": "M3-seg-005",
+      "startMs": 28000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 재활용도 좋고. 근데 재활용보다 저희 제쪽에서는 아마 그런 거여야 될 것 같아요. 그러니까 한 키워드가 있으면 그 키워드에서 그 그 뭐 SG 쪽에서 얘기할 수 있는 뭐 예를 들어 EC2라 하면은 뭐 ECS 아니면은 그거를 뭐 ECSEC 뭐 이런 식으로 여러 가지 이건 좀 이상한 상황들 있잖아요."
+    },
+    {
+      "segmentId": "M3-seg-006",
+      "startMs": 55000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그것들을 같이 좀 모아두고 모아두면서."
+    },
+    {
+      "segmentId": "M3-seg-007",
+      "startMs": 60000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러니까 오인식된다."
+    },
+    {
+      "segmentId": "M3-seg-008",
+      "startMs": 62000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "예 예 아 맞아요. 오인식된 단어들을 넣고 그것 그것들이 최대한 뭐랑 비슷한지 좀 뽑아낼 수 있게."
+    },
+    {
+      "segmentId": "M3-seg-009",
+      "startMs": 71000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "쟤도 간단하게 물었는데 그게 유사도 검색이 안 된대요."
+    },
+    {
+      "segmentId": "M3-seg-010",
+      "startMs": 74000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "예 맞아요. 그거 서도 검색이 근데 또 유사서도 검색으로 하잖아요. 그러면은 좀 이상하게 나올 수 있어요."
+    },
+    {
+      "segmentId": "M3-seg-011",
+      "startMs": 81000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "예를 들어 갖고. 그 약 그 비동기 처리 관련해 가지고 이야기가 나왔어요. 근데 그거 이제 좀 STT에서는 오탈자로 추출했어요."
+    },
+    {
+      "segmentId": "M3-seg-012",
+      "startMs": 95000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그럼 그걸 이제 좀 그 레그 방식으로 조회를 하면은 어? 비동기 처리 관련돼서 비슷한 내용 그럼 뭐 우리는 뭐 그냥 뭐 MQ를 레빈 MQ를 가지고 얘기하고 있었는데 갑자기 카프카를 꺼내 온다던가. 그런 약간 좀 오류도 있을 수 있다."
+    },
+    {
+      "segmentId": "M3-seg-013",
+      "startMs": 118000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 그래 가지고 최대한 그 STT가 뽑아낼 수 있는 오타들을 좀 집어넣어서 추출하는 식으로 가는 게 좋을 것 같아요."
+    },
+    {
+      "segmentId": "M3-seg-014",
+      "startMs": 130000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "저도 그게 좋을 것 같아. 좋을 것 같습니다. 네."
+    },
+    {
+      "segmentId": "M3-seg-015",
+      "startMs": 133000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "음"
+    },
+    {
+      "segmentId": "M3-seg-016",
+      "startMs": 138000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 아니면 그냥 전처리를 그냥 토픽별로 다 나누고 처음에 토픽들을 합치는 과정을 하면은 똑같은 내용이 저도 안 나올 것 같은데."
+    },
+    {
+      "segmentId": "M3-seg-017",
+      "startMs": 149000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어떡하지?"
+    },
+    {
+      "segmentId": "M3-seg-018",
+      "startMs": 150000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "예를 들어 뭐 코그니티스 사용을 한다 했다가 10분 뒤에 안 한다고 했으면은 그 텍스트 내용을 다 토픽별로 분리해 가지고 코네티스 뭐 사용함. 이렇게 해 가지고 타임 스티븐별로 약간 구분할 수 있잖아. 그 토픽들을 다 그룹화 하면은 구분해서 처음 사용한다."
+    },
+    {
+      "segmentId": "M3-seg-019",
+      "startMs": 165000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "했다가 안 함 이렇게 하나를 합쳐지지 않을 거예요."
+    },
+    {
+      "segmentId": "M3-seg-020",
+      "startMs": 170000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어 그거는 제가 프롬프팅을 할 때 이제 그냥 프롬프트에서 끝까지 다 읽고 판단해라라는 걸 넣으니까 이제 그런 것들을 합쳐서 말해 주더라고요. 그래서 저희 그 MQ 기술을 뭐 쓸지 결정할 때도 처음에 그냥 돌렸을 때는 뭐 확정 아직 확정되지 않았다라고 말했는데 이제 이런 거 이제 어 범벅 처리 이런 걸 처리를 넣으니까. 마지막에 돌렸던 결과로는 박정희 지었다라는 식으로 나오더라고요."
+    },
+    {
+      "segmentId": "M3-seg-021",
+      "startMs": 207000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "맞아요. 이게. 그 AI 자체가 좀 초반에 이야기하는 것들에서 약간 확증 편향을 가지더라고요."
+    },
+    {
+      "segmentId": "M3-seg-022",
+      "startMs": 215000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그냥 그래서 뒤에 갈수록 힘이 딸려 가지고"
+    },
+    {
+      "segmentId": "M3-seg-023",
+      "startMs": 219000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그래 교회 님 설문해야 되는 것 같은데. 설문이요? 네 그 10시에 영상 포트폴리오 담당자 설문이 있어요."
+    },
+    {
+      "segmentId": "M3-seg-024",
+      "startMs": 227000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "어."
+    },
+    {
+      "segmentId": "M3-seg-025",
+      "startMs": 228000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어우 저 죽고 싶다."
+    },
+    {
+      "segmentId": "M3-seg-026",
+      "startMs": 230000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "어 각 팀장님께서 오라고 적혀 있는 거 같은데. 제목 봤죠."
+    },
+    {
+      "segmentId": "M3-seg-027",
+      "startMs": 234000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "대출 대상 각 팀장님."
+    },
+    {
+      "segmentId": "M3-seg-028",
+      "startMs": 236000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "예서인데요."
+    },
+    {
+      "segmentId": "M3-seg-029",
+      "startMs": 237000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "어 자 레디스 장로. 네이스 아 한 명을 선정해서 그냥 이름 적으면 듣는 건가 궁금."
+    },
+    {
+      "segmentId": "M3-seg-030",
+      "startMs": 245000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어 네 선정해서 제출이네요. 어떻게 하나? 룰렛인가요?"
+    },
+    {
+      "segmentId": "M3-seg-031",
+      "startMs": 250000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "경영시"
+    },
+    {
+      "segmentId": "M3-seg-032",
+      "startMs": 251000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "경현님이 당첨됐어요."
+    },
+    {
+      "segmentId": "M3-seg-033",
+      "startMs": 252000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 그럼 제가 한 건가요?"
+    },
+    {
+      "segmentId": "M3-seg-034",
+      "startMs": 254000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아니 팀장이 제출하는 거니까 제가 지출하면 되는 거"
+    },
+    {
+      "segmentId": "M3-seg-035",
+      "startMs": 257000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "알겠습니다. 일단 다시 계속 얘기할까요?"
+    },
+    {
+      "segmentId": "M3-seg-036",
+      "startMs": 260000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그래서 이런 방금 대화도 잡담을 제외하라면은 없어지더라고요."
+    },
+    {
+      "segmentId": "M3-seg-037",
+      "startMs": 265000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 맞아. 저 땀을 잘 제거 잘 들어가는 거 같아요. 음"
+    },
+    {
+      "segmentId": "M3-seg-038",
+      "startMs": 271000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "돌아가서 그러면 그냥 기술적 오타가 제대로 안 잡히는 경향이 문제일 거예요."
+    },
+    {
+      "segmentId": "M3-seg-039",
+      "startMs": 276000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 난 그거 그것도"
+    },
+    {
+      "segmentId": "M3-seg-040",
+      "startMs": 278000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "다른 거는 그래도 잘 나오지 않는 다른 것들."
+    },
+    {
+      "segmentId": "M3-seg-041",
+      "startMs": 281000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "근데 지금 돌려보니까 진짜 거의 잘 나와요. 진짜. 예 거의 잘 나오는데."
+    },
+    {
+      "segmentId": "M3-seg-042",
+      "startMs": 288000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "이제 밤 171개의 그 토픽들이 나왔으면은 그중에서 한 168개 정도가 되고 몇 개가 살짝 삐꾸난다?"
+    },
+    {
+      "segmentId": "M3-seg-043",
+      "startMs": 300000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "삐꾸는 이제 사용자에게 맡기죠."
+    },
+    {
+      "segmentId": "M3-seg-044",
+      "startMs": 303000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그게 맞아요. 그래서 그것 때문에 출력 형식에 이제 그거를 사용자 체크가 필요한가 아닌가를 넣을지 아니면 그냥 전부 다 사용자에게 확인해 받을지. 또 어떻게 할지 싶어."
+    },
+    {
+      "segmentId": "M3-seg-045",
+      "startMs": 315000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러니까 사실 이거는 프로젝트 과일이니까. 사용자가 한 번씩은 읽어 보아야 되는 게 맞고. 읽어 보면 이상하면 고칠 테니까 그게 맞지 않을까요?"
+    },
+    {
+      "segmentId": "M3-seg-046",
+      "startMs": 323000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러면은 각인 유무 판단 피로에 대한 추가적인 어 기록하는 건 없애고 전부 다 판단하는 식으로 출력을 하면 될 것 같아요."
+    },
+    {
+      "segmentId": "M3-seg-047",
+      "startMs": 333000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네. 왜냐면 뭔가 잘못 잘 되었다고 했는데도 이상한 거 있을 수도 있으니까 완벽하지 않으면 안 하는 게"
+    },
+    {
+      "segmentId": "M3-seg-048",
+      "startMs": 349000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "저희 노드 캡치는 있잖아요. 만약 백엔드랑 프론트가 겹치는 부분이 있었으면은 저희 각 같은"
+    },
+    {
+      "segmentId": "M3-seg-049",
+      "startMs": 354000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아 그렇죠. 네 각각 가겠습니다."
+    },
+    {
+      "segmentId": "M3-seg-050",
+      "startMs": 382000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그럼 저는 이제 출력 형식만 걱정하면은 끝입니다. 다른 분들은 혹시 있으신가요?"
+    },
+    {
+      "segmentId": "M3-seg-051",
+      "startMs": 396000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 맞네. 거기 이제 출력 형식을 정해야겠네요. 네."
+    },
+    {
+      "segmentId": "M3-seg-052",
+      "startMs": 407000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어 그 저희가 디시전 액션 이슈로 이어지잖아요. 근데 돌려보면은 어 이슈 많이 있는 경우가 있더라고요. 한 주제에 대해서 그런 것들을 이제 노드를 어떻게 붙일지"
+    },
+    {
+      "segmentId": "M3-seg-053",
+      "startMs": 422000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이슈만 있어."
+    },
+    {
+      "segmentId": "M3-seg-054",
+      "startMs": 423000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "이슈만 뽑히더라고요. LLM이 근데"
+    },
+    {
+      "segmentId": "M3-seg-055",
+      "startMs": 426000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "걔는 없는 게 나은데."
+    },
+    {
+      "segmentId": "M3-seg-056",
+      "startMs": 427000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "저도 제가 그 실험을 해 봤을 때 한 회의당 보통 한 7개의 노드가 생성되더라고요. 어 맞아요. 한 7 8개 딱 그 정도가 제일 적당한 거 같은데."
+    },
+    {
+      "segmentId": "M3-seg-057",
+      "startMs": 441000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러면은 어 아 이게 지금은 저희 그 노후 자체가 좀 루트 노더가 있고 그다음에 거기에서 회의 관계 생성되면은 그 회의 밑에다가 뻗어져 나오는 건가요?"
+    },
+    {
+      "segmentId": "M3-seg-058",
+      "startMs": 463000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "주요도 6개에다가 각각 따로 가는 거"
+    },
+    {
+      "segmentId": "M3-seg-059",
+      "startMs": 466000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "음 아 아 그 이슈."
+    },
+    {
+      "segmentId": "M3-seg-060",
+      "startMs": 470000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "근데 현상님이 그때 거미줄로 그냥 가운데 하나 두고 거기서 6개"
+    },
+    {
+      "segmentId": "M3-seg-061",
+      "startMs": 475000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "가운데는 그냥 커다란 원 그냥 프로젝트 이름이고 그다음에 6개 뭐"
+    },
+    {
+      "segmentId": "M3-seg-062",
+      "startMs": 480000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "선택한 노드만 이제 보이고."
+    },
+    {
+      "segmentId": "M3-seg-063",
+      "startMs": 483000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "프롬프트 백엔드 그런 식으로 발견하지 않았나요?"
+    },
+    {
+      "segmentId": "M3-seg-064",
+      "startMs": 486000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 좀 뭐 그림 좀 그려 줄 수 있나?"
+    },
+    {
+      "segmentId": "M3-seg-065",
+      "startMs": 489000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "이제"
+    },
+    {
+      "segmentId": "M3-seg-066",
+      "startMs": 490000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이게 다들 치매"
+    },
+    {
+      "segmentId": "M3-seg-067",
+      "startMs": 491000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "먹어 가지고. 그러니까 덜 치우는 거 같고."
+    },
+    {
+      "segmentId": "M3-seg-068",
+      "startMs": 493000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이렇게 가지고 있고 이제 아이 C"
+    },
+    {
+      "segmentId": "M3-seg-069",
+      "startMs": 498000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "넣었을까요?"
+    },
+    {
+      "segmentId": "M3-seg-070",
+      "startMs": 500000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "왓으로 없어요. 이걸로 넣어야 되는데 그냥 이걸로"
+    },
+    {
+      "segmentId": "M3-seg-071",
+      "startMs": 503000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이렇게 하는 걸로 했어요. 가운데 하고 선은 그냥 그릴게요. 이렇게 이게 프로젝트"
+    },
+    {
+      "segmentId": "M3-seg-072",
+      "startMs": 516000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "빌어봐줘. 그다음에 여기가 갑자기 뭔가요?"
+    },
+    {
+      "segmentId": "M3-seg-073",
+      "startMs": 519000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이렇게 빼기고. 예"
+    },
+    {
+      "segmentId": "M3-seg-074",
+      "startMs": 521000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "비위로 저기 줄 호두."
+    },
+    {
+      "segmentId": "M3-seg-075",
+      "startMs": 523000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "인프라. 핸드폰 또 뭐 있죠? 저도 지"
+    },
+    {
+      "segmentId": "M3-seg-076",
+      "startMs": 532000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "기획이요. 디자인 AI 이런 거 있어요."
+    },
+    {
+      "segmentId": "M3-seg-077",
+      "startMs": 535000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "DJ. 디자인. 그렇죠."
+    },
+    {
+      "segmentId": "M3-seg-078",
+      "startMs": 539000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러면은 여기에 계속 노드가 생성된다."
+    },
+    {
+      "segmentId": "M3-seg-079",
+      "startMs": 542000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "예 맞아요 좀 네. 그렇게"
+    },
+    {
+      "segmentId": "M3-seg-080",
+      "startMs": 544000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "노드가 로더가 생성되고 근데 여기에 생성된"
+    },
+    {
+      "segmentId": "M3-seg-081",
+      "startMs": 550000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그게 디시전이"
+    },
+    {
+      "segmentId": "M3-seg-082",
+      "startMs": 551000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "결정"
+    },
+    {
+      "segmentId": "M3-seg-083",
+      "startMs": 552000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "액션 이슈 파이로 드러쉬 액션 이슈까지 이어지는 거"
+    },
+    {
+      "segmentId": "M3-seg-084",
+      "startMs": 556000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "근데 그럼 여기에 그러면은 회의가 생성될 때마다 계속 붙나요?"
+    },
+    {
+      "segmentId": "M3-seg-085",
+      "startMs": 560000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "예 그렇게 알고 계셨어요. 저는 네."
+    },
+    {
+      "segmentId": "M3-seg-086",
+      "startMs": 563000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그렇죠. 이 바이러스는 피할 수 없는 거였어."
+    },
+    {
+      "segmentId": "M3-seg-087",
+      "startMs": 566000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "막 저도 이게 뭐가 예 계속 한 회의가 될 때마다 뭐 디시즌이 몇 개 생기고 막 하는데 그러면은 여기 계속 붙을 것 같아 가지고 여기 그러면 뭐 결정도 있고 이슈도 있고 액션도 있고 뭐 이게 계속 돼 버리면 이거는"
+    },
+    {
+      "segmentId": "M3-seg-088",
+      "startMs": 585000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "이걸 디시전만 하이노드고 있고 디시전의 하이노드가 액션이잖아요. 디시즈네요. 2주요 노드가 있고 디시전이 하이 노드로 들어가고 그리고 그 디시전의 하이노드가 액션이고 액션이 하이 노드가 이슈로 이렇게 연결되는 거 아니었나요?"
+    },
+    {
+      "segmentId": "M3-seg-089",
+      "startMs": 603000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그렇게 얘기하고서"
+    },
+    {
+      "segmentId": "M3-seg-090",
+      "startMs": 612000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "여기에다가 D. 여기다가 이렇게. 에이 여기다가 이씨 이슈."
+    },
+    {
+      "segmentId": "M3-seg-091",
+      "startMs": 621000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그리고"
+    },
+    {
+      "segmentId": "M3-seg-092",
+      "startMs": 622000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그래서 한 디시전의 액션이 여러 개일 수도 있고 액시션의 이슈가 여러 개일 수도 있고. 근데 그렇게 하고 있었어요."
+    },
+    {
+      "segmentId": "M3-seg-093",
+      "startMs": 628000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "근데 이게 저희가 회의를 하면서 예 결정만 여러 개 나올 수 있고 액션이 안 나오시단 말이죠."
+    },
+    {
+      "segmentId": "M3-seg-094",
+      "startMs": 634000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "맞아요. 그래서 저에요. 그거"
+    },
+    {
+      "segmentId": "M3-seg-095",
+      "startMs": 636000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러면 진짜 뭐 요런 요런 식으로 딜이 되고 그럼 이게 프로젝트의 흐름을 이해할 수가 없는 구조가 돼 버린단 말이죠. 왜? 자 중구 나온팡이 진다면."
+    },
+    {
+      "segmentId": "M3-seg-096",
+      "startMs": 649000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 글쎄요. 그때 난 말했던 게 시간대별로 이렇게 정리를 하는 게 좋겠다고. 지금 이렇게."
+    },
+    {
+      "segmentId": "M3-seg-097",
+      "startMs": 657000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "쾅 누르면 좌락. 그럼 맨 밑에 거 말면 되잖아요. 어."
+    },
+    {
+      "segmentId": "M3-seg-098",
+      "startMs": 664000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "근데 제가 봤을 때 일단 이거가 약간 대강이라도 나오는 게 좀 필요하고 그 이후 일인 거 같긴 해요."
+    },
+    {
+      "segmentId": "M3-seg-099",
+      "startMs": 671000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 일단은 중부 난방학이라도 보이게."
+    },
+    {
+      "segmentId": "M3-seg-100",
+      "startMs": 674000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "일단"
+    },
+    {
+      "segmentId": "M3-seg-101",
+      "startMs": 675000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "일단 일은 이거라도 되고 그다음부터 이제 좀 수정을 하는 게 맞는 걸까요?"
+    },
+    {
+      "segmentId": "M3-seg-102",
+      "startMs": 679000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "근데 이렇게 돼 버리면 일단 제가 고민하고 있는 게 제가 고민하고 있는 것이 여기 그러니까 이 한 회의에서 한 회의에서 이제 뭐 주제라는 흐름이 있을 거 아니에요. 회의에다. 흐름이 있는데 AI가 이거를 잘 알아먹기 위해서 이거와 비슷한 이전 회의에 대해서 이전 회의를 어 알면 또 좋지 않을까."
+    },
+    {
+      "segmentId": "M3-seg-103",
+      "startMs": 712000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "이거를 먹이면 더 좋지 않을까라는 가설을 세웠는데. 이 구조라면은 아 근데 이 구조를 어떻게든 해 볼 수 있을 것 같은데. 아 일단은 이렇게 해 보고 디자인 유형 별로다."
+    },
+    {
+      "segmentId": "M3-seg-104",
+      "startMs": 728000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러면은 바꾸는 식으로 어 다시 뭐 시간 수명 정렬해 보고."
+    },
+    {
+      "segmentId": "M3-seg-105",
+      "startMs": 733000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 톤트가 체력 쇼하고"
+    },
+    {
+      "segmentId": "M3-seg-106",
+      "startMs": 734000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러면 일단은 저는 그러면 믿고 이 구조로 디시즌이랑 액션이랑 이슈를 계속 생성하겠습니다. 내가 실험실 오픈해보고. 톡 그리고 제가 지금 어제 토크 한 2만 개 썼거든요."
+    },
+    {
+      "segmentId": "M3-seg-107",
+      "startMs": 749000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "GMS. 예 괜찮아요."
+    },
+    {
+      "segmentId": "M3-seg-108",
+      "startMs": 751000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "2만 개 안 썼어요."
+    },
+    {
+      "segmentId": "M3-seg-109",
+      "startMs": 752000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "망팔청이 있었던 거 같은데. 예"
+    },
+    {
+      "segmentId": "M3-seg-110",
+      "startMs": 755000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "조금 이렇게 총 10만 개예요? 그 토큰 총계 수거."
+    },
+    {
+      "segmentId": "M3-seg-111",
+      "startMs": 760000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "10만 개여서 음 저기 얼마 안 썼습니다."
+    },
+    {
+      "segmentId": "M3-seg-112",
+      "startMs": 764000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 저 근데 저게 한 그 실험을 한 35분 했거든요. 35분 했거든요. 오 한 42분 넣어야 될 것 같은데."
+    },
+    {
+      "segmentId": "M3-seg-113",
+      "startMs": 774000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "사실 음"
+    },
+    {
+      "segmentId": "M3-seg-114",
+      "startMs": 775000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "음 더 하시죠. 그려봤자 4만 안 됩니다. 아"
+    },
+    {
+      "segmentId": "M3-seg-115",
+      "startMs": 779000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "이렇게 믿고 하겠습니다. 그러면."
+    },
+    {
+      "segmentId": "M3-seg-116",
+      "startMs": 786000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어머님 그래서 저 제가 말한 게 저기서 디시전 액션하고 디시전만 있는 거랑 디시전 액션만 있는 거랑은 괜찮은데. 디시전이 없고 액션이랑 이슈 많이 있는 경우가 몇 개 나오더라고요."
+    },
+    {
+      "segmentId": "M3-seg-117",
+      "startMs": 799000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "디시전이 없고요. 액션이 아 맞아 맞아 맞아."
+    },
+    {
+      "segmentId": "M3-seg-118",
+      "startMs": 802000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "이런 게 몇 개 나와 가지고. 근데 그런 건 또 어떻게 붙여야 될지 몰라 가지고"
+    },
+    {
+      "segmentId": "M3-seg-119",
+      "startMs": 805000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "이 그러니까 제가 알기에는 그거예요. 이거 어떻게 붙여야 될까? 그게 좀 고민입니다."
+    },
+    {
+      "segmentId": "M3-seg-120",
+      "startMs": 810000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "맞"
+    },
+    {
+      "segmentId": "M3-seg-121",
+      "startMs": 811000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그래 가지고 AI는 LLM을 일단은 이슈도 루트 노드를 그냥 바로 저 주요 노드로 붙여 버렸더라고요. 소위 생각하는 다르게. 그래 가지고 이거를 아 어떻게 또 제약을 둬야 되나 싶어서"
+    },
+    {
+      "segmentId": "M3-seg-122",
+      "startMs": 829000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "흠"
+    },
+    {
+      "segmentId": "M3-seg-123",
+      "startMs": 833000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아니면은 차라리 프로젝트라는 큰 그러니까 회의라는 노드를 여기에다가 한 개 더 만들어 버리는 거 어때요? 그러니까 지금은 이렇잖아요. 백엔드인데 바로 디시저만 부숴 버리잖아요."
+    },
+    {
+      "segmentId": "M3-seg-124",
+      "startMs": 855000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "근데 만약에 기억에다가 회의 회의라는 게 만들면은 여기다가 그냥 디시즌 달고 디기 달고 이런 식으로 하되 만약에 정말 디시즌이 없다. 그럼 바로 이슈로 이렇게 붙여도 되고."
+    },
+    {
+      "segmentId": "M3-seg-125",
+      "startMs": 878000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러면 그 해의는 날짜별로 회의 각 회의별로 다시 계속 노드를 만드는 건가요?"
+    },
+    {
+      "segmentId": "M3-seg-126",
+      "startMs": 884000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "커피 별로. 각 회의 별로 지금 기존의 구조를 따르자면은 각 회의별로 계속 노드를 생성하는 거고 아니 뭔가 우리가 이제 이 회의에 대한 흐름까지도 같이 좀 정리를 해 주고 싶다 하면은 이 회의 밑에서 아 저 빼먹을까요? 어 시뮬레이션 바람 스타일 오프라인 싱글."
+    },
+    {
+      "segmentId": "M3-seg-127",
+      "startMs": 909000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "편해 가지고. 어렵네요. 아 좀 애"
+    },
+    {
+      "segmentId": "M3-seg-128",
+      "startMs": 913000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "어려운 거 같은데."
+    },
+    {
+      "segmentId": "M3-seg-129",
+      "startMs": 917000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "음 사실 이게 어려운 건 아닙니다. 디시즌이라 에이 얼마나 잘 뽑히는 게 어려운 거고. 맞춰서."
+    },
+    {
+      "segmentId": "M3-seg-130",
+      "startMs": 924000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어쨌든 일단은 저는 회의라는 모드를 한 개 더 생성하는 게 좋다고 생각합니다. 음"
+    },
+    {
+      "segmentId": "M3-seg-131",
+      "startMs": 933000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 근데 그러면 사실 회의 관리가 되지 않는"
+    },
+    {
+      "segmentId": "M3-seg-132",
+      "startMs": 937000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "회의 관리 아니"
+    },
+    {
+      "segmentId": "M3-seg-133",
+      "startMs": 939000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "대신에 왜냐면 위에 있는 회의가 이제 쓸모 없어질 수도 있잖아."
+    },
+    {
+      "segmentId": "M3-seg-134",
+      "startMs": 943000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "위에 있는 회의요."
+    },
+    {
+      "segmentId": "M3-seg-135",
+      "startMs": 944000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "밑으로 좀 얘기하면서 회의 1번 2번 3번 이렇게 있는데 1번에서 한다 했는데 2번에서 안다하고. 그럼 결론적으로 안 한다가 결론인데. 회의 1번 있고 2번 있으면 1번에 사실 필요가 없잖아."
+    },
+    {
+      "segmentId": "M3-seg-136",
+      "startMs": 956000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그것도 그렇긴 한데 이게 그러면은 액션만 있을 때는 어떻게 붙일까? 이 문제가 좀 있어 갖고."
+    },
+    {
+      "segmentId": "M3-seg-137",
+      "startMs": 964000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그리고 옆에 그냥 붙여 버려야 되나 아니면은 빈 디슈전을 만들어야 되나요?"
+    },
+    {
+      "segmentId": "M3-seg-138",
+      "startMs": 968000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "결정이 없으면 쳐내야 되나?"
+    },
+    {
+      "segmentId": "M3-seg-139",
+      "startMs": 970000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "제가 그래 가지고 애름한테 어떻게든 디시전 액션 이슈 구조로 만들어 줘라고 하니까 환각이 생기더라고요."
+    },
+    {
+      "segmentId": "M3-seg-140",
+      "startMs": 978000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "음 어 헝가. 아 그렇죠. 그렇죠."
+    },
+    {
+      "segmentId": "M3-seg-141",
+      "startMs": 980000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "얘네들은 어떻게든 만들어 달라 카면은 없는 제일 유산 없는 단어를 생성하잖아요."
+    },
+    {
+      "segmentId": "M3-seg-142",
+      "startMs": 985000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그래가지고. 이건 아닌가"
+    },
+    {
+      "segmentId": "M3-seg-143",
+      "startMs": 988000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네. 음 그럼 액션이나 이슈만 있는 건 없으는 걸로?"
+    },
+    {
+      "segmentId": "M3-seg-144",
+      "startMs": 992000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "없을 것 같아요. 아니면 사용자 확인을 받을까요? 따로"
+    },
+    {
+      "segmentId": "M3-seg-145",
+      "startMs": 994000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "옵션이랑 이슈만 있으면 없애자는 게"
+    },
+    {
+      "segmentId": "M3-seg-146",
+      "startMs": 998000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "좀 결정 사항이 있어요. 액션 이슈 있는 걸로."
+    },
+    {
+      "segmentId": "M3-seg-147",
+      "startMs": 1001000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "결정성."
+    },
+    {
+      "segmentId": "M3-seg-148",
+      "startMs": 1004000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "사실 결정 상황이 없는데 액션 이슈만 있으면 의미가 없잖아요. 이렇게 하죠. 결정 사항 이런 걸 고려해야 된다."
+    },
+    {
+      "segmentId": "M3-seg-149",
+      "startMs": 1012000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이슈만 말했는데 사실 뭘 결정한 지가 없는 거예요. 그럼 약간 그냥 약간 약간 뭐라 해야 되나요? 서브로 들어가는 거 아닐까요?"
+    },
+    {
+      "segmentId": "M3-seg-150",
+      "startMs": 1023000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "핵심은 그냥 결정이 있어야 되니까."
+    },
+    {
+      "segmentId": "M3-seg-151",
+      "startMs": 1024000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "이런 회의를 하고 있잖아요 저희가. 이슈만 모아 보자라는 회의가 있을 수 있어요. 그럼 이슈들을 됐다 얘기를 했어요."
+    },
+    {
+      "segmentId": "M3-seg-152",
+      "startMs": 1032000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그럼 이슈를 정리를 해야 되는데 어 결정이 없네. 그럼 날려 버릴 수가 있잖아요."
+    },
+    {
+      "segmentId": "M3-seg-153",
+      "startMs": 1038000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 이슈를 더 나를 결정을 했다. 이슈를 날리잖아. 결정."
+    },
+    {
+      "segmentId": "M3-seg-154",
+      "startMs": 1047000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "이슈를 날리자."
+    },
+    {
+      "segmentId": "M3-seg-155",
+      "startMs": 1048000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "운동 이슈를 날리죠."
+    },
+    {
+      "segmentId": "M3-seg-156",
+      "startMs": 1050000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러니까 이게 이 속 이 회의에서 디시즌이 없다고 밑에를 다 올릴 수는 없을"
+    },
+    {
+      "segmentId": "M3-seg-157",
+      "startMs": 1057000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "같아요. 아니면 그 경영님이 실험했을 때처럼 아예 프로젝트 기초 골격을 주고 그리고 이슈만 있으면은 그 골격에서 추출해 가지고 어떻게든 연결시켜 버릴까요? 토큰만도 더 쓰면은"
+    },
+    {
+      "segmentId": "M3-seg-158",
+      "startMs": 1070000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "근데 어떻게든 연결시킨다 하셨나요? 그러면은 무조건 환각이 있어요. 얘네들이 그 어떻게든에 집합해 갖고 좀"
+    },
+    {
+      "segmentId": "M3-seg-159",
+      "startMs": 1079000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음"
+    },
+    {
+      "segmentId": "M3-seg-160",
+      "startMs": 1080000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "간단한 임시 가제라고 만들어서 디시전 액션을 만들어라."
+    },
+    {
+      "segmentId": "M3-seg-161",
+      "startMs": 1085000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아 그것도 불안할까? 그러니까 프로젝트 관리 생각해 보면 사실 뭔가 어떤 걸 만들어야 되고 어떤 행동을 하고 이런 게 중요한 거고 이슈만 있는 건 사실 없애도 저는 될 거 같은데. 왜냐면 그건 프로젝트에서 저희가 그냥 회의록에서 나온 약간 서브적인 주제고 그게 뭔가 프로젝트의 진짜 중요한 건 아니잖아요."
+    },
+    {
+      "segmentId": "M3-seg-162",
+      "startMs": 1104000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "만약 하다가 갑자기 이슈만 있는 경우가 있을 수 없을까요? 아주 치명적인 이슈. 그런 거 디저트 디자?"
+    },
+    {
+      "segmentId": "M3-seg-163",
+      "startMs": 1114000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "들어가려면 이제 사용자가 노드를 붙이라고 할 거예요."
+    },
+    {
+      "segmentId": "M3-seg-164",
+      "startMs": 1118000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그것도 괜찮을 것 같아요. 사양도 컨펌을 받아 가지고 어디다 붙"
+    },
+    {
+      "segmentId": "M3-seg-165",
+      "startMs": 1122000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네가 이제 우리는 모르겠으니까 네가 붙여라. 예 그래서 사용자 노드 만들어서 액션 뒤에 붙이면 이슈로 되고."
+    },
+    {
+      "segmentId": "M3-seg-166",
+      "startMs": 1130000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "전체적인 확인을 받는 게 저도 좋다 생각합니다."
+    },
+    {
+      "segmentId": "M3-seg-167",
+      "startMs": 1134000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "왜냐면 저희가 다 만들어 줄 순 없으니까. 어느 정도의 편의성을 제공하는 게 목적입니다."
+    },
+    {
+      "segmentId": "M3-seg-168",
+      "startMs": 1156000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "제가 봤을 때는 오늘 회의별로 나눠 주지는 말고 이렇게 나눌 때에 있어서 이전 거를 그냥 붙일 수도 있게 이렇게 하는 게 맞는 거 같아요. 이전 거를 붙일 수도 있는데 이게 사실 난이도가 높잖아요."
+    },
+    {
+      "segmentId": "M3-seg-169",
+      "startMs": 1167000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "네. 아 여기 액션 나온 걸 바탕으로 액션 나오는 거를 바탕으로 또 새로운 회의가 나와서 여기서 디시즌이 생기고 이런 거요?"
+    },
+    {
+      "segmentId": "M3-seg-170",
+      "startMs": 1177000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "어 그럴 때보다 뭐 결정 사항이 있으면 그 결정상이 또 얘기할 수도 있잖아요. 거기에 대해서 이제 덧붙이는 거죠. 이렇게 액션 액션 이렇게."
+    },
+    {
+      "segmentId": "M3-seg-171",
+      "startMs": 1184000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "자유롭죠."
+    },
+    {
+      "segmentId": "M3-seg-172",
+      "startMs": 1186000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "개빡세겠."
+    },
+    {
+      "segmentId": "M3-seg-173",
+      "startMs": 1187000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "예 그런데 좀 이게 맞긴 하잖아요 사실 하나로 합쳐지니까. 근데 이거는 좀 빡세고. 빡세긴 하지 않나요?"
+    },
+    {
+      "segmentId": "M3-seg-174",
+      "startMs": 1193000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "근데? 네 빡세는데. 이걸 사실 약간 어드밴스로 두고 일단 1번은 이걸 표현하는 거고 2번이 이전이 노드들 가지고 이게 딥이 있을 거니까."
+    },
+    {
+      "segmentId": "M3-seg-175",
+      "startMs": 1205000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이 내용에다 붙일 수 있는지 보고 붙여 주는 거"
+    },
+    {
+      "segmentId": "M3-seg-176",
+      "startMs": 1210000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "음 그래서 혹시 저 30분 있다 자취 회의 있어?"
+    },
+    {
+      "segmentId": "M3-seg-177",
+      "startMs": 1214000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "안에 가셔도 됩니다."
+    },
+    {
+      "segmentId": "M3-seg-178",
+      "startMs": 1215000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "아쉬웠죠. 어쨌든 그 일단 오늘 제가 할 거 먼저 정리를 하고 싶은데. 네."
+    },
+    {
+      "segmentId": "M3-seg-179",
+      "startMs": 1220000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "일단 젠티스 이거 다 했거든요. 이거 설정이랑 해서 파이프라인 이게 설정을 해야 되는데. 베트남 그래서 데모로 한번 만들어서 근데 보니까 여기서 설정하고 스크립트를 짜야 되더라고요."
+    },
+    {
+      "segmentId": "M3-seg-180",
+      "startMs": 1239000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그래서 여기서 자동화로 CI 시대를 한 거 같은데 그걸 했을 때 그러면 이거를 하려면 좀 아키텍처를 좀 구체화시켜서 해야 이거를 스크립트를 또 AI에 넣어서 짤 수 있을 것 같아서 제가 생각했을 때는 아키텍처를 좀 제대로 해서 만드는 거랑 그리고 그래서 이거 스크립터로 CICD 자동화하는 거랑 배포 어떻게 하는지. 그래서 파이프라인을 제대로 하나 만들고"
+    },
+    {
+      "segmentId": "M3-seg-181",
+      "startMs": 1269000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "근데 씨앗이 하는 거는 그 일단 프론트랑 백 그 부분만 정확히 들어가겠습니다."
+    },
+    {
+      "segmentId": "M3-seg-182",
+      "startMs": 1274000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "사실 올라간 건 백엔드만 있기 때문에 백엔드만 정해도. 그리고 AWS 파이프라인이니까. 예 AWS 파이프란 아닌 거예요?"
+    },
+    {
+      "segmentId": "M3-seg-183",
+      "startMs": 1283000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그렇습니다. 이 프론트도 되는지 모르겠어요. 약간 되면 좋을 것 같긴 한데."
+    },
+    {
+      "segmentId": "M3-seg-184",
+      "startMs": 1294000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이거"
+    },
+    {
+      "segmentId": "M3-seg-185",
+      "startMs": 1295000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "젠킨스 위치가 어디예요? 그러면 지금?"
+    },
+    {
+      "segmentId": "M3-seg-186",
+      "startMs": 1297000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 저는 안 써 봐서 부릅니다."
+    },
+    {
+      "segmentId": "M3-seg-187",
+      "startMs": 1299000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "WS 되고요."
+    },
+    {
+      "segmentId": "M3-seg-188",
+      "startMs": 1300000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "네 내부에 EC2"
+    },
+    {
+      "segmentId": "M3-seg-189",
+      "startMs": 1302000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "외부에"
+    },
+    {
+      "segmentId": "M3-seg-190",
+      "startMs": 1303000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "뮤지컬 왜 보여"
+    },
+    {
+      "segmentId": "M3-seg-191",
+      "startMs": 1304000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "예 도커 이미지로 딘킨스가 올라가 있을 거예요."
+    },
+    {
+      "segmentId": "M3-seg-192",
+      "startMs": 1309000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "어 그건 프로토콜 안 될 것 같은데."
+    },
+    {
+      "segmentId": "M3-seg-193",
+      "startMs": 1312000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그럴 정도면 안 될 것 같고. 그러니까 사실 파이프라인 별거 없는 게 그냥 머지 되면은 도코 이미지 그냥 컴포즈업 하면 끝날 것 같습니다. 맞아요."
+    },
+    {
+      "segmentId": "M3-seg-194",
+      "startMs": 1320000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "왜냐면 나머지는 도코 그 설정 파일에 뭐 EMB 읽어 오고 다 있기 때문에 그냥 파이프렌즈 찍는 토커를 올리면은 거기서 이제 환경 변수 읽어 오고 하는 거는 또 독호가 할 거라서. 네. 그렇습니다."
+    },
+    {
+      "segmentId": "M3-seg-195",
+      "startMs": 1334000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그래서 아키텍처를 뭐 따로 추가하거나 해도 사실 그거는 도커 컴포즈 안에 설정 파일로 들어갈 거고 이 파이프라인은 그냥 도커 컴포즈만 호출하면은 될 거에요."
+    },
+    {
+      "segmentId": "M3-seg-196",
+      "startMs": 1346000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "따로 스크립트를 그렇게 디테일하게 안 하고 단일로만"
+    },
+    {
+      "segmentId": "M3-seg-197",
+      "startMs": 1352000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네 왜냐하면 도커 자체의 내부에 다 있기 때문에 제가 도커 파일도 수정할 거잖아요. 네. 예 그걸 수정하고 뭐 환경 변수 이런 거 추가되는 거는 뭐 AWS?"
+    },
+    {
+      "segmentId": "M3-seg-198",
+      "startMs": 1362000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그 시스템 파라미터에 추가해야 되고. 근데 그 추가한 걸 읽어 오는 것도 이제 독후 안에 있을 거고. 그러면서 파이프라인즈 중에 도커를 올리면은 될 것 같습니다."
+    },
+    {
+      "segmentId": "M3-seg-199",
+      "startMs": 1375000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네."
+    },
+    {
+      "segmentId": "M3-seg-200",
+      "startMs": 1378000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "저는 뭘 할까요? 스크립트"
+    },
+    {
+      "segmentId": "M3-seg-201",
+      "startMs": 1383000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "쓱쓱 짜서 채식이 되는지 확인하겠습니다."
+    },
+    {
+      "segmentId": "M3-seg-202",
+      "startMs": 1387000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "백엔드 써 보면 사실 100포면 되잖아요. DNA에서 다른 거는 신경 안 쓰시면 안 될 것 같고. 음"
+    },
+    {
+      "segmentId": "M3-seg-203",
+      "startMs": 1397000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그거랑 서영이 도와주겠습니다. 공부해."
+    },
+    {
+      "segmentId": "M3-seg-204",
+      "startMs": 1402000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "아까 얘기했듯"
+    },
+    {
+      "segmentId": "M3-seg-205",
+      "startMs": 1404000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "예 그렇죠. 잘 만들고. Q&A 어떤 거 할지."
+    },
+    {
+      "segmentId": "M3-seg-206",
+      "startMs": 1408000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "아"
+    },
+    {
+      "segmentId": "M3-seg-207",
+      "startMs": 1408000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "QNA 관련해서 또 다 같이 얘기해도 괜찮을 것 같은데. 한번 떨어 일단 질문 보도록 하"
+    },
+    {
+      "segmentId": "M3-seg-208",
+      "startMs": 1415000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "뭐 엄청 빡세게 들어오진 않을 것 같아요. 왜냐면 이게"
+    },
+    {
+      "segmentId": "M3-seg-209",
+      "startMs": 1417000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "그러면 MBK까지 만든다 카는 저 있던데."
+    },
+    {
+      "segmentId": "M3-seg-210",
+      "startMs": 1423000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "거의 뭐 간단 간단한 거 하나. 간단한 거 하나."
+    },
+    {
+      "segmentId": "M3-seg-211",
+      "startMs": 1426000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "혹시 뭐 클로드 24시간 돌렸나?"
+    },
+    {
+      "segmentId": "M3-seg-212",
+      "startMs": 1429000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "오늘 어제까지 죽어 사람들을 다 MBP까지 생각 안 하고"
+    },
+    {
+      "segmentId": "M3-seg-213",
+      "startMs": 1432000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러니까 무슨"
+    },
+    {
+      "segmentId": "M3-seg-214",
+      "startMs": 1433000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "되게 그 그 컨설턴트님이 MBT까지 하락했는지 안 했는지 모르겠는데 그 이게 종간 발표가 평가에 들어간 듯 하니까 확실히 MBC까지 안 하면 불이익이 있나 싶어 갖고"
+    },
+    {
+      "segmentId": "M3-seg-215",
+      "startMs": 1446000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "어 그러면 제가 봤을 땐 받아도 돼요. 왜냐면 이거를 그냥 하라는 거 자체가 좀 무리가 있으니"
+    },
+    {
+      "segmentId": "M3-seg-216",
+      "startMs": 1452000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "MBP 얘기를 하시긴 했는데 뭔가 약간 무조건 해라. 이건 아니고. 그러니까 MBP랑 뭐 프로토타입 기준이 좀 애매하다."
+    },
+    {
+      "segmentId": "M3-seg-217",
+      "startMs": 1460000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "왜냐하면 애매한 것 같다. 여러분들이 이런 얘기 하시면서 일단 이번 주에 해야 되는 건 일단 POC는 무조건 박정희 뭐 임팩트는 확정은 아닌 느낌이었습니다."
+    },
+    {
+      "segmentId": "M3-seg-218",
+      "startMs": 1468000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그래서 MVP 못 해요? 하려면 그냥 클로드 그냥 24시간 돌리면 되는데 이게 무슨 의미가 있나 싶을 게임이에요."
+    },
+    {
+      "segmentId": "M3-seg-219",
+      "startMs": 1474000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 인종 인정합니다."
+    },
+    {
+      "segmentId": "M3-seg-220",
+      "startMs": 1475000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러면서 그다음 자기 코드도 이해 못 하고 이런 기능 됩니다 하고 그냥 보여주는데 그러면 그 어차피 다 하나하나 다 수정해야 되는데 이게 무슨 의미가 있나 싶습니다."
+    },
+    {
+      "segmentId": "M3-seg-221",
+      "startMs": 1485000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "걱정없이 키웠지만"
+    },
+    {
+      "segmentId": "M3-seg-222",
+      "startMs": 1487000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "좋겠습니다."
+    },
+    {
+      "segmentId": "M3-seg-223",
+      "startMs": 1490000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "표시는 힘든데 이게 MVP. 그러니까 NPA도 어차피 다 지우고 다시 해야 돼."
+    },
+    {
+      "segmentId": "M3-seg-224",
+      "startMs": 1496000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 우리가 아까 논의한 게 그런 말이야. 우리 지금 구조자체가 이렇잖아. 플레이터가 있으면은 백엔드 있고."
+    },
+    {
+      "segmentId": "M3-seg-225",
+      "startMs": 1504000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "프론트 있고. 어."
+    },
+    {
+      "segmentId": "M3-seg-226",
+      "startMs": 1506000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "AI고."
+    },
+    {
+      "segmentId": "M3-seg-227",
+      "startMs": 1507000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "디자인 업계 입장화 그럼 여기 안에서 디시전이 생성되고 회의한 주제 회의를 한번 하면은 디시전이 생성되고 그다음에 밑에 액션이 생성되고 액션 밑에 이슈가 생성되고 잠시만요. 네. 디시즌은 밑에 액션이 생기고 이슈가 생기고."
+    },
+    {
+      "segmentId": "M3-seg-228",
+      "startMs": 1526000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "네. 어. 일단 이렇잖아."
+    },
+    {
+      "segmentId": "M3-seg-229",
+      "startMs": 1533000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "예 근데 만약에 딕시전이 없으면은 그냥 백 바로 밑에 그냥 액션 붙이기 어 아니면 어떻게 하는 게 좋을까?"
+    },
+    {
+      "segmentId": "M3-seg-230",
+      "startMs": 1543000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그렇게 되면 좀 애매."
+    },
+    {
+      "segmentId": "M3-seg-231",
+      "startMs": 1545000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "귀신이 없으면 전 자르는 게 맞는 거 같아요. 자르고 노드를 붙일 수 있는 기능을 주는 게 나은 거 같아."
+    },
+    {
+      "segmentId": "M3-seg-232",
+      "startMs": 1552000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러니까 사용자 확인용으로는"
+    },
+    {
+      "segmentId": "M3-seg-233",
+      "startMs": 1556000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아주 좋을 것 같습니다."
+    },
+    {
+      "segmentId": "M3-seg-234",
+      "startMs": 1557000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그리고 일단 저희가 회의 자체가 회의 자체에서 생성되는 디시즌이랑 액션이랑 이슈들이 얘들이 진짜 꼭 내용적으로나 의미적으로 연결 안 될 수 있어요. 거 저희 회의 자체가 뭐 중구 난방하게 될수록 예를 들어서 결정은 결정은 뭐 결정은 이제 레디스 레디스를 쓰기로 했다. 결정이 나왔는데 액션은 갑자기 아 근데 일단은 오케이 나 그러면 젠킨스 젠킨스 할게요."
+    },
+    {
+      "segmentId": "M3-seg-235",
+      "startMs": 1592000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그럼 여기서 젠킨스가 나올 수 있고. 그럼 그리고 이슈 자체는 또 뭐 아 근데 아 저번에 갑자기 이슈가 안 되던데요. 뭐 이런 식으로 나올 수 있단 말이지."
+    },
+    {
+      "segmentId": "M3-seg-236",
+      "startMs": 1606000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "음 그리고"
+    },
+    {
+      "segmentId": "M3-seg-237",
+      "startMs": 1607000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "디시즌 또 한 회의당 여러 개 생기고 액션 또 한 회의당 여러 개 생기고 이슈 이슈도 여러 개 생기고 보통 이렇게 생겨 버리는데. 그래서 이 디시전이랑 액션이랑 이슈가 자 정말 한 흐름으로 매끄럽게 연결이 매끄럽게 딱딱딱 만들어지지 않을 수가 있다. 그 확률이 높다."
+    },
+    {
+      "segmentId": "M3-seg-238",
+      "startMs": 1630000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "매우 높다. 음 그래 가지고 이 구조를 이렇게 붙이는 게 맞을까? 저 생각은 좀 들어요."
+    },
+    {
+      "segmentId": "M3-seg-239",
+      "startMs": 1638000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "당장 이제 저희가 계속 회의하면서 데이터 수집해 왔고 이거 바탕으로 뽑아내는데도 지금 데이터가 이런데?"
+    },
+    {
+      "segmentId": "M3-seg-240",
+      "startMs": 1649000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그럼."
+    },
+    {
+      "segmentId": "M3-seg-241",
+      "startMs": 1650000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그럴 것 같기도 하고. 예 음"
+    },
+    {
+      "segmentId": "M3-seg-242",
+      "startMs": 1654000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이건 뭐랄까? 방법이 없는 거 같은데."
+    },
+    {
+      "segmentId": "M3-seg-243",
+      "startMs": 1658000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 그러니까 그렇죠. 아유 진짜 제 제안대로 회의를 만들고 여기다가 그냥 붙이는 걸로."
+    },
+    {
+      "segmentId": "M3-seg-244",
+      "startMs": 1670000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이제 그래도 그 문제는 똑같지 않네."
+    },
+    {
+      "segmentId": "M3-seg-245",
+      "startMs": 1672000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "알방 회의에다가 디시즌이 디시즌 여러 개 넣고 차라리 액션 이슈도 액션도 여러 개 넣고."
+    },
+    {
+      "segmentId": "M3-seg-246",
+      "startMs": 1681000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "뭔가 하나의 결정 사항이 아니라 약간 도메인을 딱 하나 닦"
+    },
+    {
+      "segmentId": "M3-seg-247",
+      "startMs": 1686000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "2 2회의에서는 어떤 어떤 주제들이 다뤄졌는지 결정들이랑 이슈랑 액션들이 있는지를 보여주는 게 더 더 나을 것 같아요. 음"
+    },
+    {
+      "segmentId": "M3-seg-248",
+      "startMs": 1702000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그거가 조금 더 괜찮을까 좀 약간 아까 말한 것처럼 만약에 CI에 대해서 얘기할 때 젠킨스 얘기도 나오고 길렛 러너 얘기도 나오면 사실 저희가 원래 하려던 방향은 길렙 결정사항 뭐 젠킨스 결정사항 이런 식으로 해서 딱딱딱 하잖아요. 원래는 근데 이렇게 해서 그냥 CICD랑 도메인으로 사람 묶고 그 밑에서 MCIC"
+    },
+    {
+      "segmentId": "M3-seg-249",
+      "startMs": 1724000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "맞아요. 아니 저도 아 처음처럼 디시즌 나오고 그 디시즌에 맞는 액션이 나오고 그 액션에 맞는 이슈가 나오면 진짜 너무 베이스인데. 그러면은 이전 지금 나온 회의에서 이놈의 액션이랑 이슈 액션이나 이슈 나온 아 지금 회의에서 나온 액션 로드 이슈 노드를 이제 이전에 있는 회의나 그런 회의나 아니면 뭐 디시즌을 찾아가 가지고 여기서 붙이고 요렇게 붙이고 이렇게 돼야 되는데."
+    },
+    {
+      "segmentId": "M3-seg-250",
+      "startMs": 1758000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아니 이게 베이스긴 해. 그게 베스트긴 한데. 아유 해 볼까?"
+    },
+    {
+      "segmentId": "M3-seg-251",
+      "startMs": 1761000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그냥 일단 해 보기. 아 일단 해 보기? 일단."
+    },
+    {
+      "segmentId": "M3-seg-252",
+      "startMs": 1764000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "한번 해 보고"
+    },
+    {
+      "segmentId": "M3-seg-253",
+      "startMs": 1767000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아니면 이슈를 없애고 둘 사이 유사도를 그냥 볼 수 있게 하는 방법은 없나요? 둘 사이 유사도 그러니까 DCN하고 액션하고 약간 이거를 에리놈한테 물어 가지고 이게 연관된 건지 물어보면은 연관이 있다고 할 거야."
+    },
+    {
+      "segmentId": "M3-seg-254",
+      "startMs": 1783000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그거 환각 잘 생각해야 돼요. 연관이 있다 하면은"
+    },
+    {
+      "segmentId": "M3-seg-255",
+      "startMs": 1786000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러면 아 있습니다."
+    },
+    {
+      "segmentId": "M3-seg-256",
+      "startMs": 1789000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "여기서도 뭐 정수를 매겨서 50도 이상이면 붙이고 아니면 떨어지고 이런 식으로"
+    },
+    {
+      "segmentId": "M3-seg-257",
+      "startMs": 1794000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그런 것처럼 될 거고. 이거 무조건 레디스 얘기했으면 결정선이 저 액션이 레디스하고 관련된 게 맞니라고."
+    },
+    {
+      "segmentId": "M3-seg-258",
+      "startMs": 1801000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아니면 진짜 그냥 한번 그 저희 처음 초환대로 제가 디시즌 노드 만들어 놓고 거의 디시즌에 밑에 있는 액션 액션이 다음 회의 나왔다. 그럼 다음 회의 그 나온 액션을 이 이전 디시전에 붙이고 해 볼까요?"
+    },
+    {
+      "segmentId": "M3-seg-259",
+      "startMs": 1820000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 그게 제일 좋은데 제가 봤을 때 좀 어려워 보여 가지고. 지금 이것만 봐도 어려워 보이는데."
+    },
+    {
+      "segmentId": "M3-seg-260",
+      "startMs": 1825000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "9시에서는"
+    },
+    {
+      "segmentId": "M3-seg-261",
+      "startMs": 1826000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "못 할 거야. 이건 깨웠"
+    },
+    {
+      "segmentId": "M3-seg-262",
+      "startMs": 1828000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "기능에서 넣을 수 있어. 음"
+    },
+    {
+      "segmentId": "M3-seg-263",
+      "startMs": 1830000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "제가 봤을 때 그러면 이게 그런 것까지 디테일하게 하려면 그냥 이슈를 쳐내고 디쉬는 액션만 놔두고 액션 이슈를 포함해 가지고 음 이걸 한 번 더 전처리해 가지고 이 결정 사항과 액션이 이렇게 나왔는데 이게 진짜 유사도가 높은지 확인하고 각 문단별로"
+    },
+    {
+      "segmentId": "M3-seg-264",
+      "startMs": 1847000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그러니까 원래 AI 뭐 보통 쓸 때도 한번 나온 거에 대해서 그 점수 매겨 가지고 검토 한번 더 시키는 길이다."
+    },
+    {
+      "segmentId": "M3-seg-265",
+      "startMs": 1852000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "더 잘 나오긴 하거든요. 네 그래서 그냥 액션의 이슈를 포함시켜 버리고 저렇게 DC인 액션이 나왔을 때 이 해당 디시전과 액션이 어느 정도 연관이 있는지 문단별로 체크해 가지고 좀 없다 싶으면 날려 버리고. 그러니까 연관이라는 게 그러니까 약간 레디스하고 무조건 관리 있는 내용인 거 레깅스를 활용해야 되는 거 이렇게 물어보면은"
+    },
+    {
+      "segmentId": "M3-seg-266",
+      "startMs": 1879000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 근데 연관 아 이거 좀 애매한데요. 그러니까 연관이라는 게"
+    },
+    {
+      "segmentId": "M3-seg-267",
+      "startMs": 1885000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그렇죠. 그러니까 갖다 붙이면 연관되니까."
+    },
+    {
+      "segmentId": "M3-seg-268",
+      "startMs": 1888000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "네 맞아요. 그래 가지고 지금 제쪽에서 제일 고민하는 게 그 얼마나 유사도가 있는지 그걸 좀 고민하고 있는 것들 유사도를 한 개 더 만들어 버리면은 이제 터져요. 진짜."
+    },
+    {
+      "segmentId": "M3-seg-269",
+      "startMs": 1898000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "음"
+    },
+    {
+      "segmentId": "M3-seg-270",
+      "startMs": 1913000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그런 요소들을 표현을 할 수가 있네요. 얘가 레디우스하고 관련된 내용이 유사도를 표현할 수 있나?"
+    },
+    {
+      "segmentId": "M3-seg-271",
+      "startMs": 1919000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그게 이제 레그를 쏘는 거 같은데."
+    },
+    {
+      "segmentId": "M3-seg-272",
+      "startMs": 1922000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 그러니까 랜디스 문서 같은 걸 레그해 놓고 레디스 결정사항 있으면은 이 레디스 레그가 가지고 내용 이거 액션에 있는 걸 찾아가지고 유사도 검색해야 되는 없으면은 그냥 권리 없는 거 같아. 이렇게 막 하"
+    },
+    {
+      "segmentId": "M3-seg-273",
+      "startMs": 1940000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "노드에서 상위 노드를 한번 검토를 해야 될 것 같아요. 지금 얘기하는 것처럼 근데 그게 올라하고 있던 요소도 많아요."
+    },
+    {
+      "segmentId": "M3-seg-274",
+      "startMs": 1950000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "제가 봤을 때 이거 뎁스가 세 개여 가지고 이 세 개 연관하려면은 약간 사람이 미칠 수도 있을 것 같아 가지고 그래서 그냥 액션에 이슈를 포함시키고 그냥 아예 두 개 노드로 해 가지고 두 개의 연관 관계를 보는 거는 그나마 가능성이"
+    },
+    {
+      "segmentId": "M3-seg-275",
+      "startMs": 1964000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "액션이랑 이슈랑 연관"
+    },
+    {
+      "segmentId": "M3-seg-276",
+      "startMs": 1966000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러니까 이거 그 DCN 액션 영광급 피라고 액션이랑 이슈 연관관계 필요하니까 두 뎁스 필요하더니 그 액션 이슈 합쳐 가지고 그냥 디시즌 액션으로 가고 디시즌 액션과의 연관관계에 있는 문단별로 해 가지고. 진짜 필요 없는 것들은 좀 쳐내고. 근데 이 쳐내는 것도 좀 쉽지 않아 보여."
+    },
+    {
+      "segmentId": "M3-seg-277",
+      "startMs": 1984000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어떤 기준으로 전해낼까?"
+    },
+    {
+      "segmentId": "M3-seg-278",
+      "startMs": 1985000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "맞아요. 굉장히 디시즌이 막 레디스 이런 건데 액션에 레디스하고 연관이 있는지 문단별로 체크가 가능한지 모르겠네."
+    },
+    {
+      "segmentId": "M3-seg-279",
+      "startMs": 2006000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "저 프롬프트는 어떤 게 제일 좋아 보여? 어떤 게 제일 멋있게 나올 것 같아요."
+    },
+    {
+      "segmentId": "M3-seg-280",
+      "startMs": 2010000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "아니 멋있는 거는 이슈까지 있는 게 제일 괜찮을 것 같긴 하죠. 근데 이거 너도 눌렀을 때 그 모달 뜨는 거에서 또 세부 내용이 보이는 거예요? 아니면 이 그 노드 내용들이 보이는"
+    },
+    {
+      "segmentId": "M3-seg-281",
+      "startMs": 2028000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "너도 일단 내용들은 볼 수 있는데 세부 내용은 어떤 걸 보여주네. 뼈적으로."
+    },
+    {
+      "segmentId": "M3-seg-282",
+      "startMs": 2036000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "출력 형식 저희 정하면 가능하게 할 건데요. 콘텐츠 넣어 가지고 아예 저장할 때 그 디시전 내용하고 제목하고. 그리고 내용 따로 넣어 가지고 누르면은 볼 수 있게 하는 식으로 하면 할 것 같아요."
+    },
+    {
+      "segmentId": "M3-seg-283",
+      "startMs": 2051000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "음"
+    },
+    {
+      "segmentId": "M3-seg-284",
+      "startMs": 2066000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "왜 그래도 유사도 묻혀야 될 것 같은데."
+    },
+    {
+      "segmentId": "M3-seg-285",
+      "startMs": 2072000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "레그 어떤"
+    },
+    {
+      "segmentId": "M3-seg-286",
+      "startMs": 2074000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러니까 레디에서 결정사항이 있다고 하면 레디스 문서가 임베딩 되어 있을 때 지금 액션에 있는 거를 에디슨 문서에 갖다 대면은 얘가 유사도를 찾을 수 있는 거"
+    },
+    {
+      "segmentId": "M3-seg-287",
+      "startMs": 2085000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "내가 그러면 모델 건드려야 되는 거 아니에요?"
+    },
+    {
+      "segmentId": "M3-seg-288",
+      "startMs": 2088000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그거는 하면 되는데 일단 찾을 수 있냐고 움직이는 약간 과일이냐 이런 건 사실 찾을 수 있는데 이런 기술적 용어들을 찾을 수 있네. 그러니까"
+    },
+    {
+      "segmentId": "M3-seg-289",
+      "startMs": 2099000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "기술적 용어는 사실 상관없을 것 같은데 레그를 쓰면은 근데 이게 그 내용이 정확하게 그거 안에 무슨 있어야 레그는 판단을 하잖아요. 유사도를 찾는 게 아니라 그거는 있냐 없냐가 기준이니까."
+    },
+    {
+      "segmentId": "M3-seg-290",
+      "startMs": 2124000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "어 끝났어요."
+    },
+    {
+      "segmentId": "M3-seg-291",
+      "startMs": 2126000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "프로님 연락을 아 어떠세요? 10시 반에 한다 하셨는데. 그래서 뭐 오후였는지."
+    },
+    {
+      "segmentId": "M3-seg-292",
+      "startMs": 2131000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그럴 것 같아요."
+    },
+    {
+      "segmentId": "M3-seg-293",
+      "startMs": 2163000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "GPT한테 물어보기. GPT. 어떤 게 제일 나을까?"
+    },
+    {
+      "segmentId": "M3-seg-294",
+      "startMs": 2170000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 일단 녹음 묘중욱 중단하고."
+    }
+  ]
+}

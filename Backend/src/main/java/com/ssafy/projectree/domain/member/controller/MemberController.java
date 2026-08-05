@@ -6,12 +6,10 @@ import com.ssafy.projectree.domain.member.controller.response.MemberProfileRespo
 import com.ssafy.projectree.domain.member.service.MemberService;
 import com.ssafy.projectree.global.annotation.Login;
 import com.ssafy.projectree.global.response.ApiResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -36,4 +34,16 @@ public class MemberController {
         MemberSearchResponse response = memberService.findByEmail(email);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> deleteMember(
+            @Login LoginMember loginMember,
+            HttpSession session
+    ) {
+
+        memberService.deleteMember(loginMember.getId());
+        session.invalidate();
+        return ResponseEntity.ok((ApiResponse.success()));
+    }
 }
+

@@ -1,0 +1,16 @@
+{
+  "eventSchemaVersion": 1,
+  "eventId": "00000000-0000-0000-0000-000000000003",
+  "eventType": "PROJECT_GRAPH_CHANGED",
+  "occurredAt": "2026-08-03T01:02:00.000000Z",
+  "projectId": 10,
+  "payload": {
+    "projectId": 10,
+    "graphVersion": 22,
+    "upsertedNodes": [
+      {"nodeId":"10000000-0000-0000-0000-000000000004","nodeVersion":2,"nodeType":"DECISION","category":"BACKEND","title":"Duplicate decision","content":"Source remains auditable","dueDate":null,"graphState":"MERGED","consistencyStatus":"NORMAL","parentNodeId":null,"mergedIntoNodeId":"10000000-0000-0000-0000-000000000005","originType":"LLM_GENERATED","createdAt":"2026-08-03T01:02:00.000000Z","updatedAt":"2026-08-03T01:02:00.000000Z","evidence":[]},
+      {"nodeId":"10000000-0000-0000-0000-000000000005","nodeVersion":3,"nodeType":"DECISION","category":"BACKEND","title":"Canonical decision","content":"Target remains canonical","dueDate":null,"graphState":"ACTIVE","consistencyStatus":"NORMAL","parentNodeId":null,"mergedIntoNodeId":null,"originType":"LLM_GENERATED","createdAt":"2026-08-03T01:02:00.000000Z","updatedAt":"2026-08-03T01:02:00.000000Z","evidence":[]}
+    ],
+    "deletedNodes": []
+  }
+}

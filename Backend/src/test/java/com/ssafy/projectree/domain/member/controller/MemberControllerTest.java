@@ -11,7 +11,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -118,6 +123,42 @@ class MemberControllerTest extends ControllerTestSupport {
         mockMvc.perform(get("/api/members/me").session(loginSession()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.profileImageUrl").isEmpty());
+    }
+
+    @DisplayName("로그인한 회원은 자신의 계정을 탈퇴할 수 있고 세션의 회원 식별자로 탈퇴가 실행된다.")
+    @Test
+    void deleteMember() throws Exception {
+        // when & then
+        mockMvc.perform(delete("/api/members/me").session(loginSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data").isEmpty());
+
+        then(memberService).should().deleteMember(1);
+    }
+
+    @DisplayName("로그인하지 않고 탈퇴를 요청하면 401을 응답하고 탈퇴를 실행하지 않는다.")
+    @Test
+    void deleteMember_withoutLogin_returnsUnauthorized() throws Exception {
+        // when & then
+        mockMvc.perform(delete("/api/members/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
+
+        then(memberService).should(never()).deleteMember(anyInt());
+    }
+
+    @DisplayName("세션은 유효하지만 회원이 없으면 탈퇴 시 404를 응답한다.")
+    @Test
+    void deleteMember_whenMemberRemoved_returnsNotFound() throws Exception {
+        // given
+        willThrow(new CustomException(CommonErrorCode.MEMBER_NOT_FOUND))
+                .given(memberService).deleteMember(1);
+
+        // when & then
+        mockMvc.perform(delete("/api/members/me").session(loginSession()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("MEMBER_NOT_FOUND"));
     }
 
     private MemberSearchResponse createResponse() {

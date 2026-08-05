@@ -1,0 +1,19 @@
+{
+  "requestId": "req-dup-itemid",
+  "projectId": "proj-01",
+  "externalMeetingId": "M-DUP-ITEMID",
+  "runType": "NODE_GENERATION",
+  "segments": [
+    {"segmentId": "seg-1", "startMs": 1000, "speakerLabel": "SPK_1", "text": "카프카 도입을 이번 스프린트에 확정합니다."}
+  ],
+  "items": [
+    {"id": "m1", "type": "DECISION", "predictedCategory": "INFRA",
+     "title": "카프카 도입 확정", "content": "이번 스프린트에 카프카를 도입한다.",
+     "evidence": [{"segmentId": "seg-1", "quote": "카프카 도입을 이번 스프린트에 확정합니다."}]}
+  ],
+  "judgments": [
+    {"itemId": "m1", "result": "NEW_DECISION", "category": "INFRA"},
+    {"itemId": "m1", "result": "MINUTES_ONLY", "reason": "NOT_CONFIRMED"}
+  ],
+  "candidates": {"decisions": []}
+}

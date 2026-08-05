@@ -43,10 +43,47 @@ spring:
 app:
   invitation:
     base-url: https://projectree.site
+  # 통합 테스트 중 백그라운드 스위퍼가 테스트 데이터를 처리하지 않도록 비활성화한다.
+  invitation-mail:
+    scheduling-enabled: false
+  meeting-sync:
+    enabled: false
+    fixed-delay-ms: 5000
+    scan-count: 200
+    key-prefix: "meeting:project:"
+  meeting-analysis:
+    graph-snapshot:
+      max-size-bytes: 10485760
+      s3:
+        enabled: false
+        expected-bucket: ""
+        allowed-object-key-prefix: graph-snapshots/
+        region: ap-northeast-2
+        endpoint-override: ""
+    publisher:
+      enabled: false
+      fixed-delay-ms: 1000
+      batch-size: 20
+      max-attempts: 3
+      lease-duration-seconds: 60
+      first-retry-delay-seconds: 30
+      second-retry-delay-seconds: 120
+      api-call-attempt-timeout-seconds: 5
+      api-call-timeout-seconds: 10
+      queue-url: ""
+      region: ap-northeast-2
+    result-consumer:
+      enabled: false
+      queue-url: ""
+      wait-time-seconds: 20
+      max-number-of-messages: 10
+      polling-delay-ms: 1000
+      region: ap-northeast-2
   # 통합 테스트 중 백그라운드 스케줄러가 테스트 데이터를 건드리지 않도록 비활성화한다.
   scheduling:
     enabled: false
   notification:
+    enabled: false
     sse:
       timeout: 30m
       heartbeat-interval: 30s

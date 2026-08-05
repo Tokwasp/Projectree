@@ -55,4 +55,15 @@ public class ProjectMember extends BaseEntity {
     public boolean isOwner() {
         return this.role == ProjectRole.OWNER;
     }
+
+    public boolean belongsTo(Project project) {
+        if (this.project == null || project == null) {
+            return false;
+        }
+        if (this.project == project) {
+            return true;
+        }
+        return this.project.getId() > 0
+                && this.project.getId() == project.getId();
+    }
 }

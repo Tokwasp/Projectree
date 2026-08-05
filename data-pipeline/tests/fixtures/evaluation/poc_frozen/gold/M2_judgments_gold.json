@@ -1,0 +1,52 @@
+{
+  "meetingId": "M2",
+  "judgments": [
+    {
+      "itemId": "m1",
+      "result": "NEW_DECISION",
+      "category": "PLANNING"
+    },
+    {
+      "itemId": "m2",
+      "result": "NEW_DECISION",
+      "category": "PLANNING"
+    },
+    {
+      "itemId": "m3",
+      "result": "NEW_DECISION",
+      "category": "AI"
+    },
+    {
+      "itemId": "m4",
+      "result": "NEW_DECISION",
+      "category": "FRONTEND",
+      "note": "R1/R2 적용: 반대 없이 실행(Jira 등록) 진행되어 DECISION 유지"
+    },
+    {
+      "itemId": "m5",
+      "result": "MINUTES_ONLY",
+      "reason": "NOT_CONFIRMED"
+    },
+    {
+      "itemId": "m6",
+      "result": "MINUTES_ONLY",
+      "reason": "NO_RELATED_DECISION"
+    },
+    {
+      "itemId": "m7",
+      "result": "MINUTES_ONLY",
+      "reason": "NOT_CONFIRMED",
+      "note": "R3 확정: 잠정 합의 + 검증 전제 = NOT_CONFIRMED"
+    },
+    {
+      "itemId": "m8",
+      "result": "MINUTES_ONLY",
+      "reason": "NO_RELATED_DECISION"
+    },
+    {
+      "itemId": "m9",
+      "result": "MINUTES_ONLY",
+      "reason": "NO_RELATED_DECISION"
+    }
+  ]
+}

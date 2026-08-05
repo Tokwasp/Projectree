@@ -1,0 +1,268 @@
+{
+  "meetingId": "V1",
+  "evaluationMode": "HUMAN_REVIEW_ASSISTED",
+  "designIntent": {
+    "goal": "한 번의 전체 파이프라인 실행으로 사용자 검토에 필요한 후보를 얼마나 놓치지 않고 생성하는지 평가",
+    "autoApplyExpected": false,
+    "allModelOutputsInitially": "PROPOSED"
+  },
+  "nodes": [
+    {
+      "goldId": "D1",
+      "type": "DECISION",
+      "title": "MVP에서는 PostgreSQL에 pgvector를 함께 사용하고 별도 벡터 DB를 두지 않는다",
+      "itemState": "CONFIRMED",
+      "expectedDisposition": "NEW_DECISION",
+      "evidenceSegmentIds": [
+        "V1-seg-005",
+        "V1-seg-006",
+        "V1-seg-007"
+      ]
+    },
+    {
+      "goldId": "A1",
+      "type": "ACTION",
+      "title": "지수가 내일까지 pgvector Top-5와 Top-10 검색 결과를 비교한다",
+      "itemState": "COMMITTED",
+      "relationState": "SAME_MEETING_DECISION",
+      "parentGoldId": "D1",
+      "expectedDisposition": "ATTACH",
+      "evidenceSegmentIds": [
+        "V1-seg-008"
+      ]
+    },
+    {
+      "goldId": "D2",
+      "type": "DECISION",
+      "title": "노드 1만 개 기준 검색 P95가 1초를 넘을 때만 Redis 캐시를 추가한다",
+      "itemState": "CONFIRMED",
+      "expectedDisposition": "NEW_DECISION",
+      "evidenceSegmentIds": [
+        "V1-seg-009",
+        "V1-seg-010",
+        "V1-seg-011",
+        "V1-seg-012"
+      ]
+    },
+    {
+      "goldId": "D3",
+      "type": "DECISION",
+      "title": "생성된 노드는 모두 PROPOSED로 저장하고 사용자가 승인한 노드만 CONFIRMED 그래프에 반영한다",
+      "itemState": "CONFIRMED",
+      "expectedDisposition": "NEW_DECISION",
+      "evidenceSegmentIds": [
+        "V1-seg-017",
+        "V1-seg-018",
+        "V1-seg-019",
+        "V1-seg-020",
+        "V1-seg-021"
+      ]
+    },
+    {
+      "goldId": "I1",
+      "type": "ISSUE",
+      "title": "생성되지 않은 Decision을 부모로 참조한 ATTACH 때문에 그래프 적용 트랜잭션이 롤백됐다",
+      "itemState": "OBSERVED",
+      "relationState": "SAME_MEETING_DECISION",
+      "parentGoldId": "D3",
+      "expectedDisposition": "ATTACH",
+      "evidenceSegmentIds": [
+        "V1-seg-017",
+        "V1-seg-018"
+      ]
+    },
+    {
+      "goldId": "A2",
+      "type": "ACTION",
+      "title": "리뷰 화면 초안 PR이 올라왔고 현재 API는 목데이터를 사용한다",
+      "itemState": "OBSERVED_PROGRESS",
+      "relationState": "SAME_MEETING_DECISION",
+      "parentGoldId": "D3",
+      "expectedDisposition": "ATTACH",
+      "evidenceSegmentIds": [
+        "V1-seg-024"
+      ]
+    },
+    {
+      "goldId": "A3",
+      "type": "ACTION",
+      "title": "경현이 금요일까지 노드 승인·수정·삭제 API를 구현한다",
+      "itemState": "COMMITTED",
+      "relationState": "SAME_MEETING_DECISION",
+      "parentGoldId": "D3",
+      "expectedDisposition": "ATTACH",
+      "evidenceSegmentIds": [
+        "V1-seg-025",
+        "V1-seg-026"
+      ]
+    },
+    {
+      "goldId": "D4",
+      "type": "DECISION",
+      "title": "원본 WebM 음성은 S3에 저장하고 PostgreSQL에는 키·길이·MIME 타입만 저장한다",
+      "itemState": "CONFIRMED",
+      "expectedDisposition": "NEW_DECISION",
+      "evidenceSegmentIds": [
+        "V1-seg-033",
+        "V1-seg-034",
+        "V1-seg-035",
+        "V1-seg-036"
+      ]
+    },
+    {
+      "goldId": "A4",
+      "type": "ACTION",
+      "title": "민서가 목요일까지 S3 업로드 어댑터를 구현한다",
+      "itemState": "COMMITTED",
+      "relationState": "SAME_MEETING_DECISION",
+      "parentGoldId": "D4",
+      "expectedDisposition": "ATTACH",
+      "evidenceSegmentIds": [
+        "V1-seg-037"
+      ]
+    },
+    {
+      "goldId": "I2",
+      "type": "ISSUE",
+      "title": "S3 콜백 업로드가 30초 후 타임아웃되는 현상이 같은 파일에서 두 번 재현됐다",
+      "itemState": "OBSERVED",
+      "relationState": "SAME_MEETING_DECISION",
+      "parentGoldId": "D4",
+      "expectedDisposition": "ATTACH",
+      "evidenceSegmentIds": [
+        "V1-seg-038",
+        "V1-seg-039",
+        "V1-seg-040",
+        "V1-seg-041"
+      ]
+    },
+    {
+      "goldId": "D5",
+      "type": "DECISION",
+      "title": "이번 범위에서는 음성을 변환하지 않고 WebM 포맷을 유지한다",
+      "itemState": "CONFIRMED",
+      "expectedDisposition": "NEW_DECISION",
+      "evidenceSegmentIds": [
+        "V1-seg-043",
+        "V1-seg-044",
+        "V1-seg-045"
+      ]
+    },
+    {
+      "goldId": "D6",
+      "type": "DECISION",
+      "title": "MVP에서는 Slack 연동을 제외하고 웹 내부 알림만 제공한다",
+      "itemState": "CONFIRMED",
+      "expectedDisposition": "NEW_DECISION",
+      "evidenceSegmentIds": [
+        "V1-seg-046",
+        "V1-seg-047",
+        "V1-seg-048",
+        "V1-seg-049"
+      ]
+    },
+    {
+      "goldId": "A5",
+      "type": "ACTION",
+      "title": "현우가 오늘 AWS Budget 10달러 알림을 설정하고 이메일 수신을 확인한다",
+      "itemState": "COMMITTED",
+      "relationState": "NO_PARENT",
+      "parentGoldId": null,
+      "expectedDisposition": "UNATTACHED",
+      "evidenceSegmentIds": [
+        "V1-seg-052",
+        "V1-seg-053",
+        "V1-seg-054"
+      ]
+    }
+  ],
+  "minutesOnlyCandidates": [
+    {
+      "candidateId": "T1",
+      "type": "DECISION",
+      "summary": "merge 이벤트 처리를 위해 Kafka를 사용할 수 있다는 제안",
+      "itemState": "TENTATIVE",
+      "expectedDisposition": "MINUTES_ONLY",
+      "evidenceSegmentIds": [
+        "V1-seg-013",
+        "V1-seg-014"
+      ]
+    },
+    {
+      "candidateId": "T2",
+      "type": "DECISION",
+      "summary": "gpt-5.2 대신 mini 모델로 변경하자는 제안",
+      "itemState": "TENTATIVE",
+      "expectedDisposition": "MINUTES_ONLY",
+      "evidenceSegmentIds": [
+        "V1-seg-027",
+        "V1-seg-028",
+        "V1-seg-029"
+      ]
+    },
+    {
+      "candidateId": "P1",
+      "type": "ACTION",
+      "summary": "시간이 남으면 검색 결과 카드 애니메이션을 추가하겠다는 개인 계획",
+      "itemState": "PERSONAL_PLAN",
+      "expectedDisposition": "MINUTES_ONLY",
+      "evidenceSegmentIds": [
+        "V1-seg-015",
+        "V1-seg-016"
+      ]
+    },
+    {
+      "candidateId": "P2",
+      "type": "ACTION",
+      "summary": "시간이 되면 주말에 문서를 정리할 수도 있다는 개인 계획",
+      "itemState": "PERSONAL_PLAN",
+      "expectedDisposition": "MINUTES_ONLY",
+      "evidenceSegmentIds": [
+        "V1-seg-055",
+        "V1-seg-056"
+      ]
+    },
+    {
+      "candidateId": "S1",
+      "type": "ISSUE",
+      "summary": "노드가 10만 개가 되면 pgvector가 느릴 수 있다는 미검증 추측",
+      "itemState": "SUSPECTED",
+      "expectedDisposition": "MINUTES_ONLY",
+      "evidenceSegmentIds": [
+        "V1-seg-009",
+        "V1-seg-010"
+      ]
+    }
+  ],
+  "mustNotExtract": [
+    {
+      "segmentIds": [
+        "V1-seg-002",
+        "V1-seg-003"
+      ],
+      "reason": "SMALL_TALK"
+    },
+    {
+      "segmentIds": [
+        "V1-seg-030",
+        "V1-seg-031",
+        "V1-seg-032"
+      ],
+      "reason": "LUNCH_SMALL_TALK"
+    },
+    {
+      "segmentIds": [
+        "V1-seg-050",
+        "V1-seg-051"
+      ],
+      "reason": "SPORTS_SMALL_TALK"
+    }
+  ],
+  "acceptanceCriteria": {
+    "assistedCoverage": "gold nodes 13개 중 11개 이상이 사용자가 승인 가능한 후보로 존재",
+    "decisionCoverage": "확정 Decision 6개 중 5개 이상 후보 생성",
+    "noiseRejection": "mustNotExtract 3개 그룹 중 노드 생성 0개",
+    "parentSafety": "존재하지 않거나 MINUTES_ONLY인 부모로 ATTACH 0개",
+    "reviewPolicy": "모든 결과는 PROPOSED이며 자동 CONFIRMED 금지"
+  }
+}

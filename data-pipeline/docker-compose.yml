@@ -1,0 +1,25 @@
+# 로컬 개발용 PostgreSQL 16 + pgvector.
+# 그래프 정본 = 이 PG (토폴로지 A). 스프링(Backend/)은 이 DB 에 직접 접근하지 않는다.
+#
+# pg_bigm(한국어 2-gram 텍스트 검색)은 M3 범위다. pgvector/pg16 이미지에는
+# pg_bigm 이 없으므로 M3 에서 커스텀 이미지로 교체한다. M1 은 pgvector 확장만 사용.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: data_pipeline_pg
+    environment:
+      POSTGRES_USER: pipeline
+      POSTGRES_PASSWORD: pipeline
+      POSTGRES_DB: pipeline
+    ports:
+      - "5432:5432"
+    volumes:
+      - pipeline_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pipeline -d pipeline"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pipeline_pg_data:

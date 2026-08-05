@@ -6,6 +6,7 @@ import com.ssafy.projectree.domain.meetingreview.dto.response.MyMeetingReviewRes
 import com.ssafy.projectree.domain.meetingreview.dto.response.PersonalSpeakingResponse;
 import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
 import com.ssafy.projectree.domain.member.Member;
+import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.nodeCategory.entity.Category;
 import com.ssafy.projectree.domain.project.controller.dto.response.ProjectHomeResponse;
@@ -14,7 +15,6 @@ import com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.Project;
-import com.ssafy.projectree.domain.project.entity.ProjectCategory;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +40,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final MeetingReviewRepository meetingReviewRepository;
+    private final MeetingRepository meetingRepository;
 
     @Transactional
     public int createProject(ProjectCreateRequest request, int memberId) {
@@ -47,7 +49,6 @@ public class ProjectService {
         Project project = request.toEntity();
         ProjectMember pm = ProjectMember.createMember(memberId, ProjectRole.OWNER);
 
-        addCategories(project, request);
         project.addMember(pm);
 
         return projectRepository.save(project).getId();
@@ -123,19 +124,6 @@ public class ProjectService {
     private void validateMember(int memberId) {
         if (!memberRepository.existsById(memberId)) {
             throw new CustomException(ProjectErrorCode.MEMBER_NOT_FOUND);
-        }
-    }
-
-    private static void addCategories(Project project, ProjectCreateRequest request) {
-        Set<Integer> categoryIds = new HashSet<>(request.getCategoryIds());
-
-        for (int categoryId : categoryIds) {
-            if (Category.isNotValid(categoryId)) {
-                throw new CustomException(ProjectErrorCode.INVALID_CATEGORY);
-            }
-
-            ProjectCategory pc = ProjectCategory.createProjectCategory(categoryId);
-            project.addCategory(pc);
         }
     }
 
