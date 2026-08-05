@@ -62,7 +62,6 @@
   min-height: 0;
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--color-gray-300) transparent;
 }
