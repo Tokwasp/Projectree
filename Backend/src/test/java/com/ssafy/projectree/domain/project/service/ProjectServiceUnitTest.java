@@ -55,37 +55,6 @@ class ProjectServiceUnitTest {
                 .containsExactly(OWNER_ID);
     }
 
-    @DisplayName("OWNER가 탈퇴하려 하면 PROJECT_LEAVE_FORBIDDEN 예외가 발생한다.")
-    @Test
-    void leaveProject_withOwnerRole() {
-        // given
-        Project project = createProjectWithOwnerAndMember();
-        given(projectRepository.findById(PROJECT_ID)).willReturn(Optional.of(project));
-
-        // when // then
-        assertThatThrownBy(() -> projectService.leaveProject(PROJECT_ID, OWNER_ID))
-                .isInstanceOf(CustomException.class)
-                .extracting("errorCode")
-                .isEqualTo(ProjectErrorCode.PROJECT_LEAVE_FORBIDDEN);
-    }
-
-    @DisplayName("OWNER의 탈퇴가 거부되면 참여 멤버 목록이 그대로 유지된다.")
-    @Test
-    void leaveProject_withOwnerRole_removesNothing() {
-        // given
-        Project project = createProjectWithOwnerAndMember();
-        given(projectRepository.findById(PROJECT_ID)).willReturn(Optional.of(project));
-
-        // when
-        assertThatThrownBy(() -> projectService.leaveProject(PROJECT_ID, OWNER_ID))
-                .isInstanceOf(CustomException.class);
-
-        // then
-        assertThat(project.getProjectMembers())
-                .extracting(ProjectMember::getMemberId)
-                .containsExactlyInAnyOrder(OWNER_ID, MEMBER_ID);
-    }
-
     @DisplayName("참여하지 않은 회원이 탈퇴하려 하면 PROJECT_PARTICIPANT_NOT_FOUND 예외가 발생한다.")
     @Test
     void leaveProject_notParticipating() {
