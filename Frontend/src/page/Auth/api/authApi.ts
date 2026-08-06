@@ -41,3 +41,8 @@ export const naverLogin = (payload: SocialLoginRequest) =>
 
 export const googleLogin = (payload: SocialLoginRequest) =>
   postSocialLogin("google", payload);
+
+export const logout = (): Promise<void> =>
+  apiRequest<void>("/auth/logout", {
+    method: "POST",
+  });

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import useLogout from "../../page/Auth/hooks/useLogout";
 import { useAuthStore } from "../../store/authStore";
 import NotificationMenu from "../NotificationMenu/NotificationMenu";
 import style from "./AppHeader.module.css";
@@ -9,16 +10,10 @@ interface AppHeaderProps {
 }
 
 export default function AppHeader({ startContent }: AppHeaderProps) {
-  const navigate = useNavigate();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const name = useAuthStore((state) => state.name);
   const imageUrl = useAuthStore((state) => state.imageUrl);
-  const logout = useAuthStore((state) => state.logout);
-
-  const handleLogout = () => {
-    logout();
-    navigate("/", { replace: true });
-  };
+  const { logout, isLoggingOut, error } = useLogout();
 
   return (
     <div className={style.container}>
@@ -75,10 +70,17 @@ export default function AppHeader({ startContent }: AppHeaderProps) {
               <button
                 className={`${style.profileMenuItem} ${style.logoutButton}`}
                 type="button"
-                onClick={handleLogout}
+                disabled={isLoggingOut}
+                onClick={() => void logout()}
               >
-                로그아웃
+                {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
               </button>
+
+              {error && (
+                <p className={style.logoutError} role="alert">
+                  {error}
+                </p>
+              )}
             </div>
           )}
         </div>
