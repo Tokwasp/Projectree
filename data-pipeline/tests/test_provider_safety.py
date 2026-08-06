@@ -61,7 +61,6 @@ def test_real_b_model_transport_is_blocked_before_http():
                 "evidence": [],
             },
             retrieval_candidates=[],
-            model="fixture-model",
         )
 
 

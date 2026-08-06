@@ -136,6 +136,8 @@ class _BResult:
 
 
 class _B:
+    provider_model = "fake-b-model"
+
     settings = _BSettings()
 
     def recommend_detailed(self, **kwargs):
@@ -154,7 +156,6 @@ def test_metered_wrappers_preserve_item_level_production_calls():
     decision = b_model.recommend(
         source_node={"nodeId": "source"},
         retrieval_candidates=[],
-        model="b-model",
     )
 
     assert decision["recommendation"] == "CREATE_NEW"

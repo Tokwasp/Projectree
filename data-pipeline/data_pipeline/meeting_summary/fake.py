@@ -17,13 +17,10 @@ class FakeMeetingSummaryGenerator:
         self.calls.append(request)
         if self._result is not None:
             return self._result
-        lines = [
-            f"- {segment.speaker_label or 'speaker'}: {segment.text}"
-            for segment in request.segments
-        ]
+        lines = tuple(segment.text.strip() for segment in request.segments)
         return GeneratedMeetingSummary(
             title=f"회의록 - {request.external_meeting_id}",
-            body="\n".join(lines) or "- No transcript content.",
+            summary=lines,
         )
 
 

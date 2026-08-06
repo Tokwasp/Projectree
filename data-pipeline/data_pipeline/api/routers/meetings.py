@@ -60,7 +60,9 @@ def meeting_summary(
         title=result.title,
         body=result.body,
         decisions=list(structured.get("decisions", [])),
-        actions=list(structured.get("actions", [])),
+        actions=list(
+            structured.get("nextTodos", structured.get("actions", []))
+        ),
         issues=list(structured.get("issues", [])),
         generatorName=result.generator_name,
         generatorVersion=result.generator_version,

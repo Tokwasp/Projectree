@@ -73,9 +73,9 @@ def _generator() -> FakeMeetingSummaryGenerator:
     return FakeMeetingSummaryGenerator(
         GeneratedMeetingSummary(
             title=payload["title"],
-            body=payload["body"],
+            summary=tuple(payload["summary"]),
             decisions=tuple(payload["decisions"]),
-            actions=tuple(payload["actions"]),
+            next_todos=tuple(payload["nextTodos"]),
             issues=tuple(payload["issues"]),
         )
     )
@@ -117,9 +117,9 @@ def test_gms_summary_adapter_parses_strict_grounded_document_without_network():
         json.dumps(
             {
                 "title": "그래프 저장소 회의",
-                "body": "## 결정\nPostgreSQL을 그래프 원본으로 사용한다.",
+                "summary": ["그래프 저장소 운영 방식을 논의했다."],
                 "decisions": ["PostgreSQL을 그래프 원본으로 사용한다."],
-                "actions": [],
+                "nextTodos": [],
                 "issues": [],
             },
             ensure_ascii=False,
@@ -131,6 +131,12 @@ def test_gms_summary_adapter_parses_strict_grounded_document_without_network():
 
     assert result.title == "그래프 저장소 회의"
     assert result.decisions == ("PostgreSQL을 그래프 원본으로 사용한다.",)
+    assert generator.version == "meeting-summary-v2"
+    system_prompt = client.messages[0][0]["content"]
+    for key in ("title", "summary", "decisions", "nextTodos", "issues"):
+        assert key in system_prompt
+    assert "200자 이하" in system_prompt
+    assert "null을 반환하지 않는다" in system_prompt
     request_payload = json.loads(client.messages[0][1]["content"])
     assert request_payload["transcript"][0]["text"].startswith("PostgreSQL")
 
@@ -142,10 +148,19 @@ def test_gms_summary_adapter_parses_strict_grounded_document_without_network():
         json.dumps({"title": "missing fields"}),
         json.dumps(
             {
-                "title": "title",
-                "body": "body",
-                "decisions": "not-an-array",
+                "title": "legacy body",
+                "body": "본문",
+                "decisions": [],
                 "actions": [],
+                "issues": [],
+            }
+        ),
+        json.dumps(
+            {
+                "title": "title",
+                "summary": [],
+                "decisions": "not-an-array",
+                "nextTodos": [],
                 "issues": [],
             }
         ),
@@ -158,6 +173,27 @@ def test_gms_summary_adapter_rejects_invalid_provider_contract(raw_response):
         )
 
 
+@pytest.mark.parametrize("title_length", [200, 201])
+def test_gms_summary_title_boundary(title_length: int):
+    raw = json.dumps(
+        {
+            "title": "가" * title_length,
+            "summary": [],
+            "decisions": [],
+            "nextTodos": [],
+            "issues": [],
+        },
+        ensure_ascii=False,
+    )
+    generator = GmsMeetingSummaryGenerator(_SummaryChatClient(raw))
+
+    if title_length == 200:
+        assert len(generator.generate(_summary_input()).title) == 200
+    else:
+        with pytest.raises(MeetingSummaryResponseError):
+            generator.generate(_summary_input())
+
+
 def test_summary_factory_rejects_fake_in_production_and_accepts_injected_gms():
     with pytest.raises(RuntimeError, match="forbidden"):
         build_meeting_summary_generator("fake", app_env="production")
@@ -166,9 +202,9 @@ def test_summary_factory_rejects_fake_in_production_and_accepts_injected_gms():
         json.dumps(
             {
                 "title": "title",
-                "body": "body",
+                "summary": [],
                 "decisions": [],
-                "actions": [],
+                "nextTodos": [],
                 "issues": [],
             }
         )
@@ -200,7 +236,9 @@ def test_fake_summary_persistence_outbox_and_idempotent_replay(session_factory):
         generator=generator,
     )
 
-    assert created.body == json.loads(FIXTURE.read_text(encoding="utf-8"))["body"]
+    assert created.body == "\n".join(
+        json.loads(FIXTURE.read_text(encoding="utf-8"))["summary"]
+    )
     assert replayed.summary_id == created.summary_id
     assert replayed.replayed is True
     assert len(generator.calls) == 1

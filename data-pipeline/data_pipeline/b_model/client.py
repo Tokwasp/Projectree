@@ -6,12 +6,21 @@ from typing import Any, Protocol
 
 
 class BModelClient(Protocol):
+    @property
+    def provider_model(self) -> str:
+        """The provider model id this adapter calls.
+
+        Callers record this on ``b_model_result.model``. It is deliberately a
+        client property rather than a call argument: the model an adapter talks
+        to is adapter configuration, not something a pipeline gets to choose.
+        Internal execution labels belong in ``model_version``/metadata.
+        """
+
     def recommend(
         self,
         *,
         source_node: dict[str, Any],
         retrieval_candidates: list[dict[str, Any]],
-        model: str,
     ) -> object:
         """Return a JSON-compatible decision; external adapters live elsewhere."""
 

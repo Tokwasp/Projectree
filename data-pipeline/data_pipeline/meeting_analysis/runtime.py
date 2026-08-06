@@ -6,7 +6,11 @@ import os
 from dataclasses import dataclass
 
 from data_pipeline.config import load_settings
-from data_pipeline.meeting_summary import build_meeting_summary_generator
+from data_pipeline.meeting_summary import (
+    build_meeting_record_callback_client,
+    build_meeting_summary_generator,
+    load_meeting_record_callback_settings,
+)
 from data_pipeline.storage import make_engine, make_session_factory
 from data_pipeline.stt import build_transcriber
 from data_pipeline.worker.config import load_worker_settings
@@ -31,9 +35,14 @@ from .runtime_adapters import (
 class MeetingAnalysisRuntime:
     component: object
     engine: object
+    callback_client: object | None = None
 
     def close(self) -> None:
-        self.engine.dispose()
+        try:
+            if self.callback_client is not None:
+                self.callback_client.close()
+        finally:
+            self.engine.dispose()
 
 
 def _aws_clients(region: str):
@@ -90,6 +99,9 @@ def build_command_consumer_runtime() -> MeetingAnalysisRuntime:
 def build_coordinator_runtime() -> MeetingAnalysisRuntime:
     worker = load_worker_settings()
     app = load_settings()
+    # Validate Java callback configuration before AWS clients or providers are
+    # assembled so a production misconfiguration fails fast without polling.
+    callback_settings = load_meeting_record_callback_settings()
     s3, _ = _aws_clients(worker.aws_region)
     engine = make_engine(app.database_url)
     sessions = make_session_factory(engine)
@@ -153,12 +165,14 @@ def build_coordinator_runtime() -> MeetingAnalysisRuntime:
         os.getenv("SUMMARY_ADAPTER", "fake"),
         app_env=worker.app_env,
     )
+    callback_client = build_meeting_record_callback_client(callback_settings)
     component = MeetingAnalysisCoordinator(
         session_factory=sessions,
         transcript_loader=transcript_loader,
         summary_processor=summary_processor(
             session_factory=sessions,
             generator=summary_generator,
+            callback_client=callback_client,
         ),
         nodes_processor=nodes_processor(
             session_factory=sessions,
@@ -167,13 +181,16 @@ def build_coordinator_runtime() -> MeetingAnalysisRuntime:
             embedding_client=embedding_client,
             b_model_client=b_model_client,
             retrieval_settings=app.retrieval,
-            b_model=os.getenv("B_MODEL_NAME", "automatic-b-model"),
+            # Execution label only. The provider model id comes from the
+            # B-model client itself (B_MODEL_NAME -> OPENAI_MODEL); passing an
+            # env-defaulted label here previously reached the GMS request body.
+            pipeline_label="automatic-b-model",
         ),
         claim_timeout_seconds=float(
             os.getenv("ANALYSIS_COORDINATOR_CLAIM_TIMEOUT_SECONDS", "900")
         ),
     )
-    return MeetingAnalysisRuntime(component, engine)
+    return MeetingAnalysisRuntime(component, engine, callback_client)
 
 
 __all__ = [

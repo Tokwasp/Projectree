@@ -13,7 +13,7 @@ Supported events:
 - `PROJECT_GRAPH_CHANGED`: `projectId`, monotonic `graphVersion`, complete
   `upsertedNodes`, and `deletedNodes`. A mutation transaction increments the
   version exactly once and writes the outbox row atomically.
-- `MEETING_SUMMARY_READY`: summary identity/version/status and an `apiPath`;
+- `MEETING_SUMMARY_READY` (legacy no-command path only): summary identity/version/status and an `apiPath`; command-based SUMMARY success uses the Java HTTP Callback instead.
   the full summary body is never duplicated into the event.
 - `ANALYSIS_STATUS_CHANGED`: `PROCESSING`, `SUCCEEDED`, or `FAILED`.
   `SUCCEEDED` is emitted only after both the graph and meeting summary are

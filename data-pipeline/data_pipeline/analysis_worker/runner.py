@@ -75,14 +75,12 @@ class AnalysisWorker:
         session_factory,
         embedding_client,
         b_model_client,
-        b_model_name: str = "b-model",
         b_model_version: str = "v1",
         actor_id: str = "analysis-worker",
     ):
         self._session_factory = session_factory
         self._embedding_client = embedding_client
         self._b_model_client = b_model_client
-        self._b_model_name = b_model_name
         self._b_model_version = b_model_version
         self._actor_id = actor_id
 
@@ -161,7 +159,6 @@ class AnalysisWorker:
             run_id,
             project_id=job.project_id,
             client=self._b_model_client,
-            model=self._b_model_name,
             model_version=self._b_model_version,
         )
 

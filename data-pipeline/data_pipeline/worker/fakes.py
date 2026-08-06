@@ -52,8 +52,10 @@ class FakeEmbeddingClient:
 class FakeBModelClient:
     """Safe integration fake: it never merges or invents a relationship."""
 
-    def recommend(self, *, source_node, retrieval_candidates, model):
-        del retrieval_candidates, model
+    provider_model = "fake-b-model"
+
+    def recommend(self, *, source_node, retrieval_candidates):
+        del retrieval_candidates
         return {
             "recommendation": "CREATE_NEW",
             "targetNodeId": None,

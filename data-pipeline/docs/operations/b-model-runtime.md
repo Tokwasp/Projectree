@@ -31,19 +31,82 @@ Automatic SQS Worker
 
 fallback 규칙: B 모델 전용 값이 있으면 그것이 이기고, 없으면 기존 GMS 값으로 내려간다.
 
+### 2.1 provider model과 실행 라벨은 다른 것이다
+
+`resolve_provider_model()`(`b_model/gms.py`)이 `B_MODEL_NAME -> OPENAI_MODEL`
+체인의 **유일한** 구현이며, 그 결과만 GMS 요청 body의 `model`에 들어간다.
+
+| 개념 | 값 예시 | 어디에 쓰이나 |
+|---|---|---|
+| provider model | `gpt-5.2` | GMS 요청 `model`, `b_model_result.model` |
+| pipeline label | `automatic-b-model` | 실행 경로 식별자. `b_model_result.metadata_json.pipelineLabel` |
+| model_version | `automatic-v1` | 분석/프롬프트 계약 버전. `b_model_result.model_version` |
+
+`recommend()`에는 모델 인자가 **없다**. provider model은 클라이언트 설정이지
+호출자의 선택이 아니며, 필요하면 `client.provider_model`로 읽는다. 2026-08-05
+회귀에서 호출부가 실행 라벨을 `model` 인자로 넘겨 GMS가 400을 반환했고, 이
+인자를 제거해 같은 실수를 타입 수준에서 막았다.
+
 ## 3. 오류 분류
 
-| 상황 | 동작 |
-|---|---|
-| 408/409/425/429/5xx | 제한된 retry (지수 backoff) |
-| 401/403 등 그 외 4xx | **즉시 실패** (재시도 무의미) |
-| 2xx인데 JSON 아님 / choices 없음 / content 없음 | `BModelResponseError` 즉시 실패 |
-| decision의 `targetNodeId`가 retrieval 후보 목록 밖 | `BModelResponseError` 즉시 실패 |
-| 네트워크 timeout | retry 후 `BModelTransportError` |
+| 상황 | 동작 | failure code |
+|---|---|---|
+| 408/409/425/429/5xx | 제한된 retry (지수 backoff) 후 실패 | `B_MODEL_HTTP_ERROR` |
+| 400/401/403/404 등 그 외 4xx | **즉시 실패** (재시도 무의미) | `B_MODEL_HTTP_ERROR` |
+| 2xx인데 JSON 아님 / choices 없음 / content 없음 | 즉시 실패 | `B_MODEL_INVALID_RESPONSE` |
+| decision의 `targetNodeId`가 retrieval 후보 목록 밖 | 즉시 실패 | `B_MODEL_INVALID_RESPONSE` |
+| `BModelDecision` 계약 위반 | 즉시 실패 | `B_MODEL_VALIDATION_ERROR` |
+| 네트워크 timeout | retry 후 실패 | `B_MODEL_TIMEOUT` |
+| 연결/프로토콜 오류 | retry 후 실패 | `B_MODEL_TRANSPORT_ERROR` |
+| 그 외 분류 불가 | 즉시 실패 | `B_MODEL_UNCLASSIFIED_ERROR` |
 
-자동 Plan에서 클라이언트·응답 검증 오류가 나면 해당 항목을 `CREATE_NEW`로
-강등하고 warning을 남긴다. 레거시 Analysis Worker는 기존
-`BModelExecutionError` 재시도 계약을 유지한다.
+`B_MODEL_UNCLASSIFIED_ERROR`는 "네트워크 문제"라는 뜻이 **아니다**. 로컬 코드
+버그(`AttributeError` 등)를 `B_MODEL_TRANSPORT_ERROR`로 기록하면 운영자가 엉뚱한
+곳(GMS 상태·VPC·DNS)을 보게 되므로 별도 코드로 분리했다.
+
+레거시 Analysis Worker 경로는 기존 코드를 유지한다 —
+`B_MODEL_RESULT_INVALID`(REST 422로 매핑, `api/errors.py`)와
+`B_MODEL_PERSISTENCE_FAILED`. 자동 경로의 `B_MODEL_VALIDATION_ERROR`와 의미가
+같지만 계약이 이미 외부에 노출되어 있어 그대로 둔다.
+
+retry 중 상태가 섞이면(예: 429 → connection reset) **provider가 실제로 응답한
+쪽**을 보존한다. status code가 있는 오류가 없는 오류보다 우선한다.
+
+HTTP 오류는 status, provider model, endpoint, request id, 그리고 GMS 응답
+body에서 뽑아낸 **비민감 오류 메시지**(500자 제한, 개행 정리)를 예외에 담는다.
+API Key·Authorization 헤더·렌더된 프롬프트·회의 원문은 절대 포함하지 않는다.
+
+### 3.1 node_analysis_run 상태 규칙
+
+| 상태 | 의미 |
+|---|---|
+| `SUCCEEDED` | 검증된 decision을 얻음 |
+| `FAILED` | provider를 **호출했고** 정상 결과를 얻지 못함. `b_model_failure_code`/`b_model_failure_message` 필수 |
+| `SKIPPED` | provider를 **호출하지 않음**. `b_model_skip_reason`만 채우고 failure 컬럼은 NULL |
+
+`SKIPPED`의 사유는 `NO_RETRIEVAL_CANDIDATES`(후보 없음) 또는
+`RETRIEVAL_FAILED`(검색 단계 실패, 이때 `retrieval_status`도 `FAILED`이고
+`retrieval_completed_at`은 NULL)다. 외부 API 실패를 `SKIPPED`로 저장하지 않는다.
+사유를 알 수 없으면 `UNKNOWN_SKIP_REASON` + `logger.error` — 그럴듯한 사유를
+지어내지 않는다.
+
+`node_analysis_run.status`는 자동 경로에서 항상 `COMPLETED`다(Node는 실제로
+발행되었으므로). 대신 stage 실패는 run 레벨 `failure_code`/`failure_message`에도
+기록되므로 아래 두 쿼리가 모두 동작한다.
+
+```sql
+SELECT * FROM node_analysis_run WHERE b_model_status = 'FAILED';
+SELECT * FROM node_analysis_run WHERE failure_code IS NOT NULL;
+```
+
+**알려진 한계**: v3 coordinator 경로의 Java 이벤트(`PROJECT_GRAPH_CHANGED`)에는
+아직 이 실패가 실리지 않는다. 이벤트 계약 변경은 Java 측 합의가 필요하다.
+
+자동 Plan에서 B 모델이 실패하면 해당 항목은 회의 진행을 막지 않도록
+`CREATE_NEW`로 강등되지만, run row는 `FAILED`로 남고 `generation_run.warnings`에
+`B_MODEL_FAILED_CREATE_NEW`(+`failureCode`/`failureMessage`)가 기록되며
+`logger.error`로도 남는다. 레거시 Analysis Worker는 기존 `BModelExecutionError`
+재시도 계약을 유지한다.
 
 ## 4. 보안
 

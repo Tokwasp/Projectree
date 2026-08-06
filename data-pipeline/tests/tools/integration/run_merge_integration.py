@@ -52,13 +52,15 @@ class DeterministicEmbeddingClient:
 
 
 class DeterministicMergeClient:
+    provider_model = "fake-b-model"
+
     def __init__(self, target_id, *, title: str, content: str):
         self._target_id = target_id
         self._title = title
         self._content = content
 
-    def recommend(self, *, source_node: dict, retrieval_candidates: list[dict], model: str):
-        del source_node, model
+    def recommend(self, *, source_node: dict, retrieval_candidates: list[dict]):
+        del source_node
         target_ids = {value["nodeId"] for value in retrieval_candidates}
         if str(self._target_id) not in target_ids:
             raise RuntimeError("seeded merge target was not retrieved")
@@ -199,7 +201,6 @@ def main() -> None:
                 title=merged_title,
                 content=merged_content,
             ),
-            model="deterministic-integration-b",
             model_version="v1",
         )
         if recommendation.candidate is None:

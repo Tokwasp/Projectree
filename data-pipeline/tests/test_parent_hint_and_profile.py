@@ -281,7 +281,9 @@ def test_b_model_payload_flags_the_hint_candidate(session_factory) -> None:
     captured: dict = {}
 
     class _CapturingClient:
-        def recommend(self, *, source_node, retrieval_candidates, model):
+        provider_model = "fake-b-model"
+
+        def recommend(self, *, source_node, retrieval_candidates):
             captured["candidates"] = retrieval_candidates
             # The hint parent is still UNATTACHED here, so ATTACHED_TO would be
             # rejected by _validate_target; the contract-conform answer is
@@ -298,7 +300,6 @@ def test_b_model_payload_flags_the_hint_candidate(session_factory) -> None:
         run_id,
         project_id=PROJECT,
         client=_CapturingClient(),
-        model="test-b",
         model_version="v1",
     )
     assert result.candidate is not None
@@ -519,7 +520,9 @@ def test_reanalyze_creates_a_fresh_attempt_when_the_target_drifted(
     )
 
     class _MergeClient:
-        def recommend(self, *, source_node, retrieval_candidates, model):
+        provider_model = "fake-b-model"
+
+        def recommend(self, *, source_node, retrieval_candidates):
             return {
                 "recommendation": "MERGE",
                 "targetNodeId": str(target_id),
@@ -530,7 +533,7 @@ def test_reanalyze_creates_a_fresh_attempt_when_the_target_drifted(
 
     execute_b_model(
         session_factory, run_id, project_id=PROJECT,
-        client=_MergeClient(), model="t", model_version="v1",
+        client=_MergeClient(), model_version="v1",
     )
 
     # Simulate graph drift: someone else's approval bumped the target version.

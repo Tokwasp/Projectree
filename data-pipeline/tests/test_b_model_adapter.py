@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from data_pipeline.b_model.client import build_b_model_client
+from data_pipeline.b_model.failures import FAILURE_HTTP_ERROR
 from data_pipeline.b_model.gms import (
     BModelClientSettings,
     BModelResponseError,
@@ -76,7 +77,7 @@ def _ok(decision: dict):
 
 def _recommend(client):
     return client.recommend(
-        source_node=SOURCE, retrieval_candidates=CANDIDATES, model="gpt-test"
+        source_node=SOURCE, retrieval_candidates=CANDIDATES
     )
 
 
@@ -253,7 +254,11 @@ def test_auth_errors_are_not_retried(status: int) -> None:
     with pytest.raises(BModelTransportError) as excinfo:
         _recommend(_client(handler))
     assert calls["n"] == 1
-    assert "non-retryable" in str(excinfo.value)
+    # A non-retryable status must arrive with enough context to act on.
+    assert excinfo.value.status_code == status
+    assert excinfo.value.failure_code == FAILURE_HTTP_ERROR
+    assert f"status={status}" in str(excinfo.value)
+    assert "denied" in str(excinfo.value)
 
 
 def test_timeout_is_retried_then_fails_as_transport_error() -> None:

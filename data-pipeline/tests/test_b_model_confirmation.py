@@ -52,6 +52,8 @@ from .test_unattached_node_edit import _initial_node
 
 
 class FakeBModelClient:
+    provider_model = "fake-b-model"
+
     def __init__(self, result=None, *, error: Exception | None = None):
         self.result = result
         self.error = error
@@ -62,13 +64,11 @@ class FakeBModelClient:
         *,
         source_node: dict,
         retrieval_candidates: list[dict],
-        model: str,
     ):
         self.calls.append(
             {
                 "source_node": source_node,
                 "retrieval_candidates": retrieval_candidates,
-                "model": model,
             }
         )
         if self.error is not None:
@@ -130,7 +130,6 @@ def _execute_decision(
         run_id,
         project_id="proj-01",
         client=client,
-        model="fake-b",
         model_version="fake-b-v1",
     )
     return result, client
@@ -191,7 +190,6 @@ def test_zero_retrieval_skips_b_without_candidate_and_completes(
         run_id,
         project_id="proj-01",
         client=client,
-        model="fake-b",
         model_version="fake-b-v1",
     )
     replay = execute_b_model(
@@ -199,7 +197,6 @@ def test_zero_retrieval_skips_b_without_candidate_and_completes(
         run_id,
         project_id="proj-01",
         client=client,
-        model="fake-b",
         model_version="fake-b-v1",
     )
 
@@ -404,7 +401,6 @@ def test_late_b_response_cannot_persist_after_source_edit(session_factory):
             run_id,
             project_id="proj-01",
             client=EditingClient(),
-            model="fake-b",
             model_version="fake-b-v1",
         )
 
@@ -438,7 +434,6 @@ def test_late_b_failure_cannot_overwrite_superseded_run(session_factory):
             run_id,
             project_id="proj-01",
             client=EditingFailureClient(),
-            model="fake-b",
             model_version="fake-b-v1",
         )
 
@@ -465,7 +460,6 @@ def test_b_execution_project_isolation_does_not_call_client(
             run_id,
             project_id="other-project",
             client=client,
-            model="fake-b",
             model_version="fake-b-v1",
         )
     assert client.calls == []
@@ -500,7 +494,6 @@ def test_concurrent_b_execution_calls_client_once_and_creates_one_candidate(
             run_id,
             project_id="proj-01",
             client=client,
-            model="fake-b",
             model_version="fake-b-v1",
         )
         entered.wait(timeout=10)
@@ -510,7 +503,6 @@ def test_concurrent_b_execution_calls_client_once_and_creates_one_candidate(
             run_id,
             project_id="proj-01",
             client=client,
-            model="fake-b",
             model_version="fake-b-v1",
         )
         second_result = second.result(timeout=10)

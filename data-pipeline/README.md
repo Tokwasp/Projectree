@@ -10,7 +10,7 @@ Recording Ready SQS ─→ recording-ready-consumer ─┐
 Java Command SQS ────→ analysis-command-consumer ┘            ├→ SUMMARY
                                                               └→ NODES
 NODES 성공 → Full Snapshot v1 → S3 → Result Event v3(snapshotRef) → Java
-SUMMARY 성공 → Result Event v3(apiPath) → Java
+SUMMARY 성공 → Java meeting-record HTTP Callback → Java
 ```
 
 ```powershell
@@ -21,11 +21,11 @@ SUMMARY 성공 → Result Event v3(apiPath) → Java
 .\.venv\Scripts\python.exe -m data_pipeline.outbox_publisher
 ```
 
-필수 설정은 `RECORDING_READY_QUEUE_URL`, `ANALYSIS_COMMAND_QUEUE_URL`, `OPENVIDU_RECORDING_BUCKET`, `PROJECTREE_ANALYSIS_RESULT_QUEUE_URL`, `AWS_S3_BUCKET`, `PROJECTREE_GRAPH_SNAPSHOT_PREFIX`, `PROJECTREE_GRAPH_SNAPSHOT_MAX_SIZE_BYTES=10485760`과 공통 AWS/DB 설정이다. Snapshot 제한은 Java의 10 MiB(`10,485,760` bytes)와 같으며 실제 S3에 올릴 canonical UTF-8 JSON byte 배열에 적용한다. OpenVidu Recording Queue, Java Command Queue, Java Result Queue는 역할이 다른 별도 Queue다. `OUTBOX_TRANSPORT=result-sqs`는 v3 row만 발행한다. Legacy OpenVidu 장시간 Worker와 수동 merge API는 각각 `ENABLE_LEGACY_OPENVIDU_AUDIO_WORKER`, `ENABLE_LEGACY_MANUAL_MERGE_API`를 명시하지 않으면 비활성이다.
+필수 설정은 `RECORDING_READY_QUEUE_URL`, `ANALYSIS_COMMAND_QUEUE_URL`, `OPENVIDU_RECORDING_BUCKET`, `PROJECTREE_ANALYSIS_RESULT_QUEUE_URL`, `AWS_S3_BUCKET`, `PROJECTREE_GRAPH_SNAPSHOT_PREFIX`, `PROJECTREE_GRAPH_SNAPSHOT_MAX_SIZE_BYTES=10485760`, `JAVA_BASE_URL`, `MEETING_RECORD_CALLBACK_API_KEY`, `MEETING_RECORD_CALLBACK_TIMEOUT_SECONDS`와 공통 AWS/DB 설정이다. Snapshot 제한은 Java의 10 MiB(`10,485,760` bytes)와 같으며 실제 S3에 올릴 canonical UTF-8 JSON byte 배열에 적용한다. OpenVidu Recording Queue, Java Command Queue, Java Result Queue는 역할이 다른 별도 Queue다. `OUTBOX_TRANSPORT=result-sqs`는 v3 row만 발행한다. Legacy OpenVidu 장시간 Worker와 수동 merge API는 각각 `ENABLE_LEGACY_OPENVIDU_AUDIO_WORKER`, `ENABLE_LEGACY_MANUAL_MERGE_API`를 명시하지 않으면 비활성이다.
 
-SUMMARY와 NODES는 STT 결과만 공유하고 동시에 실행되는 독립 작업이다. Java command의 `generateSummary`, `generateNodes`가 각각 task 생성을 결정한다. 성공은 각각 `MEETING_SUMMARY_READY`, `PROJECT_GRAPH_CHANGED`, 최종 실패는 task별 `ANALYSIS_TASK_STATUS_CHANGED`로 통지하며 통합 성공 barrier는 사용하지 않는다. 상세 계약은 [Command Join v1](docs/contracts/meeting-analysis-command-join-v1.md), [Result Event v3](docs/contracts/java-result-event-v3.md), [자동 흡수 병합](docs/contracts/automatic-node-merge.md), [Meeting Summary](docs/contracts/meeting-summary-contract.md)을 따른다.
+SUMMARY와 NODES는 STT 결과만 공유하고 동시에 실행되는 독립 작업이다. Java command의 `generateSummary`, `generateNodes`가 각각 task 생성을 결정한다. SUMMARY 성공은 Java HTTP Callback, NODES 성공은 `PROJECT_GRAPH_CHANGED`, 최종 실패는 task별 `ANALYSIS_TASK_STATUS_CHANGED`로 통지하며 통합 성공 barrier는 사용하지 않는다. 상세 계약은 [Command Join v1](docs/contracts/meeting-analysis-command-join-v1.md), [Result Event v3](docs/contracts/java-result-event-v3.md), [자동 흡수 병합](docs/contracts/automatic-node-merge.md), [Meeting Summary](docs/contracts/meeting-summary-contract.md)을 따른다.
 
-`SUMMARY_ADAPTER=gms`는 기존 OpenAI 호환 GMS Client를 사용해 제목·본문·Decision·Action·Issue를 JSON 계약으로 생성한다. `fake`는 `tests/config/fake/`에서만 허용되며 production coordinator는 모든 Fake AI adapter를 시작 단계에서 거부한다. `NO_EXTERNAL_AI_CALLS=1`이면 GMS Client 생성 전에 차단되므로 기본 테스트는 크레딧을 사용하지 않는다.
+`SUMMARY_ADAPTER=gms`는 기존 OpenAI 호환 GMS Client를 사용해 `title`, `summary`, `decisions`, `nextTodos`, `issues`의 엄격한 JSON 계약을 생성한다. `fake`는 `tests/config/fake/`에서만 허용되며 production coordinator는 모든 Fake AI adapter를 시작 단계에서 거부한다. `NO_EXTERNAL_AI_CALLS=1`이면 GMS Client 생성 전에 차단되므로 기본 테스트는 크레딧을 사용하지 않는다.
 
 ## Clova STT 어댑터
 
@@ -147,9 +147,11 @@ FastAPI 제품 경로는 그래프 조회·사용자 직접 편집·논리 병�
 ## 회의록 정본과 조회
 
 회의록 본문은 그래프 실행 통계인 `GenerationRun.result_summary`와 분리된
-`meeting_summary`에 versioned immutable 문서로 저장한다. 저장과
-`MEETING_SUMMARY_READY` Outbox는 한 트랜잭션이며 Spring은 이벤트의 `apiPath` 또는
-`GET /api/v1/meetings/{meetingId}/summary`로 조회한다. 실제 제품 경로는
+`meeting_summary`에 versioned immutable 문서로 먼저 저장한다. Command 기반 제품
+경로는 저장된 결과를 Java meeting-record HTTP Callback으로 전달하며, Java의 200 응답
+이후에만 SUMMARY task를 성공 처리한다. Callback 재실행은 저장된 결과를 재사용한다.
+Command가 없는 legacy 경로만 `MEETING_SUMMARY_READY` Outbox와
+`GET /api/v1/meetings/{meetingId}/summary` 조회를 유지한다. 실제 제품 경로는
 `GmsMeetingSummaryGenerator`, 테스트 경로는 deterministic
 `FakeMeetingSummaryGenerator`를 사용한다. 기본 검증에서는 실제 GMS 호출이
 안전 스위치로 차단된다. 상세 계약은

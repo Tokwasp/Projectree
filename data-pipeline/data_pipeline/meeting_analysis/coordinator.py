@@ -17,6 +17,7 @@ from data_pipeline.storage import (
 )
 
 from .result_events import stage_task_failed_v3
+from .task_errors import TaskProcessingError
 
 
 class TranscriptLoader(Protocol):
@@ -116,11 +117,25 @@ class MeetingAnalysisCoordinator:
                 try:
                     future.result()
                 except Exception as exc:
+                    if isinstance(exc, TaskProcessingError):
+                        failure_code = exc.failure_code
+                        retryable = exc.retryable
+                        emit_failure_event = exc.emit_failure_event
+                    else:
+                        failure_code = (
+                            "SUMMARY_GENERATION_FAILED"
+                            if task_type == "SUMMARY"
+                            else f"{task_type}_FAILED"
+                        )
+                        retryable = True
+                        emit_failure_event = True
                     terminal = self._record_failure(
                         claim,
                         task_type=task_type,
                         error=exc,
-                        failure_code=f"{task_type}_FAILED",
+                        failure_code=failure_code,
+                        retryable=retryable,
+                        emit_failure_event=emit_failure_event,
                     )
                     outcomes[task_type] = "failed" if terminal else "retrying"
                 else:
@@ -275,6 +290,8 @@ class MeetingAnalysisCoordinator:
         task_type: str,
         error: Exception,
         failure_code: str,
+        retryable: bool = True,
+        emit_failure_event: bool = True,
     ) -> bool:
         session = self._session_factory()
         try:
@@ -292,21 +309,22 @@ class MeetingAnalysisCoordinator:
             task.claimed_at = None
             task.failure_code = failure_code
             task.last_error = f"{type(error).__name__}: {error}"[:2000]
-            terminal = task.attempt_count >= task.max_attempts
+            terminal = not retryable or task.attempt_count >= task.max_attempts
             if terminal:
                 task.status = "FAILED"
-                command = session.execute(
-                    select(MeetingAnalysisCommand).where(
-                        MeetingAnalysisCommand.command_id == claim.command_id
+                if emit_failure_event:
+                    command = session.execute(
+                        select(MeetingAnalysisCommand).where(
+                            MeetingAnalysisCommand.command_id == claim.command_id
+                        )
+                    ).scalar_one()
+                    stage_task_failed_v3(
+                        session,
+                        command=command,
+                        task_type=task_type,
+                        failure_code=failure_code,
+                        failure_message=str(error),
                     )
-                ).scalar_one()
-                stage_task_failed_v3(
-                    session,
-                    command=command,
-                    task_type=task_type,
-                    failure_code=failure_code,
-                    failure_message=str(error),
-                )
             else:
                 task.status = "READY"
                 task.available_at = datetime.now(timezone.utc)

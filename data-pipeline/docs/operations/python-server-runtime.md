@@ -185,6 +185,24 @@ python -m data_pipeline.outbox_publisher
 
 ## 7. 공통 환경변수
 
+Command 기반 회의록 성공은 Java HTTP Callback으로 전달한다. Coordinator 실행 환경에는
+다음 세 값이 필요하다.
+
+```env
+JAVA_BASE_URL=https://api.example.com
+MEETING_RECORD_CALLBACK_API_KEY=replace-with-shared-secret
+MEETING_RECORD_CALLBACK_TIMEOUT_SECONDS=10
+```
+
+Parameter Store 기준 경로는 각각
+`/projectree/prod/python/java-base-url`,
+`/projectree/prod/python/meeting-record-callback-api-key`,
+`/projectree/prod/python/meeting-record-callback-timeout-seconds`다.
+
+Callback client는 Coordinator runtime당 한 번 생성해 재사용한다. Summary는 PostgreSQL에
+먼저 저장되고 Java가 HTTP 200을 반환한 뒤에만 task가 `SUCCEEDED`가 된다. Callback 재시도나
+Coordinator 재실행은 저장된 Summary를 사용하므로 GMS를 다시 호출하지 않는다.
+
 ```env
 DATABASE_URL=postgresql+psycopg://pipeline:***@localhost:5432/pipeline
 ENV_FILE=.env
