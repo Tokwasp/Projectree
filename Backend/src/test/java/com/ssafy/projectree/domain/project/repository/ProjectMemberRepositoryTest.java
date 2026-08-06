@@ -254,6 +254,27 @@ class ProjectMemberRepositoryTest extends IntegrationTestSupport {
         assertThat(result).isEmpty();
     }
 
+    @DisplayName("프로젝트 id 로 해당 프로젝트의 참여자를 모두 삭제한다.")
+    @Test
+    void deleteByProjectId() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+
+        int projectId = saveProject("포트폴리오 사이트",
+                ProjectMember.createMember(owner.getId(), ProjectRole.OWNER),
+                ProjectMember.createMember(member.getId(), ProjectRole.MEMBER));
+        flushAndClear();
+
+        // when
+        long deletedCount = projectMemberRepository.deleteByProjectId(projectId);
+
+        // then
+        assertThat(deletedCount).isEqualTo(2);
+        assertThat(projectMemberRepository.findMemberResponsesByProjectId(projectId)).isEmpty();
+        assertThat(projectRepository.findById(projectId)).isPresent();
+    }
+
     private int saveProject(String title, ProjectMember... members) {
         Project project = Project.builder()
                 .title(title)

@@ -117,7 +117,7 @@ class ProjectRepositoryTest extends IntegrationTestSupport {
         assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
     }
 
-    private void saveProject(String title, int... memberIds) {
+    private int saveProject(String title, int... memberIds) {
         Project project = Project.builder()
                 .title(title)
                 .content("프로젝트 Repository 테스트입니다.")
@@ -128,7 +128,7 @@ class ProjectRepositoryTest extends IntegrationTestSupport {
             project.addMember(ProjectMember.createMember(memberIds[i], role));
         }
 
-        projectRepository.save(project);
+        return projectRepository.save(project).getId();
     }
 
     private void flushAndClear() {

@@ -53,13 +53,15 @@ public class ProjectService {
 
     @Transactional
     public void deleteProject(int projectId, int memberId) {
-        Project project = findProject(projectId);
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
 
         if (project.isNotOwner(memberId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_DELETE_FORBIDDEN);
         }
 
-        projectRepository.delete(project);
+        projectMemberRepository.deleteByProjectId(projectId);
+        projectRepository.deleteById(projectId);
     }
 
     @Transactional
@@ -71,7 +73,9 @@ public class ProjectService {
         }
 
         if (project.isOwner(memberId)) {
-            throw new CustomException(ProjectErrorCode.PROJECT_LEAVE_FORBIDDEN);
+            projectMemberRepository.deleteByProjectId(projectId);
+            projectRepository.deleteById(projectId);
+            return;
         }
 
         project.removeMember(memberId);
