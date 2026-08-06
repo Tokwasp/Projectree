@@ -4,6 +4,7 @@ import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -31,4 +32,11 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, In
     Optional<ProjectMember> findByProjectIdAndMemberId(int projectId, int memberId);
 
     boolean existsByProjectIdAndMemberIdAndRole(int projectId, int memberId, ProjectRole role);
+
+    @Modifying(clearAutomatically = true)
+    @Query("""
+        delete from ProjectMember pm
+        where pm.project.id = :projectId
+    """)
+    long deleteByProjectId(@Param("projectId") int projectId);
 }

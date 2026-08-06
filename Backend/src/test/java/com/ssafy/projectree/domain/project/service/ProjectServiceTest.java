@@ -305,6 +305,62 @@ class ProjectServiceTest extends IntegrationTestSupport {
         assertThat(projectRepository.findById(other)).isPresent();
     }
 
+    @DisplayName("프로젝트에 참여하지 않은 회원이 탈퇴하려 하면 PROJECT_PARTICIPANT_NOT_FOUND 예외가 발생하고 아무것도 지워지지 않는다.")
+    @Test
+    void leaveProject_notParticipating() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member stranger = memberRepository.save(createMember("stranger@gmail.com", "박싸피"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when
+        assertThatThrownBy(() -> projectService.leaveProject(projectId, stranger.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND);
+        flushAndClear();
+
+        // then
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(countProjectMembers()).isEqualTo(1L);
+    }
+
+    @DisplayName("OWNER가 아닌 참여 멤버가 탈퇴하면 자신만 프로젝트에서 빠지고 프로젝트는 그대로 남는다.")
+    @Test
+    void leaveProject_withMemberRole_removesOnlySelf() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        // when
+        projectService.leaveProject(projectId, member.getId());
+        flushAndClear();
+
+        // then
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(countProjectMembers()).isEqualTo(1L);
+    }
+
+    @DisplayName("OWNER가 탈퇴하면 프로젝트와 참여 멤버 전원이 함께 삭제된다.")
+    @Test
+    void leaveProject_byOwner_deletesProjectAndMembers() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        // when
+        projectService.leaveProject(projectId, owner.getId());
+        flushAndClear();
+
+        // then
+        assertThat(projectRepository.findById(projectId)).isEmpty();
+        assertThat(countProjectMembers()).isZero();
+    }
+
     @DisplayName("프로젝트 참여자가 팀원 목록을 조회하면 참여자 전원이 회원 정보와 함께 반환된다.")
     @Test
     void getProjectMembers() {
