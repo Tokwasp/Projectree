@@ -19,15 +19,13 @@ from data_pipeline.storage import (
     MeetingSummary,
     TranscriptSegment,
 )
-from data_pipeline.meeting_analysis.result_events import (
-    stage_meeting_summary_ready_v3,
-)
-
 from .contracts import (
     GeneratedMeetingSummary,
+    MeetingSummaryContractError,
     MeetingSummaryGenerator,
     MeetingSummaryInput,
     SummarySegment,
+    normalize_generated_summary,
 )
 
 
@@ -135,16 +133,6 @@ def _source_hash(request: MeetingSummaryInput) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _validate_document(document: GeneratedMeetingSummary) -> None:
-    if not document.title.strip() or len(document.title) > 256:
-        raise MeetingSummarySourceError("summary title must be 1..256 characters")
-    if not document.body.strip() or len(document.body) > 100_000:
-        raise MeetingSummarySourceError("summary body must be 1..100000 characters")
-    for group in (document.decisions, document.actions, document.issues):
-        if len(group) > 500 or any(not item.strip() for item in group):
-            raise MeetingSummarySourceError("summary list entries must be non-empty")
-
-
 def _existing(
     session,
     *,
@@ -178,7 +166,7 @@ def generate_meeting_summary(
     summary_version: int,
     generator: MeetingSummaryGenerator,
 ) -> MeetingSummaryResult:
-    """Generate outside a transaction, then atomically persist summary+event."""
+    """Generate once and persist immutable minutes before Java delivery."""
 
     if summary_version < 1:
         raise MeetingSummarySourceError("summary_version must be positive")
@@ -211,8 +199,10 @@ def generate_meeting_summary(
                 session.commit()
             return _result(existing, replayed=True)
 
-    document = generator.generate(request)
-    _validate_document(document)
+    try:
+        document = normalize_generated_summary(generator.generate(request))
+    except MeetingSummaryContractError as exc:
+        raise MeetingSummarySourceError(str(exc)) from exc
     session = session_factory()
     try:
         row = MeetingSummary(
@@ -220,8 +210,8 @@ def generate_meeting_summary(
             external_meeting_id=external_meeting_id,
             summary_version=summary_version,
             source_hash=source_hash,
-            title=document.title.strip(),
-            body=document.body.strip(),
+            title=document.title,
+            body="\n".join(document.summary),
             structured_summary=document.structured(),
             status="READY",
             generator_name=generator.name,
@@ -245,13 +235,8 @@ def generate_meeting_summary(
                 summary=row,
                 api_path=api_path,
             )
-        else:
-            stage_meeting_summary_ready_v3(
-                session,
-                command=command,
-                summary=row,
-                api_path=api_path,
-            )
+        # Command-based SUMMARY success is delivered by the Java HTTP
+        # callback. Only the legacy no-command path keeps its historical event.
         session.commit()
         return _result(row)
     except IntegrityError:

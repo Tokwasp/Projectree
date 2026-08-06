@@ -80,7 +80,7 @@ secret 없이 `failureCode`, `errorType`만 포함한다.
 
 | eventType | aggregateType | 발생 시점 |
 |---|---|---|
-| `MEETING_SUMMARY_READY` | `meeting_summary` | versioned 회의록 정본과 같은 트랜잭션으로 저장 완료 |
+| `MEETING_SUMMARY_READY` (legacy no-command path only) | `meeting_summary` | versioned 회의록 정본과 같은 트랜잭션으로 저장 완료. Command 기반 SUMMARY 성공은 Java HTTP Callback 사용 |
 
 payload에는 `meetingSummaryId`, `projectId`, `externalMeetingId`,
 `summaryVersion`, `status=READY`, `apiPath`만 포함하며 전체 회의록 본문이나

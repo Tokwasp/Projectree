@@ -270,7 +270,7 @@ class MeteredEmbeddingClient:
         except Exception as exc:
             self._ledger.record(
                 provider="embedding",
-                model=model or self.settings.model,
+                model=model,
                 operation="embedding-item",
                 latency_ms=max(0, int((time.monotonic() - started) * 1000)),
                 usage=None,
@@ -281,7 +281,7 @@ class MeteredEmbeddingClient:
             raise
         self._ledger.record(
             provider="embedding",
-            model=model or self.settings.model,
+            model=model,
             operation="embedding-item",
             latency_ms=result.latency_ms,
             usage=asdict(result.usage),
@@ -300,19 +300,22 @@ class MeteredBModelClient:
         self.settings = client.settings
         self.calls: list[dict[str, Any]] = []
 
-    def recommend(self, *, source_node, retrieval_candidates, model):
+    @property
+    def provider_model(self) -> str:
+        return self._client.provider_model
+
+    def recommend(self, *, source_node, retrieval_candidates):
         self._ledger.reserve(provider="b-model")
         started = time.monotonic()
         try:
             result = self._client.recommend_detailed(
                 source_node=source_node,
                 retrieval_candidates=retrieval_candidates,
-                model=model,
             )
         except Exception as exc:
             self._ledger.record(
                 provider="b-model",
-                model=model or self.settings.model,
+                model=self.provider_model,
                 operation="node-recommendation",
                 latency_ms=max(0, int((time.monotonic() - started) * 1000)),
                 usage=None,
@@ -322,7 +325,7 @@ class MeteredBModelClient:
             raise
         self._ledger.record(
             provider="b-model",
-            model=model or self.settings.model,
+            model=self.provider_model,
             operation="node-recommendation",
             latency_ms=result.latency_ms,
             usage=result.usage,

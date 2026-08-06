@@ -7,7 +7,12 @@ from datetime import timedelta
 
 from sqlalchemy import select
 
-from data_pipeline.meeting_summary import generate_meeting_summary
+from data_pipeline.meeting_summary import (
+    PermanentMeetingRecordCallbackError,
+    RetryableMeetingRecordCallbackError,
+    build_callback_body,
+    generate_meeting_summary,
+)
 from data_pipeline.pipeline.automatic_graph import run_automatic_meeting
 from data_pipeline.pipeline.chain import normalize_transcript_segments
 from data_pipeline.pipeline.repository import upsert_meeting, upsert_segments
@@ -19,6 +24,8 @@ from data_pipeline.worker.uploads import (
     complete_upload_event,
     fail_upload_event,
 )
+
+from .task_errors import TaskProcessingError
 
 
 def _etag(value: object) -> str | None:
@@ -154,7 +161,7 @@ def nodes_processor(
     b_model_client,
     retrieval_settings=None,
     merge_policy=None,
-    b_model: str = "automatic-b-model",
+    pipeline_label: str = "automatic-b-model",
 ):
     if llm_client is None and llm_client_factory is None:
         raise ValueError("llm_client or llm_client_factory is required")
@@ -182,23 +189,57 @@ def nodes_processor(
             b_model_client=b_model_client,
             retrieval_settings=retrieval_settings,
             merge_policy=merge_policy,
-            b_model=b_model,
+            pipeline_label=pipeline_label,
             generate_summary=False,
         )
 
     return process
 
 
-def summary_processor(*, session_factory, generator):
+def summary_processor(*, session_factory, generator, callback_client):
     def process(command, recording, transcript) -> None:
         del recording, transcript
-        generate_meeting_summary(
-            session_factory,
-            project_id=command.project_id,
-            external_meeting_id=command.meeting_id,
-            summary_version=1,
-            generator=generator,
-        )
+        try:
+            result = generate_meeting_summary(
+                session_factory,
+                project_id=command.project_id,
+                external_meeting_id=command.meeting_id,
+                summary_version=1,
+                generator=generator,
+            )
+            callback_body = build_callback_body(
+                result,
+                command_id=command.command_id,
+            )
+        except Exception as exc:
+            raise TaskProcessingError(
+                f"{type(exc).__name__}: {exc}",
+                failure_code="SUMMARY_GENERATION_FAILED",
+                retryable=True,
+            ) from exc
+
+        try:
+            callback_client.send(
+                meeting_id=command.meeting_id,
+                body=callback_body,
+                project_id=command.project_id,
+            )
+        except PermanentMeetingRecordCallbackError as exc:
+            already_failed = (
+                exc.error_code == "MEETING_RECORD_SUMMARY_ALREADY_FAILED"
+            )
+            raise TaskProcessingError(
+                str(exc),
+                failure_code="SUMMARY_CALLBACK_REJECTED",
+                retryable=False,
+                emit_failure_event=not already_failed,
+            ) from exc
+        except RetryableMeetingRecordCallbackError as exc:
+            raise TaskProcessingError(
+                str(exc),
+                failure_code="SUMMARY_CALLBACK_DELIVERY_FAILED",
+                retryable=exc.coordinator_retryable,
+            ) from exc
 
     return process
 

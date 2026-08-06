@@ -29,7 +29,6 @@ def main() -> None:
             session_factory=make_session_factory(engine),
             embedding_client=build_embedding_client(),
             b_model_client=build_b_model_client(),
-            b_model_name=os.getenv("B_MODEL_NAME", "b-model"),
             b_model_version=os.getenv("B_MODEL_VERSION", "v1"),
         )
         worker.run_forever(

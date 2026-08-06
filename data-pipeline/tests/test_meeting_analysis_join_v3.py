@@ -202,6 +202,35 @@ def test_false_false_creates_two_skipped_tasks(session_factory) -> None:
         }
 
 
+def test_generate_summary_false_never_calls_summary_processor(session_factory) -> None:
+    persist_analysis_command(
+        session_factory,
+        command=_parse_command(payload={"generateSummary": False}),
+    )
+    persist_recording_ready(
+        session_factory,
+        event=_parse_recording(),
+        recording_bucket="recordings",
+    )
+    processed: list[str] = []
+
+    def summary_processor(*args):
+        raise AssertionError("SUMMARY processor must not be called")
+
+    def nodes_processor(*args):
+        processed.append("NODES")
+
+    result = MeetingAnalysisCoordinator(
+        session_factory=session_factory,
+        transcript_loader=lambda command, recording: [],
+        summary_processor=summary_processor,
+        nodes_processor=nodes_processor,
+    ).run_once()
+
+    assert result.succeeded == ("NODES",)
+    assert processed == ["NODES"]
+
+
 def test_duplicate_inputs_are_noop_and_conflicts_are_explicit(session_factory) -> None:
     command = _parse_command()
     recording = _parse_recording()

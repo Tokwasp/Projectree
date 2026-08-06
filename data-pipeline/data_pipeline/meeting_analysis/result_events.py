@@ -147,13 +147,20 @@ def stage_task_failed_v3(
 ) -> OutboxEvent:
     if task_type not in {"SUMMARY", "NODES"}:
         raise ValueError("task_type must be SUMMARY or NODES")
+    normalized_code = failure_code.strip() if isinstance(failure_code, str) else ""
+    if not normalized_code:
+        raise ValueError("failure_code must not be blank")
+    normalized_message = (
+        failure_message.strip()
+        if isinstance(failure_message, str) and failure_message.strip()
+        else normalized_code
+    )
     payload = {
         "taskType": task_type,
         "status": "FAILED",
-        "failureCode": failure_code[:128],
+        "failureCode": normalized_code[:100],
+        "failureMessage": normalized_message[:1000],
     }
-    if failure_message:
-        payload["failureMessage"] = failure_message[:500]
     return _stage_v3(
         session,
         event_type=ANALYSIS_TASK_STATUS_CHANGED,

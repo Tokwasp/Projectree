@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -19,7 +20,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
-from data_pipeline.b_model import BModelClient
+from data_pipeline.b_model import (
+    BModelClient,
+    describe_b_model_failure,
+    sanitize_text,
+)
 from data_pipeline.config import RetrievalSettings, load_settings
 from data_pipeline.contracts import (
     BModelDecision,
@@ -73,6 +78,9 @@ from .revisions import (
     reconcile_embedding_status_after_revision,
     validated_candidate_evidence,
 )
+
+logger = logging.getLogger(__name__)
+
 _NODE_TYPES = {"DECISION", "ACTION", "ISSUE"}
 _PUBLISHED_STATES = {"COMPLETED", "COMPLETED_WITH_WARNINGS"}
 _MERGE_ACTION_PARENT_CONFLICT = "MERGE_ACTION_PARENT_CONFLICT"
@@ -125,6 +133,18 @@ class RetrievalSnapshot:
     due_date: str | None
 
 
+@dataclass(frozen=True)
+class BModelFailure:
+    """A B-model call that started but did not produce a usable decision.
+
+    Distinct from a skip: a skip means the call was never attempted. Only a
+    failure carries a code/message onto ``node_analysis_run``.
+    """
+
+    code: str
+    message: str
+
+
 @dataclass
 class GraphPlanItem:
     source: CandidateSnapshot
@@ -140,6 +160,15 @@ class GraphPlanItem:
     excluded: bool = False
     warnings: list[dict] = field(default_factory=list)
     merge_gate_reason: str | None = None
+    #: Set when the B model was invoked and failed. Mutually exclusive with
+    #: ``skip_reason``; both stay None on the success path.
+    b_model_failure: BModelFailure | None = None
+    #: Set when the B model was deliberately not invoked.
+    skip_reason: str | None = None
+    #: The retrieval stage raised, so its result count is not trustworthy.
+    retrieval_failed: bool = False
+    #: Sanitized detail for a retrieval-stage failure, persisted on the run.
+    retrieval_failure_message: str | None = None
 
 
 @dataclass(frozen=True)
@@ -150,6 +179,10 @@ class GraphMutationPlan:
     source_request_id: uuid.UUID
     items: tuple[GraphPlanItem, ...]
     warnings: tuple[dict, ...]
+    #: Provider model id actually used for this plan's B-model calls, recorded
+    #: on ``b_model_result.model``. Never an internal pipeline label. Required,
+    #: so a plan cannot be built without knowing which model produced it.
+    provider_model: str
 
 
 @dataclass(frozen=True)
@@ -371,7 +404,12 @@ def _mark_generation_failed(
             return
         run.status = "FAILED"
         run.failure_code = code
-        run.failure_message = f"{type(error).__name__}: {error}"[:2000]
+        # Only the DB row gets the message. Outbox events and delivery state
+        # deliberately carry the exception type alone so a provider payload
+        # cannot cross the service boundary.
+        run.failure_message = sanitize_text(
+            f"{type(error).__name__}: {error}"
+        )[:2000]
         run.completed_at = datetime.now(timezone.utc)
         run.updated_at = datetime.now(timezone.utc)
         if product_command is None:
@@ -938,9 +976,20 @@ def build_graph_mutation_plan(
     b_model_client: BModelClient,
     retrieval_settings: RetrievalSettings,
     merge_policy: AutoMergePolicy,
-    b_model: str,
+    pipeline_label: str,
 ) -> GraphMutationPlan:
     """Call external adapters and build a side-effect-free Decision-first Plan."""
+
+    # Resolved once, up front: b_model_result.model is NOT NULL, and a blank
+    # provider model would silently record which model produced a decision as
+    # "". A client without one violates the BModelClient port.
+    provider_model = str(getattr(b_model_client, "provider_model", "") or "").strip()
+    if not provider_model:
+        raise ValueError(
+            "b_model_client.provider_model must be a non-empty provider model id "
+            "(B_MODEL_NAME -> OPENAI_MODEL); internal execution labels belong in "
+            "pipeline_label"
+        )
 
     warnings: list[dict] = []
     items: list[GraphPlanItem] = []
@@ -998,11 +1047,30 @@ def build_graph_mutation_plan(
                 settings=retrieval_settings,
             )
         except Exception as exc:
+            # Retrieval never completed, so the B model is not attempted at
+            # all: that is a skip, and the retrieval stage itself is FAILED.
+            # An embedding-provider outage has to be as visible here as a
+            # B-model outage is below - the class name alone cannot tell a 401
+            # from a 429 from a dropped connection.
+            _, detail = describe_b_model_failure(exc)
+            item.retrieval_failed = True
+            item.skip_reason = "RETRIEVAL_FAILED"
+            item.retrieval_failure_message = detail
             warning = {
                 "code": "EMBEDDING_OR_RETRIEVAL_FAILED_CREATE_NEW",
                 "candidateId": str(source.candidate_id),
                 "errorType": type(exc).__name__,
+                "failureMessage": detail,
             }
+            logger.error(
+                "retrieval stage failed project_id=%s meeting=%s run_id=%s "
+                "candidate_id=%s detail=%s",
+                project_id,
+                external_meeting_id,
+                generation_run_id,
+                source.candidate_id,
+                detail,
+            )
             item.warnings.append(warning)
             warnings.append(warning)
             items.append(item)
@@ -1014,6 +1082,7 @@ def build_graph_mutation_plan(
             same_meeting_parent=parent_item,
         )
         if not candidate_payload:
+            item.skip_reason = "NO_RETRIEVAL_CANDIDATES"
             item.warnings.append(
                 {
                     "code": "NO_RETRIEVAL_CANDIDATES_CREATE_NEW",
@@ -1024,21 +1093,42 @@ def build_graph_mutation_plan(
             items.append(item)
             planned_by_candidate[source.candidate_id] = item
             continue
+        # Built outside the try: a local bug here (renamed field, bad type) is
+        # not a provider failure and must not be persisted as one.
+        source_payload = _source_payload(source)
         try:
             raw = b_model_client.recommend(
-                source_node=_source_payload(source),
+                source_node=source_payload,
                 retrieval_candidates=candidate_payload,
-                model=b_model,
             )
             decision = BModelDecision.model_validate(raw)
             item.decision = decision
             item.requested_action = decision.recommendation.value
         except Exception as exc:
+            # The provider was called and did not deliver: record it as a
+            # failure with a stable code, never as "no recommendation". The
+            # item still falls back to CREATE_NEW so the meeting can publish,
+            # but the run row makes the failure visible to operators.
+            failure_code, failure_message = describe_b_model_failure(exc)
+            item.b_model_failure = BModelFailure(failure_code, failure_message)
             warning = {
                 "code": "B_MODEL_FAILED_CREATE_NEW",
                 "candidateId": str(source.candidate_id),
                 "errorType": type(exc).__name__,
+                "failureCode": failure_code,
+                "failureMessage": failure_message,
             }
+            logger.error(
+                "B-model call failed project_id=%s meeting=%s run_id=%s "
+                "candidate_id=%s model=%s failure_code=%s detail=%s",
+                project_id,
+                external_meeting_id,
+                generation_run_id,
+                source.candidate_id,
+                provider_model,
+                failure_code,
+                failure_message,
+            )
             item.warnings.append(warning)
             warnings.append(warning)
             items.append(item)
@@ -1176,6 +1266,7 @@ def build_graph_mutation_plan(
         source_request_id=source_request_id,
         items=tuple(items),
         warnings=tuple(warnings),
+        provider_model=provider_model,
     )
 
 
@@ -1244,13 +1335,77 @@ def _create_or_reactivate_relation(
     return relation
 
 
+def _b_model_trace_state(item: GraphPlanItem) -> dict[str, str | None]:
+    """Map one planned item onto its ``node_analysis_run`` B-model columns.
+
+    Three outcomes, never collapsed into each other:
+      SUCCEEDED - a validated decision exists.
+      FAILED    - the provider was called and did not deliver one.
+      SKIPPED   - the provider was deliberately not called.
+    """
+
+    if item.decision is not None:
+        return {
+            "b_model_status": "SUCCEEDED",
+            "b_model_skip_reason": None,
+            "b_model_failure_code": None,
+            "b_model_failure_message": None,
+        }
+    if item.b_model_failure is not None:
+        return {
+            "b_model_status": "FAILED",
+            "b_model_skip_reason": None,
+            "b_model_failure_code": item.b_model_failure.code,
+            "b_model_failure_message": item.b_model_failure.message,
+        }
+    if item.skip_reason is None:
+        # Never guess a plausible reason: that is exactly how every outcome
+        # collapsed into NO_VALID_B_MODEL_RESULT. A new early-continue in the
+        # planning loop that forgets to set skip_reason must be loud.
+        logger.error(
+            "plan item candidate_id=%s has no decision, no failure and no "
+            "skip_reason; the B-model outcome is unknown",
+            item.source.candidate_id,
+        )
+    return {
+        "b_model_status": "SKIPPED",
+        # Older rows used NO_VALID_B_MODEL_RESULT for every outcome; a skip now
+        # names the condition that stopped the call from happening.
+        "b_model_skip_reason": item.skip_reason or "UNKNOWN_SKIP_REASON",
+        "b_model_failure_code": None,
+        "b_model_failure_message": None,
+    }
+
+
+def _run_failure_columns(item: GraphPlanItem) -> dict[str, str | None]:
+    """Mirror a stage failure onto the run-level failure columns.
+
+    ``node_analysis_run.status`` stays COMPLETED because the automatic pipeline
+    did publish the Node, but an operator querying ``failure_code IS NOT NULL``
+    must not get zero rows during a total provider outage.
+    """
+
+    if item.b_model_failure is not None:
+        return {
+            "failure_code": item.b_model_failure.code,
+            "failure_message": item.b_model_failure.message,
+        }
+    if item.retrieval_failed:
+        return {
+            "failure_code": "RETRIEVAL_FAILED",
+            "failure_message": item.retrieval_failure_message,
+        }
+    return {"failure_code": None, "failure_message": None}
+
+
 def _persist_analysis_trace(
     session,
     *,
     node: Node,
     item: GraphPlanItem,
     settings: RetrievalSettings,
-    b_model: str,
+    provider_model: str,
+    pipeline_label: str,
 ) -> NodeAnalysisRun:
     now = datetime.now(timezone.utc)
     input_hash = _analysis_input_hash(item, settings)
@@ -1262,16 +1417,18 @@ def _persist_analysis_trace(
         retrieval_config_version=settings.config_version,
         embedding_model=settings.embedding_model,
         embedding_version=settings.embedding_version,
-        retrieval_status="COMPLETED",
+        retrieval_status=("FAILED" if item.retrieval_failed else "COMPLETED"),
         retrieval_result_count=len(item.retrieval),
-        retrieval_completed_at=now,
-        b_model_status=("SUCCEEDED" if item.decision is not None else "SKIPPED"),
-        b_model_skip_reason=(
-            None if item.decision is not None else "NO_VALID_B_MODEL_RESULT"
-        ),
+        # A stage that failed has no completion time.
+        retrieval_completed_at=(None if item.retrieval_failed else now),
+        **_b_model_trace_state(item),
         b_model_completed_at=now,
         attempt=1,
+        # The Node is still published, so the run itself completed; the
+        # run-level failure columns are what makes a stage failure findable
+        # by the usual `WHERE failure_code IS NOT NULL` query.
         status="COMPLETED",
+        **_run_failure_columns(item),
         requested_by="AUTOMATIC_PIPELINE",
         started_at=now,
         completed_at=now,
@@ -1323,7 +1480,10 @@ def _persist_analysis_trace(
                 suggested_title=decision.suggestedTitle.strip(),
                 suggested_content=decision.suggestedContent,
                 reason=decision.reason.strip(),
-                model=b_model,
+                # model = the provider model actually called (e.g. gpt-5.2).
+                # model_version = the internal analysis contract version. The
+                # pipeline label is metadata, never either of these.
+                model=provider_model,
                 model_version="automatic-v1",
                 metadata_json={
                     **decision.metadata,
@@ -1335,6 +1495,7 @@ def _persist_analysis_trace(
                     ),
                     "appliedRecommendation": item.applied_action,
                     "mergeGateReason": item.merge_gate_reason,
+                    "pipelineLabel": pipeline_label,
                 },
                 validation_status="VALIDATED",
             )
@@ -1793,7 +1954,7 @@ def apply_graph_mutation_plan(
     *,
     plan: GraphMutationPlan,
     retrieval_settings: RetrievalSettings,
-    b_model: str,
+    pipeline_label: str,
 ) -> AutomaticGraphResult:
     """Atomically publish one complete plan or nothing."""
 
@@ -2060,7 +2221,8 @@ def apply_graph_mutation_plan(
                 node=node,
                 item=item,
                 settings=retrieval_settings,
-                b_model=b_model,
+                provider_model=plan.provider_model,
+                pipeline_label=pipeline_label,
             )
             candidate = session.execute(
                 select(NodeCandidate)
@@ -2207,7 +2369,7 @@ def run_automatic_graph(
     b_model_client: BModelClient,
     retrieval_settings: RetrievalSettings | None = None,
     merge_policy: AutoMergePolicy | None = None,
-    b_model: str = "automatic-b-model",
+    pipeline_label: str = "automatic-b-model",
 ) -> AutomaticGraphResult:
     settings = retrieval_settings or load_settings().retrieval
     policy = merge_policy or AutoMergePolicy(
@@ -2251,7 +2413,7 @@ def run_automatic_graph(
         b_model_client=b_model_client,
         retrieval_settings=settings,
         merge_policy=policy,
-        b_model=b_model,
+        pipeline_label=pipeline_label,
     )
     if validation_warnings:
         plan = GraphMutationPlan(
@@ -2261,6 +2423,7 @@ def run_automatic_graph(
             source_request_id=plan.source_request_id,
             items=plan.items,
             warnings=tuple(validation_warnings) + plan.warnings,
+            provider_model=plan.provider_model,
         )
     _set_run_stage(
         session_factory,
@@ -2272,7 +2435,7 @@ def run_automatic_graph(
         session_factory,
         plan=plan,
         retrieval_settings=settings,
-        b_model=b_model,
+        pipeline_label=pipeline_label,
     )
 
 
@@ -2286,7 +2449,7 @@ def run_automatic_meeting(
     pipeline_version: str = "node-generation-v2.2",
     retrieval_settings: RetrievalSettings | None = None,
     merge_policy: AutoMergePolicy | None = None,
-    b_model: str = "automatic-b-model",
+    pipeline_label: str = "automatic-b-model",
     force_retry: bool = False,
     meeting_runner=None,
     meeting_summary_generator=None,
@@ -2294,6 +2457,17 @@ def run_automatic_meeting(
     **meeting_runner_kwargs,
 ):
     """SQS-facing orchestration wrapper around the existing ``run_meeting``."""
+
+    # ``b_model`` was renamed to ``pipeline_label`` when the execution label
+    # stopped doubling as the provider model id. Because the rest of **kwargs is
+    # forwarded to ``meeting_runner``, a stale caller would otherwise surface as
+    # an unrelated TypeError deep inside run_meeting.
+    if "b_model" in meeting_runner_kwargs:
+        raise TypeError(
+            "run_automatic_meeting no longer accepts 'b_model'; pass "
+            "pipeline_label= for the execution label. The provider model comes "
+            "from b_model_client.provider_model."
+        )
 
     if meeting_runner is None:
         from .chain import run_meeting as meeting_runner
@@ -2365,7 +2539,7 @@ def run_automatic_meeting(
             b_model_client=b_model_client,
             retrieval_settings=retrieval_settings,
             merge_policy=merge_policy,
-            b_model=b_model,
+            pipeline_label=pipeline_label,
         )
         if generate_summary:
             from data_pipeline.meeting_summary import generate_meeting_summary

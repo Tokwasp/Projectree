@@ -8,7 +8,11 @@ from datetime import datetime, timezone
 from pydantic import ValidationError
 from sqlalchemy import func, select
 
-from data_pipeline.b_model import BModelClient
+from data_pipeline.b_model import (
+    BModelClient,
+    describe_b_model_failure,
+    sanitize_text,
+)
 from data_pipeline.contracts import (
     AnalysisCandidateStatus,
     AnalysisCandidateView,
@@ -299,15 +303,27 @@ def execute_b_model(
     *,
     project_id: str,
     client: BModelClient,
-    model: str,
     model_version: str,
 ) -> BModelExecutionResult:
     """Claim, call outside a transaction, validate, and persist B output."""
 
-    if not model.strip() or not model_version.strip():
+    # The provider model is adapter configuration, not a caller choice: taking
+    # it from the client is what keeps an internal label out of the request.
+    # A missing attribute and an empty value are different bugs (wiring vs
+    # configuration) and get different messages.
+    provider_model = getattr(client, "provider_model", None)
+    if provider_model is None:
         raise NodeValidationError(
-            "model and model_version must not be empty"
+            f"{type(client).__name__} does not implement "
+            "BModelClient.provider_model"
         )
+    model = str(provider_model)
+    if not model.strip():
+        raise NodeValidationError(
+            "client.provider_model is empty; set B_MODEL_NAME (or OPENAI_MODEL)"
+        )
+    if not model_version.strip():
+        raise NodeValidationError("model_version must not be empty")
     try:
         parsed_run_id = (
             run_id if isinstance(run_id, uuid.UUID) else uuid.UUID(str(run_id))
@@ -394,7 +410,6 @@ def execute_b_model(
         raw_decision = client.recommend(
             source_node=source_payload,
             retrieval_candidates=retrieval_payload,
-            model=model,
         )
         decision = BModelDecision.model_validate(raw_decision)
     except ValidationError as exc:
@@ -405,18 +420,25 @@ def execute_b_model(
             session_factory,
             run_id=parsed_run_id,
             project_id=project_id,
+            # B_MODEL_RESULT_INVALID is an existing cross-layer contract: the
+            # REST layer maps it to HTTP 422 (api/errors.py). Kept as-is.
             failure_code="B_MODEL_RESULT_INVALID",
-            failure_message=str(failure),
+            # pydantic embeds `input_value` - i.e. model output derived from
+            # meeting content - so this is capped and redacted before storage.
+            failure_message=sanitize_text(str(failure)),
         )
         raise failure from exc
     except Exception as exc:
+        # describe_b_model_failure separates HTTP/timeout/transport/response
+        # errors and sanitizes the provider's own message for storage.
+        failure_code, failure_message = describe_b_model_failure(exc)
         failure = BModelExecutionError(f"B-model execution failed: {exc}")
         _mark_b_failure(
             session_factory,
             run_id=parsed_run_id,
             project_id=project_id,
-            failure_code="B_MODEL_FAILED",
-            failure_message=str(failure),
+            failure_code=failure_code,
+            failure_message=failure_message,
         )
         raise failure from exc
 
@@ -509,7 +531,7 @@ def execute_b_model(
                 run_id=parsed_run_id,
                 project_id=project_id,
                 failure_code="B_MODEL_RESULT_INVALID",
-                failure_message=str(exc),
+                failure_message=sanitize_text(str(exc)),
             )
             raise
         if isinstance(exc, AnalysisRunStateError):
@@ -522,7 +544,7 @@ def execute_b_model(
             run_id=parsed_run_id,
             project_id=project_id,
             failure_code="B_MODEL_PERSISTENCE_FAILED",
-            failure_message=str(failure),
+            failure_message=sanitize_text(str(failure)),
         )
         raise failure from exc
     finally:

@@ -33,11 +33,13 @@ class _Embedding:
 
 
 class _BModel:
+    provider_model = "fake-b-model"
+
     def __init__(self):
         self.calls = 0
 
-    def recommend(self, *, source_node, retrieval_candidates, model):
-        del source_node, retrieval_candidates, model
+    def recommend(self, *, source_node, retrieval_candidates):
+        del source_node, retrieval_candidates
         self.calls += 1
         raise AssertionError("should not be called without retrieval candidates")
 

@@ -162,16 +162,10 @@ def build_worker_runtime(
         embedding_client = build_embedding_client(settings.embedding_adapter)
     if settings.b_model_adapter == "fake":
         b_model_client = FakeBModelClient()
-        b_model_name = "fake-b-model"
     else:
         from data_pipeline.b_model.client import build_b_model_client
 
         b_model_client = build_b_model_client(settings.b_model_adapter)
-        b_model_name = (
-            os.getenv("B_MODEL_NAME", "").strip()
-            or os.getenv("OPENAI_MODEL", "").strip()
-            or "configured-b-model"
-        )
     meeting_runner = functools.partial(
         run_automatic_meeting,
         meeting_runner=candidate_runner,
@@ -182,7 +176,8 @@ def build_worker_runtime(
             min_similarity=app_settings.retrieval.auto_merge_min_similarity,
             min_margin=app_settings.retrieval.auto_merge_min_margin,
         ),
-        b_model=b_model_name,
+        # Execution label; the provider model comes from the client settings.
+        pipeline_label="automatic-b-model",
     )
 
     worker = SqsAudioWorker(

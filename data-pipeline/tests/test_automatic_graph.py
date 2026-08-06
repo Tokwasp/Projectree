@@ -65,7 +65,6 @@ class UnitEmbedding:
 
 class TypeEmbedding:
     def embed(self, *, text: str, model: str, dimensions: int):
-        del model
         node_type = text.lstrip().split('"')[1]
         if node_type == "ACTION":
             return [0.0, 1.0, 0.0] + [0.0] * (dimensions - 3)
@@ -86,8 +85,10 @@ class GroupAwareEmbedding(TypeEmbedding):
 
 
 class CreateOnlyB:
-    def recommend(self, *, source_node, retrieval_candidates, model):
-        del retrieval_candidates, model
+    provider_model = "fake-b-model"
+
+    def recommend(self, *, source_node, retrieval_candidates):
+        del retrieval_candidates
         return {
             "recommendation": "CREATE_NEW",
             "targetNodeId": None,
@@ -100,11 +101,12 @@ class CreateOnlyB:
 
 
 class ExistingParentLinkB:
+    provider_model = "fake-b-model"
+
     def __init__(self, parent_id: uuid.UUID):
         self.parent_id = parent_id
 
-    def recommend(self, *, source_node, retrieval_candidates, model):
-        del model
+    def recommend(self, *, source_node, retrieval_candidates):
         parent = next(
             row
             for row in retrieval_candidates
@@ -124,11 +126,12 @@ class ExistingParentLinkB:
 
 
 class DecisionMergeAndParentLinkB:
+    provider_model = "fake-b-model"
+
     def __init__(self, target_id: uuid.UUID):
         self.target_id = target_id
 
-    def recommend(self, *, source_node, retrieval_candidates, model):
-        del model
+    def recommend(self, *, source_node, retrieval_candidates):
         if source_node["nodeType"] == "DECISION":
             return {
                 "recommendation": "MERGE",
@@ -167,12 +170,14 @@ class DecisionMergeAndParentLinkB:
 
 
 class DecisionMergeAfterConcurrentEditB(DecisionMergeAndParentLinkB):
+    provider_model = "fake-b-model"
+
     def __init__(self, target_id: uuid.UUID, session_factory):
         super().__init__(target_id)
         self.session_factory = session_factory
         self.edited = False
 
-    def recommend(self, *, source_node, retrieval_candidates, model):
+    def recommend(self, *, source_node, retrieval_candidates):
         if not self.edited:
             with self.session_factory() as session:
                 target = session.get(Node, self.target_id)
@@ -191,7 +196,6 @@ class DecisionMergeAfterConcurrentEditB(DecisionMergeAndParentLinkB):
         return super().recommend(
             source_node=source_node,
             retrieval_candidates=retrieval_candidates,
-            model=model,
         )
 
 
@@ -212,6 +216,8 @@ def _identity_metadata(*, action: bool) -> dict:
 
 
 class DecisionAndActionMergeB:
+    provider_model = "fake-b-model"
+
     def __init__(
         self,
         *,
@@ -221,8 +227,8 @@ class DecisionAndActionMergeB:
         self.decision_target_id = decision_target_id
         self.action_target_id = action_target_id
 
-    def recommend(self, *, source_node, retrieval_candidates, model):
-        del retrieval_candidates, model
+    def recommend(self, *, source_node, retrieval_candidates):
+        del retrieval_candidates
         if source_node["nodeType"] == "DECISION":
             if self.decision_target_id is None:
                 return {
@@ -251,6 +257,8 @@ class DecisionAndActionMergeB:
 
 
 class DecisionAndMappedActionMergeB(DecisionAndActionMergeB):
+    provider_model = "fake-b-model"
+
     def __init__(
         self,
         *,
@@ -265,7 +273,7 @@ class DecisionAndMappedActionMergeB(DecisionAndActionMergeB):
         self.action_target_a = action_target_a
         self.action_target_b = action_target_b
 
-    def recommend(self, *, source_node, retrieval_candidates, model):
+    def recommend(self, *, source_node, retrieval_candidates):
         if source_node["nodeType"] == "ACTION":
             target_id = (
                 self.action_target_b
@@ -284,16 +292,17 @@ class DecisionAndMappedActionMergeB(DecisionAndActionMergeB):
         return super().recommend(
             source_node=source_node,
             retrieval_candidates=retrieval_candidates,
-            model=model,
         )
 
 
 class SameTargetMergeB:
+    provider_model = "fake-b-model"
+
     def __init__(self, target_id: uuid.UUID):
         self.target_id = target_id
 
-    def recommend(self, *, source_node, retrieval_candidates, model):
-        del retrieval_candidates, model
+    def recommend(self, *, source_node, retrieval_candidates):
+        del retrieval_candidates
         return {
             "recommendation": "MERGE",
             "targetNodeId": str(self.target_id),
@@ -684,7 +693,7 @@ def _build_multi_action_merge_plan(
             min_similarity=0.9,
             min_margin=0.1,
         ),
-        b_model="automatic-b-model",
+        pipeline_label="automatic-b-model",
     )
     return (
         plan,
@@ -714,7 +723,7 @@ def _run_multi_action_merge_scenario(
         session_factory,
         plan=plan,
         retrieval_settings=_settings(),
-        b_model="automatic-b-model",
+        pipeline_label="automatic-b-model",
     )
     return (
         result,
@@ -1518,7 +1527,7 @@ def test_action_merge_plan_apply_is_idempotent(session_factory):
             min_similarity=0.9,
             min_margin=0.1,
         ),
-        b_model="automatic-b-model",
+        pipeline_label="automatic-b-model",
     )
     _set_run_stage(
         session_factory,
@@ -1530,13 +1539,13 @@ def test_action_merge_plan_apply_is_idempotent(session_factory):
         session_factory,
         plan=plan,
         retrieval_settings=_settings(),
-        b_model="automatic-b-model",
+        pipeline_label="automatic-b-model",
     )
     second = apply_graph_mutation_plan(
         session_factory,
         plan=plan,
         retrieval_settings=_settings(),
-        b_model="automatic-b-model",
+        pipeline_label="automatic-b-model",
     )
     assert first.replayed is False
     assert second.replayed is True
@@ -1604,13 +1613,13 @@ def test_multi_source_plan_replay_does_not_duplicate_group_artifacts(
         session_factory,
         plan=plan,
         retrieval_settings=_settings(),
-        b_model="automatic-b-model",
+        pipeline_label="automatic-b-model",
     )
     second = apply_graph_mutation_plan(
         session_factory,
         plan=plan,
         retrieval_settings=_settings(),
-        b_model="automatic-b-model",
+        pipeline_label="automatic-b-model",
     )
 
     assert first.replayed is False
@@ -1677,7 +1686,7 @@ def test_multi_source_partial_recovery_skips_already_merged_source(
         session_factory,
         plan=plan,
         retrieval_settings=_settings(),
-        b_model="automatic-b-model",
+        pipeline_label="automatic-b-model",
     )
     with session_factory() as session:
         action_sources = {

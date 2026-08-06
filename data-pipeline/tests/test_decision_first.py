@@ -71,8 +71,9 @@ class _Embedding:
 
 
 class _AttachActionBModel:
-    def recommend(self, *, source_node, retrieval_candidates, model):
-        del model
+    provider_model = "fake-b-model"
+
+    def recommend(self, *, source_node, retrieval_candidates):
         assert source_node["nodeType"] == "ACTION"
         decision = next(
             row
@@ -849,7 +850,6 @@ def test_fake_worker_e2e_completes_without_parent_rule_409(
         session_factory=session_factory,
         embedding_client=_Embedding(),
         b_model_client=_AttachActionBModel(),
-        b_model_name="fake-b",
         b_model_version="v1",
     )
 
