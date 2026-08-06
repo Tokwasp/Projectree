@@ -1,6 +1,5 @@
 import { useParams } from "react-router-dom";
 import { useAuthStore } from "../../../../store/authStore";
-import { mockProjectHome } from "../../../../mocks/ProjectHomeMocks";
 import AiFeedback from "../components/AiFeedback/AiFeedback";
 import SpeakingDistribution from "../components/SpeakingDistribution/SpeakingDistribution";
 import useProjectHome from "../hooks/useProjectHome";
@@ -52,6 +51,7 @@ export default function ProjectHome() {
       isCurrentUser: member.name === currentUserName,
     })) ?? [];
   const meetingRecords = data?.meetingRecordList ?? [];
+  const projectDetail = data?.projectDetail;
 
   return (
     <div className={style.page}>
@@ -59,75 +59,79 @@ export default function ProjectHome() {
         프로젝트 소개
       </h1>
 
-      <section
-        className={style.introCard}
-        aria-labelledby="project-intro-heading"
-      >
-        <h2 className={style.projectName}>{mockProjectHome.title}</h2>
-        <p className={style.introDescription}>
-          {mockProjectHome.description}
-        </p>
-
-        <dl className={style.projectMeta}>
-          <div className={style.metaItem}>
-            <dt>생성일</dt>
-            <dd>{formatProjectDate(mockProjectHome.createdAt)}</dd>
-          </div>
-          <div className={style.metaItem}>
-            <dt>팀원</dt>
-            <dd>{mockProjectHome.memberCount}명</dd>
-          </div>
-        </dl>
-      </section>
-
       {isLoading ? (
         <p className={style.meetingEmpty}>
           프로젝트 홈을 불러오는 중입니다.
         </p>
-      ) : error ? (
+      ) : error || !projectDetail ? (
         <p className={style.meetingEmpty} role="alert">
-          {error}
+          {error ?? "프로젝트 정보를 불러오지 못했습니다."}
         </p>
       ) : (
-        <div className={style.dashboardGrid}>
-          <AiFeedback feedback={feedback} />
+        <>
+          <section
+            className={style.introCard}
+            aria-labelledby="project-intro-heading"
+          >
+            <h2 className={style.projectName}>
+              {projectDetail.projectTitle}
+            </h2>
+            <p className={style.introDescription}>
+              {projectDetail.projectContent}
+            </p>
 
-          <div className={style.dashboardAside}>
-            <section
-              className={style.meetingSection}
-              aria-labelledby="recent-minutes-heading"
-            >
-              <div className={style.sectionHeading}>
-                <img src={recentMinutesIcon} alt="" />
-                <h2
-                  className={style.sectionTitle}
-                  id="recent-minutes-heading"
-                >
-                  최근 회의록
-                </h2>
+            <dl className={style.projectMeta}>
+              <div className={style.metaItem}>
+                <dt>생성일</dt>
+                <dd>{formatProjectDate(projectDetail.projectCreatedAt)}</dd>
               </div>
+              <div className={style.metaItem}>
+                <dt>팀원</dt>
+                <dd>{projectDetail.participantCount}명</dd>
+              </div>
+            </dl>
+          </section>
 
-              {meetingRecords.length === 0 ? (
-                <p className={style.meetingEmpty}>
-                  최근 회의록이 없습니다.
-                </p>
-              ) : (
-                <ul className={style.meetingList}>
-                  {meetingRecords.slice(0, 2).map((meeting, index) => (
-                    <li
-                      className={style.meetingItem}
-                      key={`${meeting.name}-${index}`}
-                    >
-                      <strong>{meeting.name}</strong>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+          <div className={style.dashboardGrid}>
+            <AiFeedback feedback={feedback} />
 
-            <SpeakingDistribution speakingTimes={speakingTimes} />
+            <div className={style.dashboardAside}>
+              <section
+                className={style.meetingSection}
+                aria-labelledby="recent-minutes-heading"
+              >
+                <div className={style.sectionHeading}>
+                  <img src={recentMinutesIcon} alt="" />
+                  <h2
+                    className={style.sectionTitle}
+                    id="recent-minutes-heading"
+                  >
+                    최근 회의록
+                  </h2>
+                </div>
+
+                {meetingRecords.length === 0 ? (
+                  <p className={style.meetingEmpty}>
+                    최근 회의록이 없습니다.
+                  </p>
+                ) : (
+                  <ul className={style.meetingList}>
+                    {meetingRecords.slice(0, 2).map((meeting, index) => (
+                      <li
+                        className={style.meetingItem}
+                        key={`${meeting.name}-${index}`}
+                      >
+                        <strong>{meeting.name}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              <SpeakingDistribution speakingTimes={speakingTimes} />
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

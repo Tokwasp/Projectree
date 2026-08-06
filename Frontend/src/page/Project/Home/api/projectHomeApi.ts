@@ -1,5 +1,12 @@
 import { apiRequest } from "../../../../api/apiClient";
 
+export interface ProjectDetailResponse {
+  projectTitle: string;
+  projectContent: string;
+  participantCount: number;
+  projectCreatedAt: string;
+}
+
 export interface MeetingRecordResponse {
   name: string;
   currentPageNum: number;
@@ -18,6 +25,7 @@ export interface MyMeetingReviewResponse {
 }
 
 export interface ProjectHomeResponse {
+  projectDetail: ProjectDetailResponse;
   meetingRecordList: MeetingRecordResponse[] | null;
   personalSpeakingList: PersonalSpeakingResponse[];
   myReview: MyMeetingReviewResponse | null;
