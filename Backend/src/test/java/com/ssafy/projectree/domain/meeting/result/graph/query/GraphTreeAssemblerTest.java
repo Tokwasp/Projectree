@@ -128,7 +128,7 @@ class GraphTreeAssemblerTest {
         Instant timestamp = Instant.parse("2026-08-05T00:00:0" + second + "Z");
         return ProjectNodeProjection.from(projectId, new ProjectGraphSnapshotNode(
                 nodeId, 1, parentNodeId, null, type, category, state,
-                nodeId, "content", GraphLinkSource.AI, 1, timestamp, timestamp
+                nodeId, "content", GraphLinkSource.LLM_GENERATED, 1, timestamp, timestamp
         ), timestamp);
     }
 }

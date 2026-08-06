@@ -42,6 +42,16 @@ public class AnalysisResultConsumer {
             return;
         }
 
+        if (messages.isEmpty()) {
+            log.debug("No analysis result messages received");
+            return;
+        }
+
+        log.info(
+                "Received analysis result messages. count={}, messageIds={}",
+                messages.size(),
+                messages.stream().map(Message::messageId).toList()
+        );
         for (Message message : messages) {
             consume(message);
         }

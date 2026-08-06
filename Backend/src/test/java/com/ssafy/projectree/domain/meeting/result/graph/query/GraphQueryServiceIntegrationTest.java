@@ -310,7 +310,7 @@ class GraphQueryServiceIntegrationTest extends IntegrationTestSupport {
         Instant timestamp = Instant.parse("2026-08-05T00:00:0" + second + "Z");
         return nodeRepository.saveAndFlush(ProjectNodeProjection.from(projectId, new ProjectGraphSnapshotNode(
                 nodeId, meetingId, parentNodeId, mergedIntoNodeId, type, category, state,
-                "title-" + second, "content-" + second, GraphLinkSource.AI, second, timestamp, timestamp
+                "title-" + second, "content-" + second, GraphLinkSource.LLM_GENERATED, second, timestamp, timestamp
         ), timestamp));
     }
 

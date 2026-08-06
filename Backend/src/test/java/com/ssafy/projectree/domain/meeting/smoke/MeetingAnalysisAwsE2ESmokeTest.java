@@ -245,21 +245,21 @@ class MeetingAnalysisAwsE2ESmokeTest {
                                 GraphNodeType.DECISION, GraphNodeCategory.BACKEND, GraphNodeState.ACTIVE,
                                 "SQS 기반 비동기 분석 파이프라인 적용",
                                 "Java와 Python 사이의 분석 요청과 결과 전달에 SQS를 사용한다.",
-                                GraphLinkSource.AI, 1, now, now
+                                GraphLinkSource.LLM_GENERATED, 1, now, now
                         ),
                         new ProjectGraphSnapshotNode(
                                 actionId, command.payload().meetingId(), decisionId, null,
                                 GraphNodeType.ACTION, GraphNodeCategory.BACKEND, GraphNodeState.ACTIVE,
                                 "Result Consumer 연결 검증",
                                 "S3 Snapshot과 Result SQS 이벤트를 이용해 Java Projection 갱신을 검증한다.",
-                                GraphLinkSource.AI, 1, now, now
+                                GraphLinkSource.LLM_GENERATED, 1, now, now
                         ),
                         new ProjectGraphSnapshotNode(
                                 issueId, command.payload().meetingId(), actionId, null,
                                 GraphNodeType.ISSUE, GraphNodeCategory.BACKEND, GraphNodeState.ACTIVE,
                                 "운영 전 DLQ와 재시도 정책 확인",
                                 "실패 메시지가 Result DLQ로 이동하는지 운영 설정을 확인한다.",
-                                GraphLinkSource.AI, 1, now, now
+                                GraphLinkSource.LLM_GENERATED, 1, now, now
                         )
                 ),
                 List.of(

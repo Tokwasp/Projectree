@@ -30,6 +30,26 @@ class ProjectGraphSnapshotParserTest extends IntegrationTestSupport {
     }
 
     @Test
+    void deserializesLlmGeneratedLinkSourceAndRejectsLegacyValues() {
+        String nodeId = UUID.randomUUID().toString();
+        String nodes = """
+                [{"nodeId":"%s","sourceMeetingId":1,"parentNodeId":null,"mergedIntoNodeId":null,
+                "nodeType":"DECISION","category":"BACKEND","graphState":"ACTIVE",
+                "title":"title","content":"content","linkSource":"LLM_GENERATED","nodeVersion":1,
+                "createdAt":"2026-08-04T12:30:00Z","updatedAt":"2026-08-04T12:30:00Z"}]
+                """.formatted(nodeId).replaceAll("\\s+", "");
+
+        String snapshotJson = json("[]").replace("\"nodes\":[]", "\"nodes\":" + nodes);
+        ProjectGraphSnapshot snapshot = parser.parse(snapshotJson.getBytes(StandardCharsets.UTF_8));
+
+        assertThat(snapshot.nodes()).singleElement()
+                .extracting(ProjectGraphSnapshotNode::linkSource)
+                .isEqualTo(GraphLinkSource.LLM_GENERATED);
+        assertContractFailure(snapshotJson.replace("LLM_GENERATED", "AI"));
+        assertContractFailure(snapshotJson.replace("LLM_GENERATED", "MANUAL"));
+    }
+
+    @Test
     void rejectsUnknownFieldsLifecycleStatusAndScalarCoercion() {
         assertContractFailure(json("[]").replace("\"projectId\":1", "\"projectId\":\"1\""));
         assertContractFailure(json("[]").replace("\"meetingId\":1", "\"meetingId\":1.0"));

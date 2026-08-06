@@ -28,6 +28,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class AnalysisResultConsumerTest {
@@ -68,6 +69,15 @@ class AnalysisResultConsumerTest {
 
         verify(sqsGateway).deleteMessage(processed);
         verify(sqsGateway).deleteMessage(duplicate);
+    }
+
+    @Test
+    void doesNotProcessMessagesWhenQueueIsEmpty() {
+        given(sqsGateway.receiveMessages()).willReturn(List.of());
+
+        consumer.consumeAvailable();
+
+        verifyNoInteractions(parser, eventValidator, processor);
     }
 
     @Test

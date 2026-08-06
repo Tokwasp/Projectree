@@ -86,7 +86,7 @@ class GraphQueryProjectionRepositoryIntegrationTest extends IntegrationTestSuppo
         Instant time = Instant.parse("2026-08-05T00:00:0" + second + "Z");
         return nodeRepository.saveAndFlush(ProjectNodeProjection.from(projectId, new ProjectGraphSnapshotNode(
                 nodeId, meetingId, null, mergedIntoNodeId, GraphNodeType.DECISION,
-                GraphNodeCategory.BACKEND, state, "title", "content", GraphLinkSource.AI,
+                GraphNodeCategory.BACKEND, state, "title", "content", GraphLinkSource.LLM_GENERATED,
                 1, time, time
         ), time));
     }
