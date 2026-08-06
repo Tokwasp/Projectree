@@ -7,7 +7,7 @@ import com.ssafy.projectree.domain.meetingreview.exception.MeetingReviewErrorCod
 import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
-import com.ssafy.projectree.domain.project.controller.dto.response.ProjectHomeResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectHomeResponse;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.Project;
@@ -503,16 +503,40 @@ class ProjectServiceTest extends IntegrationTestSupport {
     void getProjectHome_noMeetingReview() {
         // given
         Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
-        int projectId = createProjectOwnedBy(owner);
+
+        String projectTitle = "포트폴리오 사이트";
+        String content = "React로 만든 개인 포트폴리오입니다.";
+        int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
 
         // when
         ProjectHomeResponse response =
                 projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
 
         // then
+        assertThat(response.getProjectDetail())
+                .extracting("projectTitle", "projectContent", "participantCount")
+                .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 1);
+
         assertThat(response.getMeetingRecordList()).isEmpty();
         assertThat(response.getPersonalSpeakingList()).isEmpty();
         assertThat(response.getMyReview()).isNull();
+    }
+
+    @DisplayName("프로젝트에 2명이 참여한 상태로 홈을 조회하면 참가자 수가 2로 반환된다.")
+    @Test
+    void getProjectHome_participantCount() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        // when
+        ProjectHomeResponse response =
+                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+
+        // then
+        assertThat(response.getProjectDetail().getParticipantCount()).isEqualTo(2);
     }
 
     @DisplayName("프로젝트 홈을 조회하면 로그인한 회원의 가장 최근 회의 리뷰가 myReview로 반환된다.")
@@ -605,9 +629,24 @@ class ProjectServiceTest extends IntegrationTestSupport {
     }
 
     private int createProjectOwnedBy(Member owner) {
-        int projectId = projectService.createProject(
-                createRequest("포트폴리오 사이트", null), owner.getId());
+        return createProjectOwnedBy(owner, "포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 1);
+    }
+
+    private int createProjectOwnedBy(Member owner, String title, String content, int participantCount) {
+        ProjectCreateRequest request = ProjectCreateRequest.builder()
+                .title(title)
+                .content(content)
+                .build();
+
+        int projectId = projectService.createProject(request, owner.getId());
         flushAndClear();
+
+        for (int i = 1; i < participantCount; i++) {
+            Member member = memberRepository.save(
+                    createMember("member" + i + "-" + projectId + "@gmail.com", "멤버" + i));
+            joinAsMember(projectId, member);
+        }
+
         return projectId;
     }
 

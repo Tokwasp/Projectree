@@ -1,7 +1,7 @@
 package com.ssafy.projectree.domain.project.controller;
 
 import com.ssafy.projectree.domain.member.LoginMember;
-import com.ssafy.projectree.domain.project.controller.dto.response.ProjectHomeResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectHomeResponse;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberListResponse;
