@@ -68,7 +68,18 @@ public class AnalysisSummaryEventHandler implements AnalysisResultEventHandler {
         if (completion == AnalysisTaskCompletionResult.APPLIED) {
             notificationOutboxRepository.saveAndFlush(createNotification(command, meeting, event, payload));
         }
-        if (projectionResult != null) {
+        if (projectionResult == null) {
+            log.info(
+                    "[AnalysisFlow] SUMMARY_PROJECTION_SKIPPED. eventId={}, commandId={}, projectId={}, meetingId={}, summaryVersion={}, status={}, completionResult={}",
+                    event.eventId(),
+                    event.commandId(),
+                    event.projectId(),
+                    event.meetingId(),
+                    payload.summaryVersion(),
+                    payload.status(),
+                    completion
+            );
+        } else {
             log.info(
                     "[AnalysisFlow] SUMMARY_PROJECTION_APPLIED. eventId={}, commandId={}, projectId={}, meetingId={}, summaryVersion={}, status={}, completionResult={}, projectionResult={}",
                     event.eventId(),

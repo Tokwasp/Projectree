@@ -64,7 +64,8 @@ public class CommandOutboxPublisher {
                     claimed.commandId(),
                     claimed.outboxId(),
                     claimed.attemptCount(),
-                    failure.getClass().getSimpleName()
+                    failure.getClass().getSimpleName(),
+                    failure
             );
             try {
                 failureHandler.handle(claimed, failure);

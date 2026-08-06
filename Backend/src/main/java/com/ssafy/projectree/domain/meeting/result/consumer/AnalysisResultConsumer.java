@@ -59,10 +59,10 @@ public class AnalysisResultConsumer {
 
     private void consume(Message message) {
         long startedAt = System.nanoTime();
+        AnalysisResultEventEnvelope event = null;
         try {
-            AnalysisResultEventEnvelope event = eventValidator.validateEnvelope(
-                    parser.parse(message.body())
-            );
+            event = parser.parse(message.body());
+            event = eventValidator.validateEnvelope(event);
             log.info(
                     "[AnalysisFlow] RESULT_PROCESSING_STARTED. messageId={}, approximateReceiveCount={}, eventId={}, eventType={}, commandId={}, projectId={}, meetingId={}",
                     message.messageId(),
@@ -112,25 +112,40 @@ public class AnalysisResultConsumer {
             );
         } catch (AnalysisResultContractException exception) {
             log.warn(
-                    "[AnalysisFlow] RESULT_CONTRACT_VIOLATION. messageId={}, approximateReceiveCount={}, elapsedMs={}",
+                    "[AnalysisFlow] RESULT_CONTRACT_VIOLATION. messageId={}, approximateReceiveCount={}, eventId={}, eventType={}, commandId={}, projectId={}, meetingId={}, elapsedMs={}",
                     message.messageId(),
                     approximateReceiveCount(message),
+                    eventIdOf(event),
+                    eventTypeOf(event),
+                    commandIdOf(event),
+                    projectIdOf(event),
+                    meetingIdOf(event),
                     elapsedMillis(startedAt),
                     exception
             );
         } catch (AnalysisResultRetryableException | DataAccessException exception) {
             log.warn(
-                    "[AnalysisFlow] RESULT_PROCESSING_RETRYABLE_FAILED. messageId={}, approximateReceiveCount={}, elapsedMs={}",
+                    "[AnalysisFlow] RESULT_PROCESSING_RETRYABLE_FAILED. messageId={}, approximateReceiveCount={}, eventId={}, eventType={}, commandId={}, projectId={}, meetingId={}, elapsedMs={}",
                     message.messageId(),
                     approximateReceiveCount(message),
+                    eventIdOf(event),
+                    eventTypeOf(event),
+                    commandIdOf(event),
+                    projectIdOf(event),
+                    meetingIdOf(event),
                     elapsedMillis(startedAt),
                     exception
             );
         } catch (RuntimeException exception) {
             log.error(
-                    "[AnalysisFlow] RESULT_PROCESSING_UNEXPECTED_FAILED. messageId={}, approximateReceiveCount={}, elapsedMs={}",
+                    "[AnalysisFlow] RESULT_PROCESSING_UNEXPECTED_FAILED. messageId={}, approximateReceiveCount={}, eventId={}, eventType={}, commandId={}, projectId={}, meetingId={}, elapsedMs={}",
                     message.messageId(),
                     approximateReceiveCount(message),
+                    eventIdOf(event),
+                    eventTypeOf(event),
+                    commandIdOf(event),
+                    projectIdOf(event),
+                    meetingIdOf(event),
                     elapsedMillis(startedAt),
                     exception
             );
@@ -143,5 +158,25 @@ public class AnalysisResultConsumer {
 
     private long elapsedMillis(long startedAt) {
         return (System.nanoTime() - startedAt) / 1_000_000;
+    }
+
+    private Object eventIdOf(AnalysisResultEventEnvelope event) {
+        return event == null ? "unknown" : event.eventId();
+    }
+
+    private Object eventTypeOf(AnalysisResultEventEnvelope event) {
+        return event == null ? "unknown" : event.eventType();
+    }
+
+    private Object commandIdOf(AnalysisResultEventEnvelope event) {
+        return event == null ? "unknown" : event.commandId();
+    }
+
+    private Object projectIdOf(AnalysisResultEventEnvelope event) {
+        return event == null ? "unknown" : event.projectId();
+    }
+
+    private Object meetingIdOf(AnalysisResultEventEnvelope event) {
+        return event == null ? "unknown" : event.meetingId();
     }
 }
