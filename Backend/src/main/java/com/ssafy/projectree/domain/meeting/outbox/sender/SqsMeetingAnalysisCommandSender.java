@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.MessageAttributeValue;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 import java.util.Map;
 
@@ -23,7 +24,7 @@ public class SqsMeetingAnalysisCommandSender implements MeetingAnalysisCommandSe
     private final MeetingAnalysisPublisherProperties properties;
 
     @Override
-    public void send(String commandId, String payload) {
+    public CommandSendResult send(String commandId, String payload) {
         SendMessageRequest request = SendMessageRequest.builder()
                 .queueUrl(properties.queueUrl())
                 .messageBody(payload)
@@ -35,6 +36,7 @@ public class SqsMeetingAnalysisCommandSender implements MeetingAnalysisCommandSe
                                 .build()
                 ))
                 .build();
-        sqsClient.sendMessage(request);
+        SendMessageResponse response = sqsClient.sendMessage(request);
+        return new CommandSendResult(response.messageId());
     }
 }

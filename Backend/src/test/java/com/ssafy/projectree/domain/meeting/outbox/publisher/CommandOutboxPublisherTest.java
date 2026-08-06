@@ -1,6 +1,7 @@
 package com.ssafy.projectree.domain.meeting.outbox.publisher;
 
 import com.ssafy.projectree.domain.meeting.outbox.dto.ClaimedCommandOutbox;
+import com.ssafy.projectree.domain.meeting.outbox.sender.CommandSendResult;
 import com.ssafy.projectree.domain.meeting.outbox.sender.MeetingAnalysisCommandSender;
 import com.ssafy.projectree.domain.meeting.outbox.service.CommandOutboxClaimService;
 import com.ssafy.projectree.domain.meeting.outbox.service.CommandPublishFailureHandler;
@@ -10,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -31,12 +31,15 @@ class CommandOutboxPublisherTest {
         ClaimedCommandOutbox failed = claimed(1, "command-1", "payload-1");
         ClaimedCommandOutbox succeeded = claimed(2, "command-2", "payload-2");
         when(claimService.claimAvailable()).thenReturn(List.of(failed, succeeded));
-        doAnswer(invocation -> {
+        when(sender.send(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString()
+        )).thenAnswer(invocation -> {
             if ("command-1".equals(invocation.getArgument(0))) {
                 throw new IllegalStateException("SQS unavailable");
             }
-            return null;
-        }).when(sender).send(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+            return new CommandSendResult("message-2");
+        });
 
         publisher.publishAvailable();
 

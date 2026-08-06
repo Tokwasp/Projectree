@@ -5,11 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class SqsMeetingAnalysisCommandSenderTest {
 
@@ -21,13 +23,20 @@ class SqsMeetingAnalysisCommandSenderTest {
                 new SqsMeetingAnalysisCommandSender(sqsClient, properties);
         String commandId = "c6db7ac7-d3c7-4f18-928c-ce376ccfabba";
         String payload = "{ \"spacing\": \"must stay identical\", \"value\": 1 }";
+        when(sqsClient.sendMessage(org.mockito.ArgumentMatchers.any(SendMessageRequest.class)))
+                .thenReturn(
+                        SendMessageResponse.builder().messageId("message-1").build(),
+                        SendMessageResponse.builder().messageId("message-2").build()
+                );
 
-        sender.send(commandId, payload);
-        sender.send(commandId, payload);
+        CommandSendResult first = sender.send(commandId, payload);
+        CommandSendResult second = sender.send(commandId, payload);
 
         ArgumentCaptor<SendMessageRequest> captor =
                 ArgumentCaptor.forClass(SendMessageRequest.class);
         verify(sqsClient, times(2)).sendMessage(captor.capture());
+        assertThat(first.messageId()).isEqualTo("message-1");
+        assertThat(second.messageId()).isEqualTo("message-2");
         assertThat(captor.getAllValues()).allSatisfy(request -> {
             assertThat(request.queueUrl()).isEqualTo(properties.queueUrl());
             assertThat(request.messageBody()).isEqualTo(payload);

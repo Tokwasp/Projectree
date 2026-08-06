@@ -1,6 +1,7 @@
 package com.ssafy.projectree.domain.meeting.outbox.publisher;
 
 import com.ssafy.projectree.domain.meeting.outbox.dto.ClaimedCommandOutbox;
+import com.ssafy.projectree.domain.meeting.outbox.sender.CommandSendResult;
 import com.ssafy.projectree.domain.meeting.outbox.sender.MeetingAnalysisCommandSender;
 import com.ssafy.projectree.domain.meeting.outbox.service.CommandOutboxClaimService;
 import com.ssafy.projectree.domain.meeting.outbox.service.CommandPublishFailureHandler;
@@ -33,6 +34,12 @@ public class CommandOutboxPublisher {
             log.debug("No meeting analysis commands available for publishing");
             return 0;
         }
+        log.info(
+                "[AnalysisFlow] COMMAND_OUTBOX_CLAIMED. count={}, outboxIds={}, commandIds={}",
+                claimedCommands.size(),
+                claimedCommands.stream().map(ClaimedCommandOutbox::outboxId).toList(),
+                claimedCommands.stream().map(ClaimedCommandOutbox::commandId).toList()
+        );
 
         for (ClaimedCommandOutbox claimed : claimedCommands) {
             publishOne(claimed);
@@ -41,13 +48,23 @@ public class CommandOutboxPublisher {
     }
 
     private void publishOne(ClaimedCommandOutbox claimed) {
+        CommandSendResult sendResult;
         try {
-            sender.send(claimed.commandId(), claimed.payload());
+            sendResult = sender.send(claimed.commandId(), claimed.payload());
+            log.info(
+                    "[AnalysisFlow] COMMAND_SQS_PUBLISHED. commandId={}, outboxId={}, sqsMessageId={}, attemptCount={}",
+                    claimed.commandId(),
+                    claimed.outboxId(),
+                    sendResult.messageId(),
+                    claimed.attemptCount()
+            );
         } catch (RuntimeException failure) {
             log.warn(
-                    "Meeting analysis command publish failed. outboxId={}, attemptCount={}",
+                    "[AnalysisFlow] COMMAND_SQS_PUBLISH_FAILED. commandId={}, outboxId={}, attemptCount={}, exceptionType={}",
+                    claimed.commandId(),
                     claimed.outboxId(),
-                    claimed.attemptCount()
+                    claimed.attemptCount(),
+                    failure.getClass().getSimpleName()
             );
             try {
                 failureHandler.handle(claimed, failure);

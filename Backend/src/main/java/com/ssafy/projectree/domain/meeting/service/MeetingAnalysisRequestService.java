@@ -14,6 +14,7 @@ import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.global.exception.CommonErrorCode;
 import com.ssafy.projectree.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -25,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class MeetingAnalysisRequestService {
 
@@ -83,15 +85,24 @@ public class MeetingAnalysisRequestService {
         );
 
         String payload = serialize(command);
-        outboxRepository.saveAndFlush(
-                MeetingAnalysisCommandOutbox.pending(
-                        commandId,
-                        meeting,
-                        commandType,
-                        payload,
-                        memberId,
-                        LocalDateTime.now(clock)
-                )
+        MeetingAnalysisCommandOutbox outbox = MeetingAnalysisCommandOutbox.pending(
+                commandId,
+                meeting,
+                commandType,
+                payload,
+                memberId,
+                LocalDateTime.now(clock)
+        );
+        outboxRepository.saveAndFlush(outbox);
+        log.info(
+                "[AnalysisFlow] ANALYSIS_COMMAND_STAGED. commandId={}, outboxId={}, projectId={}, meetingId={}, requestedByMemberId={}, generateSummary={}, generateNodes={}",
+                commandId,
+                outbox.getId(),
+                projectId,
+                meeting.getId(),
+                memberId,
+                generateSummary,
+                generateNodes
         );
 
         return MeetingAnalysisRequestResponse.of(meeting, commandId);
