@@ -32,6 +32,11 @@ import {
 
 const PLANET_TYPES = ["category", "decision", "task", "issue"] as const;
 
+/** 라벨 기본 z-index 범위 — 카메라에 가까운 라벨이 위로 온다. */
+const LABEL_Z_RANGE: [number, number] = [10, 0];
+/** 마우스를 올린 라벨은 거리와 무관하게 위로. 필터·범례 패널(20)보다는 낮아야 한다. */
+const HOVERED_LABEL_Z = 15;
+
 interface TreeSceneProps {
   /** 기본(3D) 배치 */
   flat: FlatTree;
@@ -55,9 +60,7 @@ export function TreeScene({
   const runtime = useTreeRuntime(flat);
   // 노드를 지날 때만 바뀌므로 state로 둬도 리렌더가 잦지 않다. 라벨까지 같이 강조해야 해서
   // PlanetNodes 안에 두지 않고 여기서 들고 있는다
-  const [hoveredDecisionId, setHoveredDecisionId] = useState<string | null>(
-    null,
-  );
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   // 목표만 바꾸면 스프링이 새 배치까지 끌고 간다 — 순간이동이 아니라 이동 모션이 된다
   useEffect(() => {
@@ -66,15 +69,17 @@ export function TreeScene({
 
   /**
    * 라벨은 개당 DOM 한 덩이라 노드 수만큼 붙이면 프레임이 무너진다.
-   * 상위 타입만 항상 띄우고, 작업·이슈는 선택된 가지에서만 붙인다.
+   * 상위 타입만 항상 띄우고, 작업·이슈는 선택된 가지이거나 마우스를 올렸을 때만 붙인다.
    */
   const labelNodes = useMemo(
     () =>
       flat.order.filter(
         (node) =>
-          ALWAYS_LABELED_TYPES.includes(node.type) || highlightIds?.has(node.id),
+          ALWAYS_LABELED_TYPES.includes(node.type) ||
+          highlightIds?.has(node.id) ||
+          node.id === hoveredNodeId,
       ),
-    [flat, highlightIds],
+    [flat, highlightIds, hoveredNodeId],
   );
 
   return (
@@ -90,6 +95,7 @@ export function TreeScene({
         runtime={runtime}
         controlsRef={controlsRef}
         highlightIds={highlightIds}
+        onHover={setHoveredNodeId}
       />
       {PLANET_TYPES.map((type) =>
         flat.byType[type].length > 0 ? (
@@ -98,11 +104,13 @@ export function TreeScene({
             nodes={flat.byType[type]}
             runtime={runtime}
             highlightIds={highlightIds}
-            // 클릭 대상은 결정 노드뿐이다 — 나머지에 핸들러를 달면 포인터가 움직일 때마다
-            // 전체 인스턴스를 레이캐스팅하게 된다
+            // 클릭 대상은 결정 노드뿐이다
             onSelect={type === "decision" ? onSelectDecision : undefined}
-            hoveredId={type === "decision" ? hoveredDecisionId : null}
-            onHover={type === "decision" ? setHoveredDecisionId : undefined}
+            // hover는 전 타입에서 받는다 — 라벨을 펼치는 신호라서.
+            // 포인터가 움직일 때마다 타입별 인스턴스를 레이캐스팅하게 되지만,
+            // 인스턴스당 경계구 판정이라 삼각형 검사까지 가는 건 실제로 맞은 하나뿐이다
+            hoveredId={hoveredNodeId}
+            onHover={setHoveredNodeId}
           />
         ) : null,
       )}
@@ -112,7 +120,7 @@ export function TreeScene({
           node={node}
           runtime={runtime}
           highlightIds={highlightIds}
-          hovered={node.id === hoveredDecisionId}
+          hovered={node.id === hoveredNodeId}
         />
       ))}
     </>
@@ -296,6 +304,8 @@ function PlanetNodes({
     () => (hoveredId ? nodes.findIndex((node) => node.id === hoveredId) : -1),
     [nodes, hoveredId],
   );
+  // 키우고 밝히는 건 "누를 수 있다"는 신호다 — 클릭 대상이 아닌 타입은 라벨만 펼친다
+  const emphasizedIndex = onSelect ? hoveredIndex : -1;
 
   useEffect(() => {
     const attr = brightnessRef.current;
@@ -304,7 +314,7 @@ function PlanetNodes({
     const array = attr.array as Float32Array;
     for (let i = 0; i < nodes.length; i++) {
       array[i] =
-        i === hoveredIndex
+        i === emphasizedIndex
           ? SELECTION_BRIGHTNESS.HOVER
           : !highlightIds
             ? 1
@@ -313,7 +323,7 @@ function PlanetNodes({
               : SELECTION_BRIGHTNESS.DIM;
     }
     attr.needsUpdate = true;
-  }, [nodes, highlightIds, hoveredIndex]);
+  }, [nodes, highlightIds, emphasizedIndex]);
 
   /**
    * 클릭 판정용 경계구. three는 이 구를 한 번 계산해 캐시하는데 인스턴스는 매 프레임
@@ -325,14 +335,14 @@ function PlanetNodes({
    */
   useEffect(() => {
     const mesh = meshRef.current;
-    if (!mesh || !onSelect) return;
+    if (!mesh) return;
     mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
 
     // 메시가 교체되면 onPointerOut이 오지 않아 커서가 손 모양으로 남는다
     return () => {
       document.body.style.cursor = "auto";
     };
-  }, [onSelect, nodes]);
+  }, [nodes]);
 
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
     const press = pressPointRef.current;
@@ -356,7 +366,7 @@ function PlanetNodes({
         if (!state) continue;
         dummy.position.copy(state.current);
         // dummy를 공유하므로 매번 다시 써야 한다 — 안 그러면 배율이 다음 노드로 번진다
-        dummy.scale.setScalar(i === hoveredIndex ? HOVER_SCALE : 1);
+        dummy.scale.setScalar(i === emphasizedIndex ? HOVER_SCALE : 1);
         dummy.updateMatrix();
         mesh.setMatrixAt(i, dummy.matrix);
       }
@@ -386,22 +396,29 @@ function PlanetNodes({
       // move로 계속 따라가야 한다
       onPointerMove={
         onHover
-          ? (event) =>
-              event.instanceId !== undefined &&
-              onHover(nodes[event.instanceId].id)
+          ? (event) => {
+              if (event.instanceId === undefined) return;
+              // 타입마다 메시가 따로라 뒤에 겹친 노드까지 핸들러가 돈다. stopPropagation으로
+              // 막으면 R3F가 뒤쪽 객체에 out/leave를 쏴버려서(루트 드래그 판이 그걸 맞으면
+              // 드래그가 끊긴다) 대신 가장 가까운 교차일 때만 hover를 잡는다
+              const nearest = event.intersections[0];
+              if (
+                nearest?.object !== event.object ||
+                nearest.instanceId !== event.instanceId
+              ) {
+                return;
+              }
+              onHover(nodes[event.instanceId].id);
+            }
           : undefined
       }
       onPointerOver={
         onSelect ? () => (document.body.style.cursor = "pointer") : undefined
       }
-      onPointerOut={
-        onSelect
-          ? () => {
-              document.body.style.cursor = "auto";
-              onHover?.(null);
-            }
-          : undefined
-      }
+      onPointerOut={() => {
+        if (onSelect) document.body.style.cursor = "auto";
+        onHover?.(null);
+      }}
     >
       <sphereGeometry args={[visual.radius, 32, 32]}>
         <instancedBufferAttribute
@@ -426,11 +443,13 @@ function RootNode({
   runtime,
   controlsRef,
   highlightIds,
+  onHover,
 }: {
   id: string;
   runtime: TreeRuntime;
   controlsRef: OrbitControlsRef;
   highlightIds: Set<string> | null;
+  onHover: (id: string | null) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
@@ -494,7 +513,17 @@ function RootNode({
 
   return (
     <>
-      <mesh ref={meshRef} onPointerDown={handlePointerDown}>
+      <mesh
+        ref={meshRef}
+        onPointerDown={handlePointerDown}
+        // 행성 메시와 같은 규칙 — 가장 가까운 교차일 때만 hover를 잡는다.
+        // 드래그 중에는 좌표를 받는 판이 이 구 바로 뒤에 있으므로 절대 막지 않는다
+        onPointerMove={(event) => {
+          if (event.intersections[0]?.object !== event.object) return;
+          onHover(id);
+        }}
+        onPointerOut={() => onHover(null)}
+      >
         <sphereGeometry args={[visual.radius, 48, 48]} />
         <shaderMaterial
           ref={materialRef}
@@ -539,6 +568,8 @@ function NodeLabel({
   const groupRef = useRef<THREE.Group>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const lastOpacityRef = useRef(-1);
+  // hover로 z-index를 올리기 전 값. 뗄 때 drei가 쓰던 값으로 돌려놔야 한다
+  const restoreZRef = useRef<string | null>(null);
   const visual = NODE_VISUALS[node.type];
   const emphasized = (highlightIds?.has(node.id) ?? false) || hovered;
   // 마우스를 올린 노드는 어둡게 깔린 상태에서도 제 밝기로 올라와야 한다
@@ -568,9 +599,35 @@ function NodeLabel({
       wrapper.style.opacity = opacity.toString();
       wrapper.style.display = opacity < 0.02 ? "none" : "block";
     }
+
+    // drei는 라벨이 화면에서 움직였을 때만 z-index를 다시 쓴다(Html.js). 카메라가 멈춘 채
+    // 마우스만 올리면 zIndexRange를 바꿔도 반영되지 않으므로 여기서 직접 올린다
+    const layer = wrapper.parentElement;
+    if (layer) {
+      if (hovered && restoreZRef.current === null) {
+        restoreZRef.current = layer.style.zIndex;
+        layer.style.zIndex = String(HOVERED_LABEL_Z);
+      } else if (!hovered && restoreZRef.current !== null) {
+        layer.style.zIndex = restoreZRef.current;
+        restoreZRef.current = null;
+      }
+    }
   }, 1);
 
   const glowColor = visual.glowColor;
+  // 제목이 길면 라벨이 여러 줄로 부풀어 트리를 가린다 — 평소엔 한 줄로 자르고,
+  // 마우스를 올린 노드에서만 전체를 펼친다
+  const titleClamp = hovered
+    ? ({
+        whiteSpace: "normal",
+        wordBreak: "keep-all",
+        overflowWrap: "break-word",
+      } as const)
+    : ({
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+      } as const);
 
   return (
     <group ref={groupRef}>
@@ -578,7 +635,9 @@ function NodeLabel({
         center
         pointerEvents="none"
         style={{ pointerEvents: "none" }}
-        zIndexRange={[10, 0]}
+        zIndexRange={
+          hovered ? [HOVERED_LABEL_Z, HOVERED_LABEL_Z] : LABEL_Z_RANGE
+        }
       >
         <div
           ref={wrapperRef}
@@ -606,13 +665,14 @@ function NodeLabel({
             style={{
               display: "inline-block",
               width: "max-content",
-              maxWidth: 160,
+              maxWidth: hovered ? 260 : 160,
               padding: "3px 9px",
               borderRadius: 999,
               // backdrop-filter는 요소마다 뒤 배경을 다시 샘플링해 블러한다.
               // 캔버스 위에서 움직이는 라벨 100개에 걸면 합성 비용이 감당이 안 된다 —
               // 배경을 더 불투명하게 해서 같은 가독성을 얻는다
-              background: "rgba(6, 8, 20, 0.82)",
+              // 올린 라벨은 완전 불투명 — 밑에 깔린 라벨이 비쳐 보이면 위로 올린 의미가 없다
+              background: hovered ? "rgb(6, 8, 20)" : "rgba(6, 8, 20, 0.82)",
               border: `1px solid ${glowColor}${emphasized ? "cc" : "66"}`,
               boxShadow: emphasized ? `0 0 10px ${glowColor}55` : undefined,
               color: "#f2f4ff",
@@ -621,9 +681,7 @@ function NodeLabel({
               letterSpacing: "0.01em",
               lineHeight: 1.35,
               textAlign: "center",
-              whiteSpace: "normal",
-              wordBreak: "keep-all",
-              overflowWrap: "break-word",
+              ...titleClamp,
             }}
           >
             {node.title}
