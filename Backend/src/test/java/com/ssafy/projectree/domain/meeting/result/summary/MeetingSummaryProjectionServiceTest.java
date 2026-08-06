@@ -44,12 +44,13 @@ class MeetingSummaryProjectionServiceTest {
         );
         given(repository.findByMeetingId(2)).willReturn(Optional.empty());
 
-        service.apply(event, payload);
+        SummaryProjectionApplyResult result = service.apply(event, payload);
 
         ArgumentCaptor<MeetingSummaryProjection> captor = ArgumentCaptor.forClass(
                 MeetingSummaryProjection.class
         );
         verify(repository).saveAndFlush(captor.capture());
+        assertThat(result).isEqualTo(SummaryProjectionApplyResult.CREATED);
         assertThat(captor.getValue().getSyncedAt()).isEqualTo(syncedAt);
         assertThat(captor.getValue().getOccurredAt()).isEqualTo(event.occurredAt());
     }

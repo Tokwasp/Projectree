@@ -17,8 +17,10 @@ import com.ssafy.projectree.domain.meeting.result.summary.MeetingSummaryProjecti
 import com.ssafy.projectree.domain.meeting.result.summary.MeetingSummaryReadyPayload;
 import com.ssafy.projectree.domain.meeting.result.summary.MeetingSummaryReadyPayloadParser;
 import com.ssafy.projectree.domain.meeting.result.summary.MeetingSummaryReadyPayloadValidator;
+import com.ssafy.projectree.domain.meeting.result.summary.SummaryProjectionApplyResult;
 import com.ssafy.projectree.domain.meeting.result.validation.LockedAnalysisEventReferenceValidator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -28,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AnalysisSummaryEventHandler implements AnalysisResultEventHandler {
 
@@ -58,11 +61,25 @@ public class AnalysisSummaryEventHandler implements AnalysisResultEventHandler {
         resultInboxService.registerProcessed(event);
 
         AnalysisTaskCompletionResult completion = completeSummary(meeting);
+        SummaryProjectionApplyResult projectionResult = null;
         if (completion != AnalysisTaskCompletionResult.ALREADY_FAILED) {
-            projectionService.apply(event, payload);
+            projectionResult = projectionService.apply(event, payload);
         }
         if (completion == AnalysisTaskCompletionResult.APPLIED) {
             notificationOutboxRepository.saveAndFlush(createNotification(command, meeting, event, payload));
+        }
+        if (projectionResult != null) {
+            log.info(
+                    "[AnalysisFlow] SUMMARY_PROJECTION_APPLIED. eventId={}, commandId={}, projectId={}, meetingId={}, summaryVersion={}, status={}, completionResult={}, projectionResult={}",
+                    event.eventId(),
+                    event.commandId(),
+                    event.projectId(),
+                    event.meetingId(),
+                    payload.summaryVersion(),
+                    payload.status(),
+                    completion,
+                    projectionResult
+            );
         }
     }
 

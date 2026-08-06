@@ -48,7 +48,7 @@ public class AnalysisResultConsumer {
         }
 
         log.info(
-                "Received analysis result messages. count={}, messageIds={}",
+                "[AnalysisFlow] RESULT_SQS_RECEIVED. count={}, messageIds={}",
                 messages.size(),
                 messages.stream().map(Message::messageId).toList()
         );
@@ -58,9 +58,20 @@ public class AnalysisResultConsumer {
     }
 
     private void consume(Message message) {
+        long startedAt = System.nanoTime();
         try {
             AnalysisResultEventEnvelope event = eventValidator.validateEnvelope(
                     parser.parse(message.body())
+            );
+            log.info(
+                    "[AnalysisFlow] RESULT_PROCESSING_STARTED. messageId={}, approximateReceiveCount={}, eventId={}, eventType={}, commandId={}, projectId={}, meetingId={}",
+                    message.messageId(),
+                    approximateReceiveCount(message),
+                    event.eventId(),
+                    event.eventType(),
+                    event.commandId(),
+                    event.projectId(),
+                    event.meetingId()
             );
             AnalysisResultProcessingOutcome outcome = processor.process(event);
             if (outcome != AnalysisResultProcessingOutcome.PROCESSED
@@ -68,36 +79,59 @@ public class AnalysisResultConsumer {
                 throw new IllegalStateException("Analysis result processor returned an unsupported outcome");
             }
 
-            sqsGateway.deleteMessage(message);
+            try {
+                sqsGateway.deleteMessage(message);
+            } catch (RuntimeException exception) {
+                log.error(
+                        "[AnalysisFlow] RESULT_ACK_FAILED. messageId={}, approximateReceiveCount={}, eventId={}, eventType={}, commandId={}, projectId={}, meetingId={}, outcome={}, elapsedMs={}, exceptionType={}",
+                        message.messageId(),
+                        approximateReceiveCount(message),
+                        event.eventId(),
+                        event.eventType(),
+                        event.commandId(),
+                        event.projectId(),
+                        event.meetingId(),
+                        outcome,
+                        elapsedMillis(startedAt),
+                        exception.getClass().getSimpleName(),
+                        exception
+                );
+                return;
+            }
             log.info(
-                    "Acknowledged analysis result message. messageId={}, eventId={}, eventType={}, projectId={}, meetingId={}, commandId={}, outcome={}",
+                    "[AnalysisFlow] RESULT_ACKNOWLEDGED. messageId={}, approximateReceiveCount={}, eventId={}, eventType={}, commandId={}, projectId={}, meetingId={}, outcome={}, elapsedMs={}",
                     message.messageId(),
+                    approximateReceiveCount(message),
                     event.eventId(),
                     event.eventType(),
+                    event.commandId(),
                     event.projectId(),
                     event.meetingId(),
-                    event.commandId(),
-                    outcome
+                    outcome,
+                    elapsedMillis(startedAt)
             );
         } catch (AnalysisResultContractException exception) {
             log.warn(
-                    "Analysis result contract violation; message will not be acknowledged. messageId={}, approximateReceiveCount={}",
+                    "[AnalysisFlow] RESULT_CONTRACT_VIOLATION. messageId={}, approximateReceiveCount={}, elapsedMs={}",
                     message.messageId(),
                     approximateReceiveCount(message),
+                    elapsedMillis(startedAt),
                     exception
             );
         } catch (AnalysisResultRetryableException | DataAccessException exception) {
             log.warn(
-                    "Retryable analysis result processing failure; message will not be acknowledged. messageId={}, approximateReceiveCount={}",
+                    "[AnalysisFlow] RESULT_PROCESSING_RETRYABLE_FAILED. messageId={}, approximateReceiveCount={}, elapsedMs={}",
                     message.messageId(),
                     approximateReceiveCount(message),
+                    elapsedMillis(startedAt),
                     exception
             );
         } catch (RuntimeException exception) {
             log.error(
-                    "Unexpected analysis result processing failure; message will not be acknowledged. messageId={}, approximateReceiveCount={}",
+                    "[AnalysisFlow] RESULT_PROCESSING_UNEXPECTED_FAILED. messageId={}, approximateReceiveCount={}, elapsedMs={}",
                     message.messageId(),
                     approximateReceiveCount(message),
+                    elapsedMillis(startedAt),
                     exception
             );
         }
@@ -105,5 +139,9 @@ public class AnalysisResultConsumer {
 
     private String approximateReceiveCount(Message message) {
         return message.attributes().getOrDefault("ApproximateReceiveCount", "unknown");
+    }
+
+    private long elapsedMillis(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000;
     }
 }

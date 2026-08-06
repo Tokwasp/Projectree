@@ -19,7 +19,7 @@ public class MeetingSummaryProjectionService {
     private final Clock clock;
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void apply(
+    public SummaryProjectionApplyResult apply(
             AnalysisResultEventEnvelope event,
             MeetingSummaryReadyPayload payload
     ) {
@@ -35,13 +35,16 @@ public class MeetingSummaryProjectionService {
                     event.occurredAt(),
                     syncedAt
             ));
-            return;
+            return SummaryProjectionApplyResult.CREATED;
         }
-        projection.applyIfNewer(
+        boolean updated = projection.applyIfNewer(
                 event.commandId(),
                 payload,
                 event.occurredAt(),
                 syncedAt
         );
+        return updated
+                ? SummaryProjectionApplyResult.UPDATED
+                : SummaryProjectionApplyResult.IGNORED_OLDER_VERSION;
     }
 }

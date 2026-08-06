@@ -6,15 +6,18 @@ import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChange
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayloadParser;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayloadValidator;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.AnalysisGraphProjectionApplier;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.GraphProjectionApplyResult;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.ProjectGraphSnapshot;
 import com.ssafy.projectree.domain.meeting.result.graph.storage.GraphSnapshotLoader;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @ConditionalOnBean(GraphSnapshotLoader.class)
 public class AnalysisGraphEventHandler implements AnalysisResultEventHandler {
@@ -35,6 +38,19 @@ public class AnalysisGraphEventHandler implements AnalysisResultEventHandler {
         ProjectGraphChangedPayload payload = payloadParser.parse(event.payload());
         payloadValidator.validate(payload);
         ProjectGraphSnapshot snapshot = snapshotLoader.load(event, payload);
-        projectionApplier.apply(event, payload, snapshot);
+        GraphProjectionApplyResult result = projectionApplier.apply(event, payload, snapshot);
+        log.info(
+                "[AnalysisFlow] GRAPH_PROJECTION_APPLIED. eventId={}, commandId={}, projectId={}, meetingId={}, requestedGraphVersion={}, currentGraphVersion={}, projectionUpdated={}, completionResult={}, nodeCount={}, evidenceCount={}",
+                event.eventId(),
+                event.commandId(),
+                event.projectId(),
+                event.meetingId(),
+                result.requestedGraphVersion(),
+                result.currentGraphVersion(),
+                result.projectionUpdated(),
+                result.completionResult(),
+                snapshot.nodes().size(),
+                snapshot.evidences().size()
+        );
     }
 }

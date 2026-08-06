@@ -8,6 +8,7 @@ import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChange
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayloadParser;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayloadValidator;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.AnalysisGraphProjectionApplier;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.GraphProjectionApplyResult;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.ProjectGraphSnapshot;
 import com.ssafy.projectree.domain.meeting.result.graph.storage.GraphSnapshotLoader;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.doThrow;
@@ -49,6 +51,15 @@ class AnalysisGraphEventHandlerTest {
         ProjectGraphChangedPayload payload = payload();
         when(payloadParser.parse(event.payload())).thenReturn(payload);
         when(snapshotLoader.load(event, payload)).thenReturn(snapshot);
+        when(snapshot.nodes()).thenReturn(List.of());
+        when(snapshot.evidences()).thenReturn(List.of());
+        when(projectionApplier.apply(event, payload, snapshot))
+                .thenReturn(new GraphProjectionApplyResult(
+                        com.ssafy.projectree.domain.meeting.entity.AnalysisTaskCompletionResult.APPLIED,
+                        true,
+                        1,
+                        1
+                ));
 
         handler.handle(event);
 

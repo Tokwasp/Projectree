@@ -50,6 +50,10 @@ class GraphSnapshotLoaderTest {
         given(downloader.download(fixture.payload().snapshotRef())).willReturn(downloaded);
         given(parser.parse(downloaded.bytes())).willReturn(parsed);
         given(validator.validate(fixture.event(), fixture.payload(), parsed)).willReturn(normalized);
+        given(normalized.graphVersion()).willReturn(1L);
+        given(normalized.nodes()).willReturn(List.of());
+        given(normalized.evidences()).willReturn(List.of());
+        given(normalized.mergeRecords()).willReturn(List.of());
 
         assertThat(loader.load(fixture.event(), fixture.payload())).isSameAs(normalized);
 
