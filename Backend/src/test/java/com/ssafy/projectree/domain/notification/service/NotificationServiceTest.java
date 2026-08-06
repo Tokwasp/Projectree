@@ -9,6 +9,7 @@ import com.ssafy.projectree.domain.notification.entity.Notification;
 import com.ssafy.projectree.domain.notification.entity.NotificationType;
 import com.ssafy.projectree.domain.notification.repository.EmitterRepository;
 import com.ssafy.projectree.domain.notification.repository.NotificationRepository;
+import com.ssafy.projectree.global.config.notification.NotificationProperties;
 import com.ssafy.projectree.global.exception.CommonErrorCode;
 import com.ssafy.projectree.global.exception.CustomException;
 import jakarta.persistence.EntityManager;
@@ -31,7 +32,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.ArgumentCaptor.forClass;
 
 class NotificationServiceTest extends IntegrationTestSupport {
@@ -248,6 +253,75 @@ class NotificationServiceTest extends IntegrationTestSupport {
         then(notificationPublisher).should(never()).publish(any(NotificationMessage.class));
     }
 
+    @DisplayName("내부 호출은 회의록 생성 알림을 저장한 뒤 기존 Publisher로 발행한다.")
+    @Test
+    void createAndPublish() {
+        NotificationRepository repository = mock(NotificationRepository.class);
+        MemberRepository members = mock(MemberRepository.class);
+        NotificationPublisher publisher = mock(NotificationPublisher.class);
+        NotificationService service = unitService(repository, members, publisher);
+        int receiverId = 22;
+        when(members.existsById(receiverId)).thenReturn(true);
+        when(repository.save(any(Notification.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.createAndPublish(
+                NotificationType.MEETING_RECORD_CREATED,
+                receiverId
+        );
+
+        var notificationCaptor = forClass(Notification.class);
+        verify(repository).save(notificationCaptor.capture());
+        assertThat(notificationCaptor.getValue())
+                .extracting(Notification::getType, Notification::getReceiverId)
+                .containsExactly(
+                        NotificationType.MEETING_RECORD_CREATED,
+                        receiverId
+                );
+        verify(publisher).publish(any(NotificationMessage.class));
+    }
+
+    @DisplayName("내부 호출 수신자가 없으면 저장하거나 발행하지 않는다.")
+    @Test
+    void createAndPublishWithUnknownReceiver() {
+        NotificationRepository repository = mock(NotificationRepository.class);
+        MemberRepository members = mock(MemberRepository.class);
+        NotificationPublisher publisher = mock(NotificationPublisher.class);
+        NotificationService service = unitService(repository, members, publisher);
+        when(members.existsById(UNKNOWN_MEMBER_ID)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.createAndPublish(
+                NotificationType.MEETING_RECORD_CREATED,
+                UNKNOWN_MEMBER_ID
+        ))
+                .isInstanceOf(CustomException.class)
+                .hasMessage(CommonErrorCode.MEMBER_NOT_FOUND.getMessage());
+
+        verify(repository, never()).save(any(Notification.class));
+        verify(publisher, never()).publish(any(NotificationMessage.class));
+    }
+
+    @DisplayName("내부 호출에서 알림 저장이 실패하면 Publisher를 호출하지 않는다.")
+    @Test
+    void createAndPublishDoesNotPublishWhenSaveFails() {
+        NotificationRepository repository = mock(NotificationRepository.class);
+        MemberRepository members = mock(MemberRepository.class);
+        NotificationPublisher publisher = mock(NotificationPublisher.class);
+        NotificationService service = unitService(repository, members, publisher);
+        int receiverId = 22;
+        when(members.existsById(receiverId)).thenReturn(true);
+        doThrow(new RuntimeException("save failed"))
+                .when(repository)
+                .save(any(Notification.class));
+
+        assertThatThrownBy(() -> service.createAndPublish(
+                NotificationType.MEETING_RECORD_CREATED,
+                receiverId
+        )).isInstanceOf(RuntimeException.class);
+
+        verify(publisher, never()).publish(any(NotificationMessage.class));
+    }
+
     private Member saveMember() {
         return memberRepository.saveAndFlush(Member.builder()
                 .email("receiver@example.com")
@@ -265,5 +339,20 @@ class NotificationServiceTest extends IntegrationTestSupport {
                 .type(type)
                 .receiverId(receiverId)
                 .build();
+    }
+
+    private NotificationService unitService(
+            NotificationRepository repository,
+            MemberRepository members,
+            NotificationPublisher publisher
+    ) {
+        return new NotificationService(
+                repository,
+                members,
+                mock(EmitterRepository.class),
+                mock(NotificationSender.class),
+                publisher,
+                mock(NotificationProperties.class)
+        );
     }
 }

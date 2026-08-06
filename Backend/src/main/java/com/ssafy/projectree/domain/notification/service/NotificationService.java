@@ -4,6 +4,7 @@ import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.notification.controller.request.NotificationCallbackRequest;
 import com.ssafy.projectree.domain.notification.dto.NotificationMessage;
 import com.ssafy.projectree.domain.notification.entity.Notification;
+import com.ssafy.projectree.domain.notification.entity.NotificationType;
 import com.ssafy.projectree.domain.notification.repository.EmitterRepository;
 import com.ssafy.projectree.domain.notification.repository.NotificationRepository;
 import com.ssafy.projectree.global.config.notification.NotificationProperties;
@@ -11,6 +12,7 @@ import com.ssafy.projectree.global.exception.CommonErrorCode;
 import com.ssafy.projectree.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -49,11 +51,22 @@ public class NotificationService {
 
     @Transactional
     public void handleCallback(NotificationCallbackRequest request) {
-        if (notExistMemberBy(request.getReceiverId())) {
+        createAndPublishInternal(request.getType(), request.getReceiverId());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createAndPublish(NotificationType type, int receiverId) {
+        createAndPublishInternal(type, receiverId);
+    }
+
+    private void createAndPublishInternal(NotificationType type, int receiverId) {
+        if (notExistMemberBy(receiverId)) {
             throw new CustomException(CommonErrorCode.MEMBER_NOT_FOUND);
         }
 
-        Notification notification = notificationRepository.save(request.toEntity());
+        Notification notification = notificationRepository.save(
+                Notification.of(type, receiverId)
+        );
         notificationPublisher.publish(NotificationMessage.from(notification));
     }
 

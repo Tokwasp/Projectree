@@ -97,6 +97,10 @@ app:
       max-number-of-messages: ${MEETING_ANALYSIS_RESULT_MAX_NUMBER_OF_MESSAGES:10}
       polling-delay-ms: ${MEETING_ANALYSIS_RESULT_POLLING_DELAY_MS:1000}
       region: ${AWS_REGION:ap-northeast-2}
+  meeting-record:
+    callback:
+      # Python 분석 서버와 공유하는 비밀. 비어 있으면 Callback 인증은 항상 실패한다.
+      api-key: ${MEETING_RECORD_CALLBACK_API_KEY:}
   # 초대 메일 스위퍼와 알림 하트비트가 함께 이 스위치를 쓴다.
   scheduling:
     enabled: true
