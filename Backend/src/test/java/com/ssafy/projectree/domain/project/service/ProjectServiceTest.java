@@ -12,6 +12,7 @@ import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
+import com.ssafy.projectree.domain.project.entity.ProjectMemberErrorCode;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.exception.CustomException;
@@ -495,7 +496,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
                 projectService.getProjectHome(PageRequest.of(0, 10), projectId, outsider.getId()))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
-                .isEqualTo(MeetingReviewErrorCode.IS_NOT_PROJECT_MEMBER);
+                .isEqualTo(ProjectMemberErrorCode.IS_NOT_PROJECT_MEMBER);
     }
 
     @DisplayName("회의 리뷰가 없는 프로젝트의 홈을 조회하면 빈 홈이 반환된다.")
