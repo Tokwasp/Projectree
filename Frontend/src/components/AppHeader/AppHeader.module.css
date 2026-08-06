@@ -93,7 +93,7 @@
   right: 0;
   z-index: 20;
   display: flex;
-  min-width: 108px;
+  min-width: 160px;
   flex-direction: column;
   padding: var(--space-1);
   border: 0;
@@ -130,6 +130,18 @@
 
 .logoutButton:hover {
   background: color-mix(in srgb, var(--color-error) 7%, transparent);
+}
+
+.logoutButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.logoutError {
+  margin: var(--space-1) var(--space-2);
+  color: var(--color-error);
+  font-size: 10px;
+  line-height: var(--leading-normal);
 }
 
 @media (max-width: 900px) {
