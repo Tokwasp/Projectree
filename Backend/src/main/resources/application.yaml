@@ -141,4 +141,7 @@ logging:
     org.hibernate.SQL: OFF
     org.hibernate.orm.jdbc.bind: OFF
     org.hibernate.type.descriptor.sql.BasicBinder: OFF
-    com.ssafy.projectree.domain.meeting.result.consumer: INFO
+    com.ssafy.projectree.domain.meeting.result: INFO
+    com.ssafy.projectree.domain.meeting.record.service.MeetingRecordCallbackService: INFO
+    com.ssafy.projectree.domain.meeting.service.MeetingAnalysisRequestService: INFO
+    com.ssafy.projectree.domain.meeting.outbox: INFO
