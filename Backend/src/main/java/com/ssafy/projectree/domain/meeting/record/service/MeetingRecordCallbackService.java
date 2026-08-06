@@ -46,6 +46,12 @@ public class MeetingRecordCallbackService {
     ) {
         validateSchemaVersion(request.callbackSchemaVersion());
         String commandId = request.commandId().toString();
+        log.info(
+                "[AnalysisFlow] RECORD_CALLBACK_RECEIVED. commandId={}, meetingId={}, callbackSchemaVersion={}",
+                commandId,
+                meetingId,
+                request.callbackSchemaVersion()
+        );
 
         // 같은 Meeting에 대한 동시 Callback을 직렬화한다.
         // 두 요청이 동시에 "회의록 없음"으로 판단하는 race를 막는 것이 목적이다.
@@ -81,6 +87,13 @@ public class MeetingRecordCallbackService {
                 new MeetingRecordCreatedNotificationEvent(
                         command.getRequestedByMemberId()
                 )
+        );
+        log.info(
+                "[AnalysisFlow] RECORD_CALLBACK_SAVED. commandId={}, meetingId={}, meetingRecordId={}, requestedByMemberId={}",
+                commandId,
+                meetingId,
+                created.getId(),
+                command.getRequestedByMemberId()
         );
 
         return MeetingRecordCallbackResponse.of(created, meetingId, false);
@@ -146,7 +159,8 @@ public class MeetingRecordCallbackService {
         }
 
         log.info(
-                "동일 commandId 회의록 Callback 재시도를 중복으로 처리한다. meetingId={}, meetingRecordId={}",
+                "[AnalysisFlow] RECORD_CALLBACK_DUPLICATE. commandId={}, meetingId={}, meetingRecordId={}",
+                commandId,
                 meetingId,
                 existing.getId()
         );
