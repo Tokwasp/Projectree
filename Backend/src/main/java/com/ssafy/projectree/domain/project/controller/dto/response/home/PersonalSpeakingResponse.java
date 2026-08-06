@@ -1,4 +1,4 @@
-package com.ssafy.projectree.domain.meetingreview.dto.response;
+package com.ssafy.projectree.domain.project.controller.dto.response.home;
 
 import lombok.Builder;
 import lombok.Getter;

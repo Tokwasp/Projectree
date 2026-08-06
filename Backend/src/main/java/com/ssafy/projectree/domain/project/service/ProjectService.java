@@ -1,19 +1,21 @@
 package com.ssafy.projectree.domain.project.service;
 
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
-import com.ssafy.projectree.domain.meetingreview.dto.response.MyMeetingReviewResponse;
-import com.ssafy.projectree.domain.meetingreview.dto.response.PersonalSpeakingResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.MyMeetingReviewResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.PersonalSpeakingResponse;
 import com.ssafy.projectree.domain.meetingreview.exception.MeetingReviewErrorCode;
 import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
-import com.ssafy.projectree.domain.project.controller.dto.response.ProjectHomeResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectDetailResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectHomeResponse;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
+import com.ssafy.projectree.domain.project.entity.ProjectMemberErrorCode;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
@@ -100,8 +102,12 @@ public class ProjectService {
 
     public ProjectHomeResponse getProjectHome(Pageable pageable, int projectId, int memberId) {
         if (isNotProjectMember(projectId, memberId)) {
-            throw new CustomException(MeetingReviewErrorCode.IS_NOT_PROJECT_MEMBER);
+            throw new CustomException(ProjectMemberErrorCode.IS_NOT_PROJECT_MEMBER);
         }
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
+        ProjectDetailResponse projectDetail = ProjectDetailResponse.of(project);
 
         List<MeetingReview> recentMeetingReviews = meetingReviewRepository.getRecentReview(projectId, memberId)
                 .map(MeetingReview::getRoomName)
@@ -109,7 +115,7 @@ public class ProjectService {
                 .orElseGet(List::of);
 
         if (isRecentReviewNotExist(recentMeetingReviews)) {
-            return ProjectHomeResponse.empty();
+            return ProjectHomeResponse.notExistRecentReview(projectDetail);
         }
 
         MeetingReview myMeetingReview = recentMeetingReviews.stream()
@@ -119,7 +125,7 @@ public class ProjectService {
 
         List<PersonalSpeakingResponse> speakingResponses = calculatePersonalSpeakPercentBy(recentMeetingReviews);
         MyMeetingReviewResponse myReviewResponse = MyMeetingReviewResponse.of(myMeetingReview);
-        return ProjectHomeResponse.of(null, speakingResponses, myReviewResponse);
+        return ProjectHomeResponse.of(projectDetail,null, speakingResponses, myReviewResponse);
     }
 
     private void validateMember(int memberId) {
