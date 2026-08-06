@@ -26,8 +26,7 @@ public class NotificationSender {
             );
         } catch (IOException | IllegalStateException e) {
             log.debug("SSE 구독 실패 memberId={}", memberId);
-            emitterRepository.delete(memberId, emitter);
-            emitter.complete();
+            completeAndRemove(memberId, emitter);
         }
     }
 
@@ -41,8 +40,7 @@ public class NotificationSender {
             );
         } catch (IOException | IllegalStateException e) {
             log.debug("SSE 전송 실패 memberId={}", memberId);
-            emitterRepository.delete(memberId, emitter);
-            emitter.complete();
+            completeAndRemove(memberId, emitter);
         }
     }
 
@@ -54,8 +52,16 @@ public class NotificationSender {
             );
         } catch (IOException | IllegalStateException e) {
             log.debug("SSE 하트비트 체크 실패 memberId={}", memberId);
-            emitterRepository.delete(memberId, emitter);
+            completeAndRemove(memberId, emitter);
+        }
+    }
+
+    public void completeAndRemove(int memberId, SseEmitter emitter) {
+        emitterRepository.delete(memberId, emitter);
+        try {
             emitter.complete();
+        } catch (Exception e) {
+            log.debug("이미 끊긴 emitter 정리 중 예외 무시 memberId={}", memberId);
         }
     }
 }

@@ -8,6 +8,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -18,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 
@@ -121,6 +123,55 @@ class NotificationSenderTest {
 
         // then
         then(emitterRepository).should(never()).delete(MEMBER_ID, emitter);
+    }
+
+    @DisplayName("전송 실패 후 정리 중 complete()가 예외를 던져도 밖으로 새지 않는다.")
+    @Test
+    void sendWhenCompleteThrowsAsyncRequestNotUsable() throws Exception {
+        // given
+        doThrow(new IOException("Broken pipe")).when(emitter).send(any(SseEmitter.SseEventBuilder.class));
+        completeThrowsAsyncRequestNotUsable();
+
+        // when // then
+        assertThatCode(() -> notificationSender.send(
+                MEMBER_ID, emitter, "41", NotificationSender.NOTIFICATION_EVENT, "본문"))
+                .doesNotThrowAnyException();
+
+        then(emitterRepository).should().delete(MEMBER_ID, emitter);
+    }
+
+    @DisplayName("하트비트 정리 중 complete()가 예외를 던져도 밖으로 새지 않는다.")
+    @Test
+    void sendHeartbeatWhenCompleteThrowsAsyncRequestNotUsable() throws Exception {
+        // given
+        doThrow(new IOException("Broken pipe")).when(emitter).send(any(SseEmitter.SseEventBuilder.class));
+        completeThrowsAsyncRequestNotUsable();
+
+        // when // then
+        assertThatCode(() -> notificationSender.sendHeartbeat(MEMBER_ID, emitter))
+                .doesNotThrowAnyException();
+
+        then(emitterRepository).should().delete(MEMBER_ID, emitter);
+    }
+
+    @DisplayName("completeAndRemove는 정리 대상을 지운 뒤 complete()의 예외를 삼킨다.")
+    @Test
+    void completeAndRemoveSwallowsCompleteException() {
+        // given
+        completeThrowsAsyncRequestNotUsable();
+
+        // when // then
+        assertThatCode(() -> notificationSender.completeAndRemove(MEMBER_ID, emitter))
+                .doesNotThrowAnyException();
+
+        then(emitterRepository).should().delete(MEMBER_ID, emitter);
+        then(emitter).should().complete();
+    }
+
+    private void completeThrowsAsyncRequestNotUsable() {
+        doAnswer(invocation -> {
+            throw new AsyncRequestNotUsableException("no longer usable");
+        }).when(emitter).complete();
     }
 
     private String capturedEvent() throws IOException {

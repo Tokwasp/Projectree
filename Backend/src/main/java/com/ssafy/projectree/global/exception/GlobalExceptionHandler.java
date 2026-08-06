@@ -15,6 +15,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @Slf4j
@@ -76,6 +77,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleOptimisticLock(Exception e) {
         log.warn("optimistic lock conflict: {}", e.getMessage());
         return errorResponse(MeetingRecordErrorCode.MEETING_RECORD_VERSION_CONFLICT);
+    }
+
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsable(AsyncRequestNotUsableException e) {
+        log.debug("SSE 응답을 더 이상 사용할 수 없어 무시한다: {}", e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

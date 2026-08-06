@@ -17,11 +17,15 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -183,6 +187,51 @@ class NotificationServiceTest extends IntegrationTestSupport {
         then(notificationSender).should(never()).send(
                 anyInt(), any(SseEmitter.class), anyString(),
                 eq(NotificationSender.NOTIFICATION_EVENT), any());
+    }
+
+    @DisplayName("연결이 타임아웃되면 completeAndRemove로 정리한다.")
+    @Test
+    void subscribeOnTimeoutDelegatesToCompleteAndRemove() {
+        // given
+        EmitterRepository repository = mock(EmitterRepository.class);
+        NotificationSender sender = mock(NotificationSender.class);
+        SseEmitter emitterMock = mock(SseEmitter.class);
+        when(repository.save(anyInt(), any(SseEmitter.class))).thenReturn(emitterMock);
+        NotificationService service = unitServiceWithEmitter(repository, sender);
+        int memberId = 5;
+
+        // when
+        service.subscribe(memberId, null);
+
+        // then
+        ArgumentCaptor<Runnable> onTimeoutCaptor = ArgumentCaptor.forClass(Runnable.class);
+        then(emitterMock).should().onTimeout(onTimeoutCaptor.capture());
+        onTimeoutCaptor.getValue().run();
+
+        then(sender).should().completeAndRemove(memberId, emitterMock);
+    }
+
+    @DisplayName("연결에서 에러가 나면 completeAndRemove로 정리한다.")
+    @Test
+    @SuppressWarnings("unchecked")
+    void subscribeOnErrorDelegatesToCompleteAndRemove() {
+        // given
+        EmitterRepository repository = mock(EmitterRepository.class);
+        NotificationSender sender = mock(NotificationSender.class);
+        SseEmitter emitterMock = mock(SseEmitter.class);
+        when(repository.save(anyInt(), any(SseEmitter.class))).thenReturn(emitterMock);
+        NotificationService service = unitServiceWithEmitter(repository, sender);
+        int memberId = 5;
+
+        // when
+        service.subscribe(memberId, null);
+
+        // then
+        ArgumentCaptor<Consumer<Throwable>> onErrorCaptor = ArgumentCaptor.forClass(Consumer.class);
+        then(emitterMock).should().onError(onErrorCaptor.capture());
+        onErrorCaptor.getValue().accept(new AsyncRequestNotUsableException("no longer usable"));
+
+        then(sender).should().completeAndRemove(memberId, emitterMock);
     }
 
     @DisplayName("콜백을 받으면 알림을 저장한다.")
@@ -353,6 +402,20 @@ class NotificationServiceTest extends IntegrationTestSupport {
                 mock(NotificationSender.class),
                 publisher,
                 mock(NotificationProperties.class)
+        );
+    }
+
+    private NotificationService unitServiceWithEmitter(
+            EmitterRepository emitterRepository,
+            NotificationSender notificationSender
+    ) {
+        return new NotificationService(
+                mock(NotificationRepository.class),
+                mock(MemberRepository.class),
+                emitterRepository,
+                notificationSender,
+                mock(NotificationPublisher.class),
+                new NotificationProperties(new NotificationProperties.Sse(Duration.ofMinutes(1)))
         );
     }
 }

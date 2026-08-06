@@ -12,9 +12,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -86,6 +88,14 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.errorMessage").value("서버 내부 오류가 발생했습니다."));
     }
 
+    @DisplayName("SSE 응답이 더 이상 사용 불가능해지면 바디 없이 조용히 처리한다.")
+    @Test
+    void handleAsyncRequestNotUsable() throws Exception {
+        mockMvc.perform(get("/probe/async-unusable"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(""));
+    }
+
     @RestController
     static class ProbeController {
 
@@ -106,6 +116,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/probe/boom")
         void boom() {
             throw new RuntimeException("의도적으로 발생시킨 예외");
+        }
+
+        @GetMapping("/probe/async-unusable")
+        void asyncUnusable() throws AsyncRequestNotUsableException {
+            throw new AsyncRequestNotUsableException("응답을 더 이상 사용할 수 없다");
         }
     }
 }
