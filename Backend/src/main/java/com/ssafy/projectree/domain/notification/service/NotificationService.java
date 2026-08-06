@@ -32,8 +32,8 @@ public class NotificationService {
         SseEmitter emitter = emitterRepository.save(memberId, createEmitter());
 
         emitter.onCompletion(() -> emitterRepository.delete(memberId, emitter));
-        emitter.onTimeout(emitter::complete);
-        emitter.onError(throwable -> emitter.complete());
+        emitter.onTimeout(() -> notificationSender.completeAndRemove(memberId, emitter));
+        emitter.onError(throwable -> notificationSender.completeAndRemove(memberId, emitter));
 
         notificationSender.sendSubscriptionMessage(memberId, emitter, "connect", "연결되었습니다.");
         if (isValidLastEventId(lastEventId)) {
