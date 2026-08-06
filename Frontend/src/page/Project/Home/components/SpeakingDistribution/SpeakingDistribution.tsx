@@ -20,26 +20,32 @@ export default function SpeakingDistribution({
         <p>최근 회의에서 팀원별 발화 비율을 확인해보세요.</p>
       </div>
 
-      <ul className={style.memberList}>
-        {speakingTimes.map((member) => (
-          <li className={style.memberItem} key={member.memberId}>
-            <span className={style.avatar} aria-hidden="true">
-              {member.name.slice(0, 1)}
-            </span>
-            <span className={style.memberName}>
-              {member.name}
-              {member.isCurrentUser && <strong>나</strong>}
-            </span>
-            <progress
-              className={style.progress}
-              max="100"
-              value={member.percentage}
-              aria-label={`${member.name} 발화 비율 ${member.percentage}%`}
-            />
-            <span className={style.percentage}>{member.percentage}%</span>
-          </li>
-        ))}
-      </ul>
+      {speakingTimes.length === 0 ? (
+        <p className={style.empty}>최근 회의의 발화 기록이 없습니다.</p>
+      ) : (
+        <ul className={style.memberList}>
+          {speakingTimes.map((member) => (
+            <li className={style.memberItem} key={member.memberId}>
+              <span className={style.avatar} aria-hidden="true">
+                {member.name.slice(0, 1)}
+              </span>
+              <span className={style.memberName}>
+                {member.name}
+                {member.isCurrentUser && <strong>나</strong>}
+              </span>
+              <progress
+                className={style.progress}
+                max="100"
+                value={member.percentage}
+                aria-label={`${member.name} 발화 비율 ${member.percentage}%`}
+              />
+              <span className={style.percentage}>
+                {member.percentage}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
