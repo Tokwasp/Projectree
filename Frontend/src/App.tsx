@@ -21,9 +21,10 @@ function App() {
   return (
     <>
       <Routes>
+        <Route path="/auth/:provider/callback" element={<OAuthCallback />} />
+
         <Route path="/" element={<Layout />}>
           <Route index element={<Landing />} />
-          <Route path="/auth/:provider/callback" element={<OAuthCallback />} />
           <Route path="/invitations/:token" element={<InvitationLanding />} />
         </Route>
 

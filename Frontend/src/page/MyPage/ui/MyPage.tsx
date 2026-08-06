@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import useLogout from "../../Auth/hooks/useLogout";
 import ProfileSection from "../components/ProfileSection/ProfileSection";
 import MyProjectList from "../components/MyProjectList/MyProjectList";
 import useProjectList from "../../Project/List/hooks/useProjectList";
@@ -8,19 +8,17 @@ import style from "../css/MyPage.module.css";
 const MY_PROJECT_LIST_SIZE = 100;
 
 export default function MyPage() {
-  const navigate = useNavigate();
   const name = useAuthStore((state) => state.name);
   const imageUrl = useAuthStore((state) => state.imageUrl);
-  const logout = useAuthStore((state) => state.logout);
-  const { projects, isLoading, error } = useProjectList(
+  const {
+    logout,
+    isLoggingOut,
+    error: logoutError,
+  } = useLogout();
+  const { projects, isLoading, error: projectError } = useProjectList(
     0,
     MY_PROJECT_LIST_SIZE,
   );
-
-  const handleLogout = () => {
-    logout();
-    navigate("/", { replace: true });
-  };
 
   return (
     <div className={style.page}>
@@ -38,8 +36,8 @@ export default function MyPage() {
 
       {isLoading && projects.length === 0 ? (
         <p>프로젝트 목록을 불러오는 중입니다.</p>
-      ) : error ? (
-        <p role="alert">{error}</p>
+      ) : projectError ? (
+        <p role="alert">{projectError}</p>
       ) : (
         <MyProjectList projects={projects} />
       )}
@@ -48,14 +46,21 @@ export default function MyPage() {
         <button
           className={style.logoutButton}
           type="button"
-          onClick={handleLogout}
+          disabled={isLoggingOut}
+          onClick={() => void logout()}
         >
-          로그아웃
+          {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
         </button>
 
         <button className={style.deleteButton} type="button">
           계정 삭제
         </button>
+
+        {logoutError && (
+          <p className={style.logoutError} role="alert">
+            {logoutError}
+          </p>
+        )}
       </div>
     </div>
   );

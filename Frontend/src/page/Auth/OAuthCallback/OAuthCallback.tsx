@@ -8,6 +8,8 @@ import {
 } from "../hooks/useSocialLogin";
 import { useAuthStore } from "../../../store/authStore";
 import { prefetchProjectList } from "../../Project/List/api/projectListApi";
+import logo from "../../../assets/logo.svg";
+import style from "./OAuthCallback.module.css";
 
 const PROJECT_LIST_SIZE = 8;
 
@@ -66,8 +68,25 @@ export default function OAuthCallback() {
   }, [provider, searchParams, navigate, login]);
 
   return (
-    <div>
-      <span>로그인 처리 중입니다...</span>
-    </div>
+    <main className={style.page}>
+      <section
+        className={style.card}
+        aria-labelledby="login-processing-title"
+        aria-live="polite"
+      >
+        <div className={style.brand}>
+          <img src={logo} alt="" />
+          <span>Projectree</span>
+        </div>
+
+        <div className={style.spinner} aria-hidden="true" />
+
+        <h1 className={style.title} id="login-processing-title">
+          로그인 정보를 확인하고 있어요
+        </h1>
+
+        <p className={style.description}>잠시만 기다려주세요.</p>
+      </section>
+    </main>
   );
 }

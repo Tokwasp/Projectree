@@ -16,21 +16,27 @@ export default function AiFeedback({ feedback }: AiFeedbackProps) {
           AI 개인 피드백
         </h2>
       </div>
-      <div className={style.summary}>
-        <img
-          className={style.feedbackFace}
-          src={aiFeedbackFace}
-          alt="긍정적인 AI 피드백"
-        />
-      </div>
-      <ul className={style.detailList}>
-        {feedback.details.map((detail) => (
-          <li className={style.detailItem} key={detail.label}>
-            <strong>{detail.label}</strong>
-            <span>{detail.description}</span>
-          </li>
-        ))}
-      </ul>
+      {feedback.details.length === 0 ? (
+        <p className={style.empty}>최근 회의 피드백이 없습니다.</p>
+      ) : (
+        <>
+          <div className={style.summary}>
+            <img
+              className={style.feedbackFace}
+              src={aiFeedbackFace}
+              alt="긍정적인 AI 피드백"
+            />
+          </div>
+          <ul className={style.detailList}>
+            {feedback.details.map((detail) => (
+              <li className={style.detailItem} key={detail.label}>
+                <strong>{detail.label}</strong>
+                <span>{detail.description}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }
