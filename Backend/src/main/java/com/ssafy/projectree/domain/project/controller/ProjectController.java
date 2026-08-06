@@ -89,10 +89,9 @@ public class ProjectController {
     @GetMapping("/{project-id}/home")
     public ResponseEntity<ApiResponse<ProjectHomeResponse>> getProjectHome(
             @PathVariable("project-id") int projectId,
-            @Login LoginMember loginMember,
-            @PageableDefault(size = 10) Pageable pageable
+            @Login LoginMember loginMember
     ) {
-        ProjectHomeResponse response = projectService.getProjectHome(pageable, projectId, loginMember.getId());
+        ProjectHomeResponse response = projectService.getProjectHome(projectId, loginMember.getId());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

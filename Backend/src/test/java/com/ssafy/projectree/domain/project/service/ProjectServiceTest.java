@@ -22,7 +22,6 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
@@ -493,7 +492,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when // then
         assertThatThrownBy(() ->
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, outsider.getId()))
+                projectService.getProjectHome(projectId, outsider.getId()))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ProjectMemberErrorCode.IS_NOT_PROJECT_MEMBER);
@@ -511,7 +510,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getProjectDetail())
@@ -534,7 +533,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getProjectDetail().getParticipantCount()).isEqualTo(2);
@@ -558,7 +557,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getMyReview())
@@ -585,7 +584,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getPersonalSpeakingList()).hasSize(3)
@@ -614,7 +613,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getMeetingRecordList()).isNull();

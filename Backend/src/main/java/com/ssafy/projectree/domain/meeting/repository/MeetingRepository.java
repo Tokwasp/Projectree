@@ -7,9 +7,19 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface MeetingRepository extends JpaRepository<Meeting, Integer> {
+
+    @Query("""
+            select m
+            from Meeting m
+            where m.project.id = :projectId
+            order by m.createdAt desc
+            limit 5
+            """)
+    List<Meeting> findRecentFiveBy(@Param("projectId") int projectId);
 
     boolean existsByRoomName(String roomName);
 
