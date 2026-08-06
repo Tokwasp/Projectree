@@ -27,13 +27,14 @@ public class AnalysisResultConsumerConfig {
     AnalysisResultSqsGateway analysisResultSqsGateway(
             AnalysisResultConsumerProperties properties
     ) {
+        Duration attemptTimeout = Duration.ofSeconds(properties.waitTimeSeconds() + 5);
         SqsClient sqsClient = SqsClient.builder()
                 .region(Region.of(properties.region()))
                 .credentialsProvider(DefaultCredentialsProvider.builder().build())
                 .overrideConfiguration(configuration -> configuration
                         .retryStrategy(strategy -> strategy.maxAttempts(1))
-                        .apiCallAttemptTimeout(Duration.ofSeconds(5))
-                        .apiCallTimeout(Duration.ofSeconds(10)))
+                        .apiCallAttemptTimeout(attemptTimeout)
+                        .apiCallTimeout(attemptTimeout.plusSeconds(5)))
                 .build();
         return new AnalysisResultSqsGateway(sqsClient, properties);
     }
