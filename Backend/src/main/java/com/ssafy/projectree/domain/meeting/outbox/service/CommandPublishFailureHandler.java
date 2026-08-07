@@ -1,8 +1,9 @@
 package com.ssafy.projectree.domain.meeting.outbox.service;
 
+import com.ssafy.projectree.domain.meeting.command.MeetingAnalysisCommandType;
+import com.ssafy.projectree.domain.meeting.command.MeetingAnalysisRequestedCommand;
 import com.ssafy.projectree.domain.meeting.entity.AnalysisTaskStatus;
 import com.ssafy.projectree.domain.meeting.entity.Meeting;
-import com.ssafy.projectree.domain.meeting.command.MeetingAnalysisCommandType;
 import com.ssafy.projectree.domain.meeting.notification.entity.MeetingAnalysisNotificationOutbox;
 import com.ssafy.projectree.domain.meeting.notification.entity.NotificationAudience;
 import com.ssafy.projectree.domain.meeting.notification.repository.MeetingAnalysisNotificationOutboxRepository;
@@ -11,6 +12,10 @@ import com.ssafy.projectree.domain.meeting.outbox.dto.ClaimedCommandOutbox;
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandOutbox;
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.NodeDeleteCommandStatus;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.entity.NodeDeleteCommand;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +30,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -37,6 +43,8 @@ public class CommandPublishFailureHandler {
     private final MeetingAnalysisPublisherProperties properties;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final NodeDeleteCommandRepository nodeDeleteCommandRepository;
+    private final ProjectGraphOperationGuard graphOperationGuard;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CommandPublishFailureOutcome handle(
@@ -52,9 +60,10 @@ public class CommandPublishFailureHandler {
         }
 
         String safeError = sanitize(failure);
+        LocalDateTime failedAt = LocalDateTime.now(clock);
         boolean finalFailure = outbox.rescheduleOrFail(
                 claimed.claimToken(),
-                LocalDateTime.now(clock),
+                failedAt,
                 properties.maxAttempts(),
                 properties.firstRetryDelaySeconds(),
                 properties.secondRetryDelaySeconds(),
@@ -64,22 +73,135 @@ public class CommandPublishFailureHandler {
             return CommandPublishFailureOutcome.RETRY_SCHEDULED;
         }
 
-        if (outbox.getCommandType() == MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED) {
-            log.error(
-                    "Node content update command publish permanently failed. commandId={}, targetProjectId={}, targetNodeId={}, attemptCount={}",
-                    outbox.getCommandId(),
-                    outbox.getTargetProjectId(),
-                    outbox.getTargetNodeId(),
-                    outbox.getAttemptCount()
-            );
-            return CommandPublishFailureOutcome.FINAL_FAILED;
+        switch (outbox.getCommandType()) {
+            case MEETING_ANALYSIS_REQUESTED ->
+                    handleMeetingAnalysisFinalFailure(outbox);
+            case NODE_CONTENT_UPDATE_REQUESTED ->
+                    handleNodeContentUpdateFinalFailure(outbox);
+            case NODE_DELETE_REQUESTED ->
+                    handleNodeDeleteFinalFailure(outbox, failedAt);
         }
+        return CommandPublishFailureOutcome.FINAL_FAILED;
+    }
 
+    private void handleMeetingAnalysisFinalFailure(
+            MeetingAnalysisCommandOutbox outbox
+    ) {
+        MeetingAnalysisRequestedCommand requestedCommand =
+                parseMeetingAnalysisCommand(outbox);
         Meeting meeting = meetingRepository.findByIdForUpdate(outbox.getMeeting().getId())
                 .orElseThrow(() -> new IllegalStateException("Meeting not found for command outbox"));
+        validateMeetingAnalysisCommand(outbox, meeting, requestedCommand);
         failSelectedProcessingTasks(meeting);
         notificationRepository.saveAllAndFlush(createNotifications(outbox, meeting));
-        return CommandPublishFailureOutcome.FINAL_FAILED;
+        if (requestedCommand.payload().generateNodes()) {
+            graphOperationGuard.release(
+                    meeting.getProject().getId(),
+                    outbox.getCommandId(),
+                    "COMMAND_PUBLISH_FAILED"
+            );
+        }
+    }
+
+    private void handleNodeContentUpdateFinalFailure(
+            MeetingAnalysisCommandOutbox outbox
+    ) {
+        log.error(
+                "Node content update command publish permanently failed. commandId={}, targetProjectId={}, targetNodeId={}, attemptCount={}",
+                outbox.getCommandId(),
+                outbox.getTargetProjectId(),
+                outbox.getTargetNodeId(),
+                outbox.getAttemptCount()
+        );
+        graphOperationGuard.release(
+                requireTargetProjectId(outbox),
+                outbox.getCommandId(),
+                "COMMAND_PUBLISH_FAILED"
+        );
+    }
+
+    private void handleNodeDeleteFinalFailure(
+            MeetingAnalysisCommandOutbox outbox,
+            LocalDateTime failedAt
+    ) {
+        NodeDeleteCommand command = nodeDeleteCommandRepository
+                .findByCommandId(outbox.getCommandId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Node delete command not found for command outbox"
+                ));
+        if (command.getStatus() != NodeDeleteCommandStatus.PENDING) {
+            throw new IllegalStateException(
+                    "Node delete command must be pending on publish failure"
+            );
+        }
+        int projectId = requireTargetProjectId(outbox);
+        if (command.getProjectId() != projectId) {
+            throw new IllegalStateException(
+                    "Node delete command project does not match command outbox"
+            );
+        }
+        command.markFailed("COMMAND_PUBLISH_FAILED", failedAt);
+        graphOperationGuard.release(
+                projectId,
+                outbox.getCommandId(),
+                "COMMAND_PUBLISH_FAILED"
+        );
+    }
+
+    private int requireTargetProjectId(MeetingAnalysisCommandOutbox outbox) {
+        if (outbox.getTargetProjectId() == null
+                || outbox.getTargetProjectId() <= 0) {
+            throw new IllegalStateException(
+                    "Command outbox target project is missing"
+            );
+        }
+        return outbox.getTargetProjectId();
+    }
+
+    private MeetingAnalysisRequestedCommand parseMeetingAnalysisCommand(
+            MeetingAnalysisCommandOutbox outbox
+    ) {
+        try {
+            return objectMapper.readValue(
+                    outbox.getPayload(),
+                    MeetingAnalysisRequestedCommand.class
+            );
+        } catch (JacksonException exception) {
+            throw new IllegalStateException(
+                    "Meeting analysis command payload is invalid",
+                    exception
+            );
+        }
+    }
+
+    private void validateMeetingAnalysisCommand(
+            MeetingAnalysisCommandOutbox outbox,
+            Meeting meeting,
+            MeetingAnalysisRequestedCommand command
+    ) {
+        if (command == null
+                || command.commandSchemaVersion()
+                != MeetingAnalysisRequestedCommand.CURRENT_SCHEMA_VERSION
+                || command.commandId() == null
+                || !outbox.getCommandId().equals(command.commandId().toString())
+                || command.commandType()
+                != MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED
+                || command.payload() == null) {
+            throw new IllegalStateException(
+                    "Meeting analysis command payload does not match outbox and meeting"
+            );
+        }
+
+        MeetingAnalysisRequestedCommand.Payload payload = command.payload();
+        if (payload.meetingId() != meeting.getId()
+                || command.projectId() != meeting.getProject().getId()
+                || !Objects.equals(payload.roomName(), meeting.getRoomName())
+                || payload.generateSummary() != meeting.isGenerateSummary()
+                || payload.generateNodes() != meeting.isGenerateNodes()) {
+            throw new IllegalStateException(
+                    "Meeting analysis command payload does not match outbox and meeting"
+            );
+        }
     }
 
     private void failSelectedProcessingTasks(Meeting meeting) {

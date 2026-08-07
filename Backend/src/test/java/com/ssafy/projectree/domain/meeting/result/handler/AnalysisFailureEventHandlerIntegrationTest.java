@@ -15,6 +15,8 @@ import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventType;
 import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContractException;
 import com.ssafy.projectree.domain.meeting.result.exception.InvalidAnalysisTaskStateException;
 import com.ssafy.projectree.domain.meeting.result.failure.AnalysisTaskType;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.inbox.repository.MeetingAnalysisResultInboxRepository;
 import com.ssafy.projectree.domain.meeting.result.processor.AnalysisResultEventProcessor;
 import com.ssafy.projectree.domain.meeting.result.processor.AnalysisResultProcessingOutcome;
@@ -59,6 +61,8 @@ class AnalysisFailureEventHandlerIntegrationTest {
     private ProjectRepository projectRepository;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private ProjectGraphSyncRepository graphSyncRepository;
 
     @AfterEach
     void cleanUp() {
@@ -66,6 +70,7 @@ class AnalysisFailureEventHandlerIntegrationTest {
         notificationRepository.deleteAll();
         commandRepository.deleteAll();
         meetingRepository.deleteAll();
+        graphSyncRepository.deleteAll();
         projectRepository.deleteAll();
     }
 
@@ -87,6 +92,8 @@ class AnalysisFailureEventHandlerIntegrationTest {
         assertThat(notification.getAudience()).isEqualTo(NotificationAudience.USER);
         assertThat(notification.getNotificationType())
                 .isEqualTo(NotificationType.MEETING_SUMMARY_ANALYSIS_FAILED);
+        assertThat(graphSyncRepository.findById(fixture.projectId()).orElseThrow()
+                .hasActiveCommand()).isTrue();
         JsonNode payload = objectMapper.readTree(notification.getPayload());
         assertThat(payload.get("taskType").asText()).isEqualTo("SUMMARY");
         assertThat(payload.get("failureCode").asText()).isEqualTo("GRAPH_ANALYSIS_FAILED");
@@ -106,6 +113,21 @@ class AnalysisFailureEventHandlerIntegrationTest {
                 assertThat(notification.getNotificationType())
                         .isEqualTo(NotificationType.MEETING_NODE_ANALYSIS_FAILED)
         );
+        assertThat(graphSyncRepository.findById(fixture.projectId()).orElseThrow()
+                .hasActiveCommand()).isFalse();
+    }
+
+    @Test
+    void nodesOnlyFailureReleasesGuard() {
+        Fixture fixture = fixture(false, true);
+
+        processor.process(event(fixture, AnalysisTaskType.NODES));
+
+        Meeting meeting = meetingRepository.findById(fixture.meetingId()).orElseThrow();
+        assertThat(meeting.getSummaryStatus()).isEqualTo(AnalysisTaskStatus.SKIPPED);
+        assertThat(meeting.getNodeStatus()).isEqualTo(AnalysisTaskStatus.FAILED);
+        assertThat(graphSyncRepository.findById(fixture.projectId()).orElseThrow()
+                .hasActiveCommand()).isFalse();
     }
 
     @Test
@@ -122,6 +144,8 @@ class AnalysisFailureEventHandlerIntegrationTest {
         assertThat(notificationRepository.count()).isEqualTo(1);
         assertThat(meetingRepository.findById(fixture.meetingId()).orElseThrow().getSummaryStatus())
                 .isEqualTo(AnalysisTaskStatus.FAILED);
+        assertThat(graphSyncRepository.findById(fixture.projectId()).orElseThrow()
+                .hasActiveCommand()).isFalse();
     }
 
     @Test
@@ -195,6 +219,18 @@ class AnalysisFailureEventHandlerIntegrationTest {
                         "{\"command\":true}", 17, LocalDateTime.now()
                 )
         );
+        ProjectGraphSync sync = ProjectGraphSync.initial(
+                project.getId(),
+                Instant.parse("2026-08-04T00:00:00Z")
+        );
+        if (generateNodes) {
+            sync.acquireGraphOperation(
+                    command.getCommandId(),
+                    MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
+                    Instant.parse("2026-08-04T00:30:00Z")
+            );
+        }
+        graphSyncRepository.saveAndFlush(sync);
         return new Fixture(project.getId(), meeting.getId(), command.getCommandId(), roomName);
     }
 

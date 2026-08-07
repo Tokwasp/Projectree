@@ -15,6 +15,7 @@ import com.ssafy.projectree.domain.meeting.result.failure.AnalysisTaskStatusChan
 import com.ssafy.projectree.domain.meeting.result.failure.AnalysisTaskStatusChangedPayloadParser;
 import com.ssafy.projectree.domain.meeting.result.failure.AnalysisTaskStatusChangedPayloadValidator;
 import com.ssafy.projectree.domain.meeting.result.failure.AnalysisTaskType;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.meeting.result.inbox.service.ResultInboxService;
 import com.ssafy.projectree.domain.meeting.result.validation.LockedAnalysisEventReferenceValidator;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class AnalysisFailureEventHandler implements AnalysisResultEventHandler {
     private final ResultInboxService resultInboxService;
     private final MeetingAnalysisNotificationOutboxRepository notificationOutboxRepository;
     private final ObjectMapper objectMapper;
+    private final ProjectGraphOperationGuard graphOperationGuard;
 
     @Override
     public AnalysisResultEventType supportedType() {
@@ -58,6 +60,17 @@ public class AnalysisFailureEventHandler implements AnalysisResultEventHandler {
         boolean changed = applyFailure(meeting, payload.taskType());
         if (changed) {
             notificationOutboxRepository.saveAndFlush(createNotification(command, meeting, event, payload));
+        }
+        if (changed && payload.taskType() == AnalysisTaskType.NODES) {
+            if (!graphOperationGuard.release(
+                    event.projectId(),
+                    event.commandId(),
+                    "ANALYSIS_TERMINAL_FAILED"
+            )) {
+                throw new AnalysisResultContractException(
+                        "Analysis failure result does not own the active graph operation"
+                );
+            }
         }
     }
 

@@ -21,7 +21,8 @@ public class ProjectGraphChangedPayloadValidator {
             throw new AnalysisResultContractException("Graph result sourceType is not supported");
         }
         if (payload.sourceType() != GraphResultSourceType.MEETING_ANALYSIS
-                && payload.sourceType() != GraphResultSourceType.NODE_CONTENT_UPDATE) {
+                && payload.sourceType() != GraphResultSourceType.NODE_CONTENT_UPDATE
+                && payload.sourceType() != GraphResultSourceType.NODE_DELETE) {
             throw new AnalysisResultContractException("Graph result sourceType is not supported");
         }
         if (payload.graphVersion() <= 0) {

@@ -9,6 +9,7 @@ import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventType;
 import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContractException;
 import com.ssafy.projectree.domain.meeting.result.graph.event.GraphResultSourceType;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayload;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.GraphNodeCategory;
@@ -57,6 +58,7 @@ class NodeContentUpdateGraphProjectionApplierTest {
     @Mock private ResultInboxService inboxService;
     @Mock private GraphProjectionReplacer projectionReplacer;
     @Mock private EntityManager entityManager;
+    @Mock private ProjectGraphOperationGuard graphOperationGuard;
 
     private final ObjectMapper objectMapper = JsonMapper.builder().build();
     private NodeContentUpdateGraphProjectionApplier applier;
@@ -71,8 +73,14 @@ class NodeContentUpdateGraphProjectionApplierTest {
                 projectionReplacer,
                 entityManager,
                 objectMapper,
-                Clock.fixed(NOW, ZoneOffset.UTC)
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                graphOperationGuard
         );
+        lenient().when(graphOperationGuard.release(
+                any(ProjectGraphSync.class),
+                any(String.class),
+                any(String.class)
+        )).thenReturn(true);
     }
 
     @Test

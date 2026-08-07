@@ -9,6 +9,7 @@ import com.ssafy.projectree.domain.meeting.exception.MeetingErrorCode;
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandOutbox;
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.global.exception.CommonErrorCode;
@@ -35,6 +36,7 @@ public class MeetingAnalysisRequestService {
     private final MeetingAnalysisCommandOutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final ProjectGraphOperationGuard graphOperationGuard;
 
     @Transactional
     public MeetingAnalysisRequestResponse requestAnalysis(
@@ -65,16 +67,25 @@ public class MeetingAnalysisRequestService {
 
         boolean generateSummary = request.generateSummary();
         boolean generateNodes = request.generateNodes();
-        meeting.confirmAnalysisOptions(generateSummary, generateNodes);
-
         UUID commandId = UUID.randomUUID();
         MeetingAnalysisCommandType commandType =
                 MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED;
+        Instant requestedAt = Instant.now(clock);
+        if (generateNodes) {
+            graphOperationGuard.acquire(
+                    projectId,
+                    commandId,
+                    commandType,
+                    requestedAt
+            );
+        }
+        meeting.confirmAnalysisOptions(generateSummary, generateNodes);
+
         MeetingAnalysisRequestedCommand command = new MeetingAnalysisRequestedCommand(
                 MeetingAnalysisRequestedCommand.CURRENT_SCHEMA_VERSION,
                 commandId,
                 commandType,
-                Instant.now(clock),
+                requestedAt,
                 projectId,
                 new MeetingAnalysisRequestedCommand.Payload(
                         meeting.getId(),
@@ -117,6 +128,9 @@ public class MeetingAnalysisRequestService {
                 || request.generateSummary() == null
                 || request.generateNodes() == null) {
             throw new CustomException(CommonErrorCode.INVALID_REQUEST);
+        }
+        if (!request.generateSummary() && !request.generateNodes()) {
+            throw new CustomException(MeetingErrorCode.ANALYSIS_TASK_NOT_SELECTED);
         }
     }
 

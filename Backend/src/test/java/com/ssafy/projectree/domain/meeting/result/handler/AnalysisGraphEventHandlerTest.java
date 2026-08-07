@@ -13,6 +13,7 @@ import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChange
 import com.ssafy.projectree.domain.meeting.result.graph.projection.AnalysisGraphProjectionApplier;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.GraphProjectionApplyResult;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.NodeContentUpdateGraphProjectionApplier;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.NodeDeleteGraphProjectionApplier;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.ProjectGraphSnapshot;
 import com.ssafy.projectree.domain.meeting.result.graph.storage.GraphSnapshotLoader;
 import org.junit.jupiter.api.AfterEach;
@@ -42,6 +43,7 @@ class AnalysisGraphEventHandlerTest {
     @Mock private GraphSnapshotLoader snapshotLoader;
     @Mock private AnalysisGraphProjectionApplier projectionApplier;
     @Mock private NodeContentUpdateGraphProjectionApplier nodeContentUpdateProjectionApplier;
+    @Mock private NodeDeleteGraphProjectionApplier nodeDeleteProjectionApplier;
     @Mock private ProjectGraphSnapshot snapshot;
 
     private AnalysisGraphEventHandler handler;
@@ -52,7 +54,7 @@ class AnalysisGraphEventHandlerTest {
     void setUp() {
         handler = new AnalysisGraphEventHandler(
                 payloadParser, payloadValidator, snapshotLoader, projectionApplier,
-                nodeContentUpdateProjectionApplier
+                nodeContentUpdateProjectionApplier, nodeDeleteProjectionApplier
         );
         logger = (Logger) LoggerFactory.getLogger(AnalysisGraphEventHandler.class);
         logAppender = new ListAppender<>();
@@ -140,6 +142,31 @@ class AnalysisGraphEventHandlerTest {
                 .isInstanceOf(IllegalStateException.class);
 
         verify(projectionApplier, never()).apply(event, payload, snapshot);
+    }
+
+    @Test
+    void delegatesNodeDeleteGraphResultToDeleteApplier() {
+        AnalysisResultEventEnvelope event = event(null);
+        ProjectGraphChangedPayload payload =
+                payload(GraphResultSourceType.NODE_DELETE);
+        when(payloadParser.parse(event.payload())).thenReturn(payload);
+        when(snapshotLoader.load(event, payload)).thenReturn(snapshot);
+        when(snapshot.nodes()).thenReturn(List.of());
+        when(snapshot.evidences()).thenReturn(List.of());
+        when(nodeDeleteProjectionApplier.apply(event, payload, snapshot))
+                .thenReturn(new GraphProjectionApplyResult(
+                        null,
+                        true,
+                        2,
+                        2
+                ));
+
+        handler.handle(event);
+
+        verify(nodeDeleteProjectionApplier).apply(event, payload, snapshot);
+        verify(projectionApplier, never()).apply(event, payload, snapshot);
+        verify(nodeContentUpdateProjectionApplier, never())
+                .apply(event, payload, snapshot);
     }
 
     @Test
