@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
+import logo from "../../../../assets/logo.svg";
 import type { InvitationStatus } from "../api/invitationApi";
 import useInvitationLanding from "../hooks/useInvitationLanding";
 import style from "../css/InvitationLanding.module.css";
@@ -21,6 +22,19 @@ function getStatusMessage(
     default:
       return null;
   }
+}
+
+interface InvitationBrandProps {
+  compact?: boolean;
+}
+
+function InvitationBrand({ compact = false }: InvitationBrandProps) {
+  return (
+    <div className={`${style.brand} ${compact ? style.cardBrand : ""}`}>
+      <img src={logo} alt="" />
+      <span>Projectree</span>
+    </div>
+  );
 }
 
 export default function InvitationLanding() {
@@ -52,7 +66,21 @@ export default function InvitationLanding() {
   if (isLoading) {
     return (
       <main className={style.page}>
-        <div className={style.card}>초대 정보를 불러오는 중입니다.</div>
+        <section
+          className={`${style.card} ${style.loadingCard}`}
+          aria-labelledby="invitation-loading-title"
+          aria-live="polite"
+        >
+          <InvitationBrand />
+
+          <div className={style.spinner} aria-hidden="true" />
+
+          <h1 className={style.title} id="invitation-loading-title">
+            초대 정보를 확인하고 있어요
+          </h1>
+
+          <p className={style.message}>잠시만 기다려주세요.</p>
+        </section>
       </main>
     );
   }
@@ -60,18 +88,22 @@ export default function InvitationLanding() {
   if (error || !invitation) {
     return (
       <main className={style.page}>
-        <div className={style.card}>
-          <h1 className={style.title}>초대를 확인할 수 없습니다.</h1>
-          <p className={style.message} role="alert">
-            {error ?? "유효하지 않은 초대입니다."}
-          </p>
-          <button
-            className={style.secondaryButton}
-            type="button"
-            onClick={() => navigate("/home")}
-          >
-            홈으로 이동
-          </button>
+        <div className={style.pageContent}>
+          <InvitationBrand compact />
+
+          <div className={style.invitationContent}>
+            <h1 className={style.title}>초대를 확인할 수 없습니다.</h1>
+            <p className={style.message} role="alert">
+              {error ?? "유효하지 않은 초대입니다."}
+            </p>
+            <button
+              className={style.secondaryButton}
+              type="button"
+              onClick={() => navigate("/home")}
+            >
+              홈으로 이동
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -86,50 +118,56 @@ export default function InvitationLanding() {
 
   return (
     <main className={style.page}>
-      <div className={style.card}>
-        <span className={style.eyebrow}>프로젝트 초대</span>
+      <div className={style.pageContent}>
+        <InvitationBrand compact />
 
-        <h1 className={style.title}>{invitation.projectTitle}</h1>
+        <div className={style.invitationContent}>
+          <span className={style.eyebrow}>프로젝트 초대</span>
 
-        <p className={style.message}>
-          <strong>{invitation.inviterName}</strong>님이 프로젝트에
-          초대했습니다.
-        </p>
+          <h1 className={`${style.title} ${style.projectTitle}`}>
+            {invitation.projectTitle}
+          </h1>
 
-        {statusMessage && (
-          <p className={style.statusMessage}>{statusMessage}</p>
-        )}
+          <p className={style.message}>
+            <strong>{invitation.inviterName}</strong>님이 프로젝트에
+            초대했습니다.
+          </p>
 
-        <div className={style.actions}>
-          {canAccept && (
-            <button
-              className={style.primaryButton}
-              type="button"
-              disabled={isAccepting || isRejecting}
-              onClick={() => void handleAccept()}
-            >
-              {isAccepting ? "수락 중..." : "초대 수락"}
-            </button>
+          {statusMessage && (
+            <p className={style.statusMessage}>{statusMessage}</p>
           )}
 
-          {canAccept && (
-            <button
-              className={style.rejectButton}
-              type="button"
-              disabled={isAccepting || isRejecting}
-              onClick={() => void handleReject()}
-            >
-              {isRejecting ? "거절 중..." : "초대 거절"}
-            </button>
-          )}
+          <div className={style.actions}>
+            {canAccept && (
+              <button
+                className={style.primaryButton}
+                type="button"
+                disabled={isAccepting || isRejecting}
+                onClick={() => void handleAccept()}
+              >
+                {isAccepting ? "수락 중..." : "초대 수락"}
+              </button>
+            )}
 
-          <button
-            className={style.secondaryButton}
-            type="button"
-            onClick={() => navigate("/home")}
-          >
-            홈으로 이동
-          </button>
+            {canAccept && (
+              <button
+                className={style.rejectButton}
+                type="button"
+                disabled={isAccepting || isRejecting}
+                onClick={() => void handleReject()}
+              >
+                {isRejecting ? "거절 중..." : "초대 거절"}
+              </button>
+            )}
+
+            <button
+              className={style.secondaryButton}
+              type="button"
+              onClick={() => navigate("/home")}
+            >
+              홈으로 이동
+            </button>
+          </div>
         </div>
       </div>
     </main>
