@@ -23,10 +23,10 @@ function App() {
     <>
       <Routes>
         <Route path="/auth/:provider/callback" element={<OAuthCallback />} />
+        <Route path="/invitations/:token" element={<InvitationLanding />} />
 
         <Route path="/" element={<Layout />}>
           <Route index element={<Landing />} />
-          <Route path="/invitations/:token" element={<InvitationLanding />} />
         </Route>
 
         <Route element={<PrivateLayout />}>
