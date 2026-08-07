@@ -8,8 +8,9 @@ from typing import Any, Callable, Protocol
 
 from data_pipeline.worker.openvidu_events import OpenViduEgressEventParser
 
-from .contracts import AnalysisCommandParser
-from .persistence import persist_analysis_command, persist_recording_ready
+from .contracts import JavaCommandParser
+from .dispatcher import dispatch_java_command
+from .persistence import persist_recording_ready
 
 logger = logging.getLogger(__name__)
 
@@ -118,14 +119,14 @@ class AnalysisCommandConsumer(_PersistingConsumer):
         sqs_client: SqsInputClient,
         queue_url: str,
         session_factory,
-        parser: AnalysisCommandParser | None = None,
+        parser: JavaCommandParser | None = None,
         wait_time_seconds: int = 20,
     ) -> None:
-        command_parser = parser or AnalysisCommandParser()
+        command_parser = parser or JavaCommandParser()
 
         def persist(body: str) -> None:
             command = command_parser.parse(body)
-            persist_analysis_command(session_factory, command=command)
+            dispatch_java_command(session_factory, command=command)
 
         super().__init__(
             sqs_client=sqs_client,

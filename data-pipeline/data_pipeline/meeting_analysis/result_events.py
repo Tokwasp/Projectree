@@ -44,7 +44,11 @@ def _stage_v3(
         project_id=command.project_id,
         schema_version=EVENT_SCHEMA_VERSION,
         payload={
-            "meetingId": public_identifier(command.meeting_id),
+            "meetingId": (
+                public_identifier(command.meeting_id)
+                if command.meeting_id is not None
+                else None
+            ),
             "commandId": str(command.command_id),
             "payload": payload,
         },
@@ -61,8 +65,12 @@ def stage_project_graph_changed_v3(
     *,
     command: MeetingAnalysisCommand,
     snapshot_prefix: str | None = None,
+    source_type: str = "MEETING_ANALYSIS",
 ) -> tuple[OutboxEvent, GraphSnapshotArtifact, int]:
     """Increment once, freeze the full snapshot, and stage the v3 event."""
+
+    if source_type not in {"MEETING_ANALYSIS", "NODE_CONTENT_UPDATE"}:
+        raise ValueError("unsupported PROJECT_GRAPH_CHANGED sourceType")
 
     session.flush()
     graph_version = bump_graph_version(session, project_id=command.project_id)
@@ -107,7 +115,7 @@ def stage_project_graph_changed_v3(
         aggregate_type="project_graph",
         aggregate_id=command.project_id,
         payload={
-            "sourceType": "MEETING_ANALYSIS",
+            "sourceType": source_type,
             "graphVersion": graph_version,
             "snapshotArtifactId": str(artifact.id),
         },

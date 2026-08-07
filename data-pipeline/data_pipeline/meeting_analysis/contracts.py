@@ -6,6 +6,7 @@ import json
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import TypeAlias
 
 
 class AnalysisCommandValidationError(ValueError):
@@ -23,21 +24,34 @@ class MeetingAnalysisCommandMessage:
     requested_at: datetime
 
 
+@dataclass(frozen=True)
+class NodeContentUpdateCommandMessage:
+    command_id: uuid.UUID
+    project_id: str
+    node_id: uuid.UUID
+    expected_node_version: int
+    title: str | None
+    content: str | None
+    requested_by_member_id: str
+    requested_at: datetime
+
+
+JavaCommandMessage: TypeAlias = (
+    MeetingAnalysisCommandMessage | NodeContentUpdateCommandMessage
+)
+
+
 class AnalysisCommandParser:
     """Parse commandSchemaVersion=1 without coercing booleans or identifiers."""
 
     def parse(self, body: str) -> MeetingAnalysisCommandMessage:
-        try:
-            payload = json.loads(body)
-        except (TypeError, json.JSONDecodeError) as exc:
-            raise AnalysisCommandValidationError(
-                "analysis command body is not valid JSON"
-            ) from exc
-        if not isinstance(payload, dict):
-            raise AnalysisCommandValidationError(
-                "analysis command must be a JSON object"
-            )
-        if payload.get("commandSchemaVersion") != 1:
+        payload = _json_object(body)
+        return self.parse_payload(payload)
+
+    def parse_payload(self, payload: dict) -> MeetingAnalysisCommandMessage:
+        if type(payload.get("commandSchemaVersion")) is not int or payload.get(
+            "commandSchemaVersion"
+        ) != 1:
             raise AnalysisCommandValidationError(
                 "commandSchemaVersion must be 1"
             )
@@ -75,7 +89,7 @@ class AnalysisCommandParser:
             raise AnalysisCommandValidationError(
                 f"{field} must be a UUID string"
             ) from exc
-        if str(parsed) != value.lower():
+        if str(parsed) != value:
             raise AnalysisCommandValidationError(
                 f"{field} must use canonical UUID text"
             )
@@ -116,8 +130,123 @@ class AnalysisCommandParser:
         return parsed.astimezone(timezone.utc)
 
 
+class NodeContentUpdateCommandParser:
+    """Strict parser for canonical Node title/content update commands."""
+
+    def parse(self, body: str) -> NodeContentUpdateCommandMessage:
+        payload = _json_object(body)
+        return self.parse_payload(payload)
+
+    def parse_payload(self, payload: dict) -> NodeContentUpdateCommandMessage:
+        if type(payload.get("commandSchemaVersion")) is not int or payload.get(
+            "commandSchemaVersion"
+        ) != 1:
+            raise AnalysisCommandValidationError(
+                "commandSchemaVersion must be 1"
+            )
+        if payload.get("commandType") != "NODE_CONTENT_UPDATE_REQUESTED":
+            raise AnalysisCommandValidationError(
+                "commandType must be NODE_CONTENT_UPDATE_REQUESTED"
+            )
+        command_id = AnalysisCommandParser._uuid(
+            payload.get("commandId"), "commandId"
+        )
+        project_id = AnalysisCommandParser._positive_int(
+            payload.get("projectId"), "projectId"
+        )
+        requested_at = AnalysisCommandParser._utc_datetime(
+            payload.get("requestedAt")
+        )
+        nested = payload.get("payload")
+        if not isinstance(nested, dict):
+            raise AnalysisCommandValidationError("payload must be an object")
+        node_id = AnalysisCommandParser._uuid(nested.get("nodeId"), "nodeId")
+        expected = nested.get("expectedNodeVersion")
+        if (
+            isinstance(expected, bool)
+            or not isinstance(expected, int)
+            or expected <= 0
+            or expected > 2**31 - 1
+        ):
+            raise AnalysisCommandValidationError(
+                "expectedNodeVersion must be a positive JSON integer"
+            )
+        title = nested.get("title")
+        content = nested.get("content")
+        if title is None and content is None:
+            raise AnalysisCommandValidationError(
+                "at least one of title or content must be non-null"
+            )
+        if title is not None:
+            if not isinstance(title, str) or not title.strip():
+                raise AnalysisCommandValidationError(
+                    "title must be a non-blank string or null"
+                )
+            if len(title) > 255:
+                raise AnalysisCommandValidationError(
+                    "title must be at most 255 characters"
+                )
+        if content is not None:
+            if not isinstance(content, str) or not content.strip():
+                raise AnalysisCommandValidationError(
+                    "content must be a non-blank string or null"
+                )
+            if len(content) > 65535:
+                raise AnalysisCommandValidationError(
+                    "content must be at most 65535 characters"
+                )
+        member_id = AnalysisCommandParser._positive_int(
+            nested.get("requestedByMemberId"), "requestedByMemberId"
+        )
+        return NodeContentUpdateCommandMessage(
+            command_id=command_id,
+            project_id=project_id,
+            node_id=node_id,
+            expected_node_version=expected,
+            title=title,
+            content=content,
+            requested_by_member_id=member_id,
+            requested_at=requested_at,
+        )
+
+
+class JavaCommandParser:
+    """Route one Java command envelope without weakening either subtype."""
+
+    def __init__(self) -> None:
+        self._meeting = AnalysisCommandParser()
+        self._node_update = NodeContentUpdateCommandParser()
+
+    def parse(self, body: str) -> JavaCommandMessage:
+        payload = _json_object(body)
+        command_type = payload.get("commandType")
+        if command_type == "MEETING_ANALYSIS_REQUESTED":
+            return self._meeting.parse_payload(payload)
+        if command_type == "NODE_CONTENT_UPDATE_REQUESTED":
+            return self._node_update.parse_payload(payload)
+        raise AnalysisCommandValidationError("unsupported commandType")
+
+
+def _json_object(body: str) -> dict:
+    try:
+        payload = json.loads(body)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise AnalysisCommandValidationError(
+            "analysis command body is not valid JSON"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise AnalysisCommandValidationError(
+            "analysis command must be a JSON object"
+        )
+    return payload
+
+
 __all__ = [
     "AnalysisCommandParser",
     "AnalysisCommandValidationError",
+    "JavaCommandMessage",
+    "JavaCommandParser",
     "MeetingAnalysisCommandMessage",
+    "NodeContentUpdateCommandMessage",
+    "NodeContentUpdateCommandParser",
 ]

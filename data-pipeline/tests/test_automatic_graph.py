@@ -1168,7 +1168,11 @@ def test_multiple_action_sources_merge_into_one_target(
         assert target.graph_state == "ACTIVE"
         assert target.parent_id == parent_id
         assert target.version == before_version + 2
-        assert target.title == "repeat action item-3"
+        # The target was user-authored. Automatic merges may append Evidence,
+        # but must not overwrite its protected title/content projection.
+        assert target.title == "multi-source action"
+        assert target.content == "multi-source action existing content"
+        assert target.last_actor_type == "USER"
         assert session.execute(
             select(NodeEmbedding.status).where(NodeEmbedding.node_id == target_id)
         ).scalar_one() == "STALE"

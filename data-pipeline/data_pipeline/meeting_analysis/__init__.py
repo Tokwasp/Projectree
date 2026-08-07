@@ -2,7 +2,10 @@
 
 from .contracts import (
     AnalysisCommandParser,
+    JavaCommandParser,
     MeetingAnalysisCommandMessage,
+    NodeContentUpdateCommandMessage,
+    NodeContentUpdateCommandParser,
 )
 from .persistence import (
     CommandPayloadConflictError,
@@ -14,7 +17,10 @@ from .persistence import (
 __all__ = [
     "AnalysisCommandParser",
     "CommandPayloadConflictError",
+    "JavaCommandParser",
     "MeetingAnalysisCommandMessage",
+    "NodeContentUpdateCommandMessage",
+    "NodeContentUpdateCommandParser",
     "RecordingPayloadConflictError",
     "persist_analysis_command",
     "persist_recording_ready",

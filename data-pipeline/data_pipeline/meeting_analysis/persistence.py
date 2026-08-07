@@ -211,6 +211,7 @@ def persist_analysis_command(
         ).scalar_one_or_none() is not None
         row = MeetingAnalysisCommand(
             command_id=command.command_id,
+            command_type="MEETING_ANALYSIS_REQUESTED",
             project_id=command.project_id,
             meeting_id=command.meeting_id,
             room_name=command.room_name,
