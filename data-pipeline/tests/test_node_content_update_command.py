@@ -700,3 +700,41 @@ def test_concurrent_expected_version_allows_one_update_on_postgresql(session_fac
     with session_factory() as session:
         assert session.get(Node, node_id).version == version + 1
         assert session.get(ProjectGraphState, PROJECT).graph_version == graph_version + 1
+
+
+def test_failed_update_leaves_no_graph_state_row_behind(session_factory) -> None:
+    """The project lock row is scaffolding; a non-bumping command returns it."""
+
+    _seed_node(session_factory)
+    with session_factory() as session:
+        session.delete(session.get(ProjectGraphState, PROJECT))
+        session.commit()
+
+    result = process_node_content_update(
+        session_factory,
+        command=_for_node(uuid.uuid4(), 1, payload={"title": "없는 노드"}),
+    )
+
+    assert result.failure_code == "NODE_NOT_FOUND"
+    with session_factory() as session:
+        assert session.get(ProjectGraphState, PROJECT) is None
+
+
+def test_no_op_update_leaves_no_graph_state_row_behind(session_factory) -> None:
+    node_id = _seed_node(session_factory, title="그대로", content="본문 그대로")
+    with session_factory() as session:
+        version = session.get(Node, node_id).version
+        session.delete(session.get(ProjectGraphState, PROJECT))
+        session.commit()
+
+    result = process_node_content_update(
+        session_factory,
+        command=_for_node(
+            node_id, version, payload={"title": "그대로", "content": "본문 그대로"}
+        ),
+    )
+
+    assert result.status == "COMPLETED"
+    assert result.changed is False
+    with session_factory() as session:
+        assert session.get(ProjectGraphState, PROJECT) is None

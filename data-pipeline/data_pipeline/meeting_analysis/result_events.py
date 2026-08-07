@@ -26,6 +26,15 @@ EVENT_SCHEMA_VERSION = "3"
 PROJECT_GRAPH_CHANGED = "PROJECT_GRAPH_CHANGED"
 MEETING_SUMMARY_READY = "MEETING_SUMMARY_READY"
 ANALYSIS_TASK_STATUS_CHANGED = "ANALYSIS_TASK_STATUS_CHANGED"
+NODE_DELETE_REJECTED = "NODE_DELETE_REJECTED"
+
+NODE_DELETE_REJECTION_REASONS = frozenset(
+    {
+        "GRAPH_VERSION_CONFLICT",
+        "NODE_NOT_FOUND",
+        "NODE_PROJECT_MISMATCH",
+    }
+)
 
 
 def _stage_v3(
@@ -69,7 +78,11 @@ def stage_project_graph_changed_v3(
 ) -> tuple[OutboxEvent, GraphSnapshotArtifact, int]:
     """Increment once, freeze the full snapshot, and stage the v3 event."""
 
-    if source_type not in {"MEETING_ANALYSIS", "NODE_CONTENT_UPDATE"}:
+    if source_type not in {
+        "MEETING_ANALYSIS",
+        "NODE_CONTENT_UPDATE",
+        "NODE_DELETE",
+    }:
         raise ValueError("unsupported PROJECT_GRAPH_CHANGED sourceType")
 
     session.flush()
@@ -145,6 +158,40 @@ def stage_meeting_summary_ready_v3(
     )
 
 
+def stage_node_delete_rejected_v3(
+    session,
+    *,
+    command: MeetingAnalysisCommand,
+    reason_code: str,
+) -> OutboxEvent:
+    """Stage the business rejection in the same transaction as the outcome.
+
+    The payload carries only what Java's Node Delete contract agreed on. Seed
+    ids and the observed graph versions stay in the command inbox row and the
+    change log, where they serve diagnosis without widening the wire contract.
+
+    Infrastructure failures never reach here: they roll the transaction back
+    and are retried by the command queue instead of being reported to Java as
+    a domain decision.
+    """
+
+    if reason_code not in NODE_DELETE_REJECTION_REASONS:
+        raise ValueError(
+            f"unsupported NODE_DELETE_REJECTED reasonCode: {reason_code}"
+        )
+    return _stage_v3(
+        session,
+        event_type=NODE_DELETE_REJECTED,
+        command=command,
+        aggregate_type="project_graph",
+        aggregate_id=command.project_id,
+        payload={
+            "sourceType": "NODE_DELETE",
+            "reasonCode": reason_code,
+        },
+    )
+
+
 def stage_task_failed_v3(
     session,
     *,
@@ -183,8 +230,11 @@ __all__ = [
     "ANALYSIS_TASK_STATUS_CHANGED",
     "EVENT_SCHEMA_VERSION",
     "MEETING_SUMMARY_READY",
+    "NODE_DELETE_REJECTED",
+    "NODE_DELETE_REJECTION_REASONS",
     "PROJECT_GRAPH_CHANGED",
     "stage_meeting_summary_ready_v3",
+    "stage_node_delete_rejected_v3",
     "stage_project_graph_changed_v3",
     "stage_task_failed_v3",
 ]

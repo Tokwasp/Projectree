@@ -232,7 +232,7 @@ class MeetingAnalysisCommand(Base):
         ),
         CheckConstraint(
             "command_type IN ('MEETING_ANALYSIS_REQUESTED', "
-            "'NODE_CONTENT_UPDATE_REQUESTED')",
+            "'NODE_CONTENT_UPDATE_REQUESTED', 'NODE_DELETE_REQUESTED')",
             name="ck_analysis_command_type",
         ),
         CheckConstraint(
@@ -240,17 +240,29 @@ class MeetingAnalysisCommand(Base):
             "meeting_id IS NOT NULL AND room_name IS NOT NULL AND "
             "length(trim(room_name)) > 0 AND generate_summary IS NOT NULL AND "
             "generate_nodes IS NOT NULL AND target_node_id IS NULL AND "
-            "expected_node_version IS NULL AND requested_by_member_id IS NULL) OR "
+            "expected_node_version IS NULL AND expected_graph_version IS NULL AND "
+            "requested_by_member_id IS NULL) OR "
             "(command_type = 'NODE_CONTENT_UPDATE_REQUESTED' AND "
             "meeting_id IS NULL AND room_name IS NULL AND "
             "generate_summary IS NULL AND generate_nodes IS NULL AND "
             "target_node_id IS NOT NULL AND expected_node_version IS NOT NULL AND "
+            "expected_graph_version IS NULL AND "
+            "requested_by_member_id IS NOT NULL) OR "
+            "(command_type = 'NODE_DELETE_REQUESTED' AND "
+            "meeting_id IS NULL AND room_name IS NULL AND "
+            "generate_summary IS NULL AND generate_nodes IS NULL AND "
+            "target_node_id IS NULL AND expected_node_version IS NULL AND "
+            "expected_graph_version IS NOT NULL AND "
             "requested_by_member_id IS NOT NULL)",
             name="ck_analysis_command_shape",
         ),
         CheckConstraint(
             "expected_node_version IS NULL OR expected_node_version >= 1",
             name="ck_analysis_command_node_version_positive",
+        ),
+        CheckConstraint(
+            "expected_graph_version IS NULL OR expected_graph_version >= 0",
+            name="ck_analysis_command_graph_version_nonnegative",
         ),
         CheckConstraint("length(payload_hash) = 64", name="ck_analysis_command_hash"),
         CheckConstraint(
@@ -278,6 +290,7 @@ class MeetingAnalysisCommand(Base):
     generate_nodes: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     target_node_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     expected_node_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    expected_graph_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     requested_by_member_id: Mapped[str | None] = mapped_column(
         String(128), nullable=True
     )
