@@ -2,11 +2,13 @@ import style from "./ProfileSection.module.css";
 
 interface ProfileSectionProps {
   name: string;
+  email: string;
   profileImageUrl: string | null;
 }
 
 export default function ProfileSection({
   name,
+  email,
   profileImageUrl,
 }: ProfileSectionProps) {
   return (
@@ -26,15 +28,9 @@ export default function ProfileSection({
 
         <div className={style.profileInfo}>
           <h2 className={style.name}>{name}</h2>
-          <p className={style.profileDescription}>
-            Projectree에서 사용하는 프로필입니다.
-          </p>
+          <p className={style.profileDescription}>{email}</p>
         </div>
       </div>
-
-      <button className={style.editButton} type="button">
-        프로필 수정
-      </button>
     </section>
   );
 }

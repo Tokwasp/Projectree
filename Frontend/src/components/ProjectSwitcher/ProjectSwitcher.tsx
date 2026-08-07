@@ -7,18 +7,20 @@ interface ProjectSwitcherProps {
   projects: ProjectSummary[];
   currentProjectId: number | null;
   currentProjectName: string;
+  isDark?: boolean;
 }
 
 export default function ProjectSwitcher({
   projects,
   currentProjectId,
   currentProjectName,
+  isDark = false,
 }: ProjectSwitcherProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div
-      className={style.container}
+      className={`${style.container} ${isDark ? style.containerDark : ""}`}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
           setIsOpen(false);

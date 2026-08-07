@@ -1,24 +1,30 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import style from "./MeetingEndModal.module.css";
-
-export interface MeetingOutputOptions {
-  createSummary: boolean;
-  createNodes: boolean;
-}
+import type { MeetingOutputOptions } from "../../api/meetingApi";
 
 interface MeetingEndModalProps {
   isOpen: boolean;
+  pending: boolean;
   onClose: () => void;
   onEnd: (options: MeetingOutputOptions) => void;
 }
 
 export default function MeetingEndModal({
   isOpen,
+  pending,
   onClose,
   onEnd,
 }: MeetingEndModalProps) {
-  const [createSummary, setCreateSummary] = useState(false);
-  const [createNodes, setCreateNodes] = useState(false);
+  const [generateSummary, setGenerateSummary] = useState(false);
+  const [generateNodes, setGenerateNodes] = useState(false);
+
+  const handleClose = useCallback(() => {
+    if (pending) return;
+
+    setGenerateSummary(false);
+    setGenerateNodes(false);
+    onClose();
+  }, [pending, onClose]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -27,9 +33,7 @@ export default function MeetingEndModal({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setCreateSummary(false);
-        setCreateNodes(false);
-        onClose();
+        handleClose();
       }
     };
 
@@ -38,36 +42,24 @@ export default function MeetingEndModal({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
   if (!isOpen) {
     return null;
   }
 
-  const handleClose = () => {
-    setCreateSummary(false);
-    setCreateNodes(false);
-    onClose();
-  };
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (pending) return;
 
     onEnd({
-      createSummary,
-      createNodes,
+      generateSummary,
+      generateNodes,
     });
-
-    setCreateSummary(false);
-    setCreateNodes(false);
   };
 
   return (
-    <div
-      className={style.overlay}
-      role="presentation"
-      onClick={handleClose}
-    >
+    <div className={style.overlay} role="presentation" onClick={handleClose}>
       <section
         className={style.modal}
         role="dialog"
@@ -95,16 +87,13 @@ export default function MeetingEndModal({
               <input
                 className={style.checkbox}
                 type="checkbox"
-                checked={createSummary}
-                onChange={(event) =>
-                  setCreateSummary(event.target.checked)
-                }
+                checked={generateSummary}
+                disabled={pending}
+                onChange={(event) => setGenerateSummary(event.target.checked)}
               />
 
               <span>
-                <strong className={style.optionTitle}>
-                  회의록 생성
-                </strong>
+                <strong className={style.optionTitle}>회의록 생성</strong>
                 <span className={style.optionDescription}>
                   회의 내용을 정리하여 AI 회의 요약을 생성합니다.
                 </span>
@@ -115,16 +104,13 @@ export default function MeetingEndModal({
               <input
                 className={style.checkbox}
                 type="checkbox"
-                checked={createNodes}
-                onChange={(event) =>
-                  setCreateNodes(event.target.checked)
-                }
+                checked={generateNodes}
+                disabled={pending}
+                onChange={(event) => setGenerateNodes(event.target.checked)}
               />
 
               <span>
-                <strong className={style.optionTitle}>
-                  노드 생성
-                </strong>
+                <strong className={style.optionTitle}>노드 생성</strong>
                 <span className={style.optionDescription}>
                   회의에서 논의된 내용을 바탕으로 노드를 생성합니다.
                 </span>
@@ -136,13 +122,18 @@ export default function MeetingEndModal({
             <button
               className={style.cancelButton}
               type="button"
+              disabled={pending}
               onClick={handleClose}
             >
               취소
             </button>
 
-            <button className={style.endButton} type="submit">
-              종료
+            <button
+              className={style.endButton}
+              type="submit"
+              disabled={pending}
+            >
+              {pending ? "종료 중…" : "종료"}
             </button>
           </div>
         </form>

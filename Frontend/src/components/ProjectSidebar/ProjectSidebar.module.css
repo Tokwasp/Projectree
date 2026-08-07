@@ -10,6 +10,49 @@
   border-right: 1px solid var(--color-border);
 }
 
+/* 노드·회의 화면 전용 — 사이드바를 어둡게 깔고 글자는 흰색으로 뒤집는다 */
+.containerDark {
+  color: var(--color-white);
+  background: var(--color-background);
+  border-right-color: var(--color-meeting-border);
+}
+
+.containerDark .memberSection {
+  background: var(--color-meeting-panel);
+}
+
+.containerDark .memberLabel {
+  color: var(--color-gray-300);
+}
+
+.containerDark .memberAvatar,
+.containerDark .memberMore {
+  color: var(--color-white);
+  background: var(--color-meeting-bg);
+  border-color: var(--color-meeting-border);
+}
+
+.containerDark .projectMenuButton {
+  color: var(--color-white);
+}
+
+.containerDark .projectMenuButton:hover:not(:disabled) {
+  background: var(--color-meeting-panel);
+}
+
+.containerDark .projectMenuButtonActive {
+  color: var(--color-white);
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 22%,
+    var(--color-background)
+  );
+}
+
+.containerDark .projectMenuButton:disabled {
+  color: var(--color-gray-500);
+}
+
 .memberSection {
   display: flex;
   flex-direction: column;

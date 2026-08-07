@@ -1,0 +1,135 @@
+/* 사이드바만 남기고 앱 헤더까지 덮는다 — 화면에는 사이드바와 우주 공간만 보여야 한다.
+   z-index는 앱 헤더(10)보다 높고 회의 오버레이(100)보다 낮게 둬서,
+   회의 중 미니 창이 트리 위에 계속 보이도록 한다 */
+.container {
+  position: fixed;
+  inset: 0 0 0 var(--app-sidebar-width);
+  z-index: 50;
+  overflow: hidden;
+  background: #000006;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+}
+
+/* 선택한 결정의 하위 노드 정보. 화면 맨 우측을 세로로 다 쓴다 */
+.detailPanel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-5);
+  overflow-y: auto;
+  color: #f2f4ff;
+  background: rgba(6, 8, 20, 0.82);
+  border-left: 1px solid rgba(127, 216, 255, 0.28);
+  backdrop-filter: blur(6px);
+}
+
+.detailHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.detailCategory {
+  color: #e879f9;
+  font-size: var(--text-xs);
+}
+
+.detailTitle {
+  margin-top: var(--space-1);
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+}
+
+.detailClose {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  color: #f2f4ff;
+  font-size: var(--text-lg);
+  line-height: 1;
+  background: transparent;
+  border: 1px solid rgba(127, 216, 255, 0.4);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+.detailCount {
+  color: var(--color-gray-400);
+  font-size: var(--text-xs);
+}
+
+.detailEmpty {
+  margin-top: var(--space-4);
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  list-style: none;
+}
+
+.taskTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.issueList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0 var(--space-3);
+  list-style: none;
+}
+
+.issueItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-gray-300);
+  font-size: var(--text-xs);
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+}
+
+/* 실제 노드 데이터가 아니라는 걸 화면에서 바로 알 수 있어야 한다 */
+/* 좌상단은 카테고리 필터, 좌하단은 범례, 우측은 2D 토글·줌이 쓴다 — 상단 가운데로 */
+.mockBadge {
+  position: absolute;
+  top: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+  background: rgba(6, 8, 20, 0.55);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(3px);
+}
