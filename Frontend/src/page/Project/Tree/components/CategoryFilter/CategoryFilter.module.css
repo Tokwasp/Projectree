@@ -1,0 +1,38 @@
+/* 3D 캔버스 위에 떠 있는 유리 패널. 2D 토글(우상단)과 겹치지 않게 좌상단에 둔다 */
+.container {
+  position: absolute;
+  top: var(--space-6);
+  left: var(--space-6);
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  max-width: calc(100% - var(--space-16) * 2);
+}
+
+.chip,
+.chipActive {
+  padding: var(--space-1) var(--space-4);
+  color: #f2f4ff;
+  font-size: var(--text-xs);
+  background: rgba(6, 8, 20, 0.55);
+  border: 1px solid rgba(127, 216, 255, 0.4);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(3px);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.chip:hover {
+  border-color: rgba(127, 216, 255, 0.9);
+}
+
+/* 선택된 칩은 카테고리 노드와 같은 호박색으로 묶어 준다 */
+.chipActive {
+  color: #1b1c1e;
+  font-weight: var(--font-semibold);
+  background: #fbbf24;
+  border-color: #fbbf24;
+}

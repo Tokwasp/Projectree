@@ -14,6 +14,7 @@ import InvitationLanding from "./page/Project/Invitation/ui/InvitationLanding";
 import ProjectMember from "./page/Project/Member/ui/ProjectMember";
 import PrivateLayout from "./layout/PrivateLayout";
 import ProjectMeeting from "./page/Project/Meeting/ui/ProjectMeeting";
+import ProjectTree from "./page/Project/Tree/ui/ProjectTree";
 import MeetingOverlay from "./page/Project/Meeting/components/MeetingOverlay/MeetingOverlay";
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
             <Route index element={<ProjectHome />} />
             <Route path="members" element={<ProjectMember />} />
             <Route path="meeting" element={<ProjectMeeting />} />
+            <Route path="tree" element={<ProjectTree />} />
           </Route>
         </Route>
       </Routes>

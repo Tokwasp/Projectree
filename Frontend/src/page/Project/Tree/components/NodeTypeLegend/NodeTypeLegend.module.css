@@ -1,0 +1,80 @@
+/* 3D 캔버스 위에 떠 있는 유리 패널. 좌하단은 다른 오버레이와 겹치지 않는다 */
+.container {
+  position: absolute;
+  bottom: var(--space-6);
+  left: var(--space-6);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  color: #f2f4ff;
+  font-size: var(--text-xs);
+  background: rgba(6, 8, 20, 0.72);
+  border: 1px solid rgba(127, 216, 255, 0.4);
+  border-radius: var(--radius-md);
+}
+
+.title {
+  margin-bottom: var(--space-1);
+  color: var(--color-gray-400);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+/* label로 감싸야 글자를 눌러도 체크가 토글된다 */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  cursor: pointer;
+}
+
+/* 루트는 항상 보이므로 체크박스가 없다 — 체크박스 자리만큼 들여쓴다 */
+.rowFixed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  padding-left: calc(var(--space-4) + var(--space-1));
+}
+
+.checkbox {
+  width: var(--space-4);
+  height: var(--space-4);
+  margin: 0;
+  accent-color: #7fd8ff;
+  cursor: pointer;
+}
+
+.dot {
+  flex: none;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.name {
+  white-space: nowrap;
+}
+
+/* 목록과 성격이 달라 구분선을 두고, 폭은 목록에 맞춰 두 줄로 접힌다 */
+.hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 180px;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  color: var(--color-gray-400);
+  font-size: 10px;
+  line-height: var(--leading-normal);
+  border-top: 1px solid rgba(127, 216, 255, 0.2);
+}
+
+/* 체크 해제된 항목은 흐리게 — 지금 무엇이 꺼져 있는지 한눈에 보여야 한다 */
+.nameOff {
+  white-space: nowrap;
+  color: var(--color-gray-500);
+}

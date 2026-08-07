@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { endMeeting } from "../api/meetingApi";
+import {
+  endMeeting,
+  getStoredCreatorId,
+  requestMeetingAnalysis,
+  type MeetingOutputOptions,
+} from "../api/meetingApi";
+import { useAuthStore } from "../../../../store/authStore";
 import { useMeetingStore } from "../../../../store/meetingStore";
 import {
   disconnectMeeting,
@@ -49,14 +55,21 @@ export const useMeetingOverlay = () => {
   const startedAt = useMeetingStore((state) => state.startedAt);
   const miniPos = useMeetingStore((state) => state.miniPos);
   const setMiniPos = useMeetingStore((state) => state.setMiniPos);
+  const memberId = useAuthStore((state) => state.memberId);
 
   const location = useLocation();
   const navigate = useNavigate();
   const [elapsed, setElapsed] = useState(0);
+  const [endModalOpen, setEndModalOpen] = useState(false);
+  const [ending, setEnding] = useState(false);
   const dragRef = useRef<DragState | null>(null);
 
   const meetingPath = `/projects/${projectId}/meeting`;
   const isImmersive = location.pathname === meetingPath;
+
+  const creatorId = getStoredCreatorId();
+  const isCreator =
+    memberId !== null && (creatorId === null || memberId === creatorId);
 
   useEffect(() => {
     if (phase !== "live" || !startedAt) return;
@@ -148,19 +161,30 @@ export const useMeetingOverlay = () => {
     navigate(`/projects/${projectId}`);
   };
 
-  const finish = async () => {
+  const requestFinish = () => setEndModalOpen(true);
+  const cancelFinish = () => setEndModalOpen(false);
+
+  const finish = async (options: MeetingOutputOptions) => {
+    setEnding(true);
+
     if (roomName) {
       try {
+        if (projectId !== null) {
+          await requestMeetingAnalysis(projectId, roomName, options);
+        }
         await endMeeting(roomName);
       } catch (caught) {
         console.error("회의 종료 요청 실패:", caught);
         window.alert(
           "회의를 종료하지 못했습니다. 다른 참가자는 아직 회의 중입니다.",
         );
+        setEnding(false);
         return;
       }
     }
 
+    setEnding(false);
+    setEndModalOpen(false);
     await disconnectMeeting();
     navigate(`/projects/${projectId}`);
   };
@@ -169,11 +193,16 @@ export const useMeetingOverlay = () => {
     isImmersive,
     elapsed,
     miniPos,
+    isCreator,
+    endModalOpen,
+    ending,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
     expand,
     leave,
+    requestFinish,
+    cancelFinish,
     finish,
     toggleMic: toggleMicrophone,
     toggleCam: toggleCamera,

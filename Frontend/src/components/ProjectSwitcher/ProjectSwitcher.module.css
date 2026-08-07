@@ -6,6 +6,58 @@
   flex-shrink: 0;
 }
 
+/* 어두운 사이드바 안에서는 카드째로 뒤집는다 */
+.containerDark .button {
+  color: var(--color-white);
+  background: var(--color-meeting-panel);
+  border-color: var(--color-meeting-border);
+}
+
+.containerDark .label {
+  color: var(--color-gray-300);
+}
+
+.containerDark .projectName {
+  color: var(--color-white);
+}
+
+.containerDark .chevron {
+  border-right-color: var(--color-gray-300);
+  border-bottom-color: var(--color-gray-300);
+}
+
+.containerDark .dropdown {
+  background: var(--color-meeting-panel);
+  border-color: var(--color-meeting-border);
+  scrollbar-color: var(--color-gray-600) transparent;
+}
+
+.containerDark .dropdown::-webkit-scrollbar-thumb {
+  background: var(--color-gray-600);
+  border-color: var(--color-meeting-panel);
+}
+
+.containerDark .dropdown::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-500);
+}
+
+.containerDark .dropdownItem {
+  color: var(--color-white);
+}
+
+.containerDark .dropdownItem:hover {
+  background: var(--color-meeting-bg);
+}
+
+.containerDark .dropdownItemActive {
+  color: var(--color-white);
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 24%,
+    var(--color-meeting-panel)
+  );
+}
+
 .button {
   display: flex;
   box-sizing: border-box;
