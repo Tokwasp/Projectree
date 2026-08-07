@@ -1,6 +1,7 @@
 import { useState } from "react";
 import useLogout from "../../Auth/hooks/useLogout";
 import ProfileSection from "../components/ProfileSection/ProfileSection";
+import ProfileSectionSkeleton from "../components/ProfileSection/ProfileSectionSkeleton";
 import MyProjectList from "../components/MyProjectList/MyProjectList";
 import DeleteAccountModal from "../components/DeleteAccountModal/DeleteAccountModal";
 import useProjectList from "../../Project/List/hooks/useProjectList";
@@ -53,7 +54,7 @@ export default function MyPage() {
       </header>
 
       {isProfileLoading ? (
-        <p>회원 정보를 불러오는 중입니다.</p>
+        <ProfileSectionSkeleton />
       ) : profileError ? (
         <p role="alert">{profileError}</p>
       ) : profile ? (
@@ -64,12 +65,13 @@ export default function MyPage() {
         />
       ) : null}
 
-      {isLoading && projects.length === 0 ? (
-        <p>프로젝트 목록을 불러오는 중입니다.</p>
-      ) : projectError ? (
+      {projectError ? (
         <p role="alert">{projectError}</p>
       ) : (
-        <MyProjectList projects={projects} />
+        <MyProjectList
+          projects={projects}
+          isLoading={isLoading && projects.length === 0}
+        />
       )}
 
       <div className={style.accountActions}>
