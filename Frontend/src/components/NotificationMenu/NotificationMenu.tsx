@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import NotificationIcon from "../../assets/icons/header/notification.png";
 import { useNotificationStore } from "../../store/notificationStore";
 import style from "./NotificationMenu.module.css";
@@ -20,6 +20,7 @@ const formatCreatedAt = (createdAt: string) => {
 
 export default function NotificationMenu() {
   const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const notifications = useNotificationStore(
     (state) => state.notifications,
   );
@@ -33,15 +34,35 @@ export default function NotificationMenu() {
   const notificationCount =
     notifications.length > 99 ? "99+" : notifications.length;
 
+  /**
+   * 포커스(onBlur)로 닫으면 "전체 삭제"에서 막힌다 — 목록이 비면 그 버튼이 사라지는데,
+   * 포커스를 쥔 요소가 제거될 때는 focusout이 오지 않아 메뉴가 열린 채로 남는다.
+   * 그때부터는 안에 포커스가 없어 바깥을 눌러도 blur가 없다. 포인터로 직접 판정한다.
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const closeOnOutside = (event: PointerEvent) => {
+      if (!wrapperRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
   return (
-    <div
-      className={style.wrapper}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
-          setIsOpen(false);
-        }
-      }}
-    >
+    <div className={style.wrapper} ref={wrapperRef}>
       <button
         className={style.trigger}
         type="button"

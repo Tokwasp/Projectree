@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import logo from "../../../../assets/logo.svg";
 import type { InvitationStatus } from "../api/invitationApi";
 import useInvitationLanding from "../hooks/useInvitationLanding";
+import { toast } from "../../../../store/toastStore";
 import style from "../css/InvitationLanding.module.css";
 
 function getStatusMessage(
@@ -55,12 +56,16 @@ export default function InvitationLanding() {
     const projectId = await acceptInvitation();
 
     if (projectId !== null) {
+      // 프로젝트로 바로 넘어가서 이 화면이 사라진다
+      toast.success("초대를 수락했습니다.");
       navigate(`/projects/${projectId}`);
     }
   };
 
   const handleReject = async () => {
-    await rejectInvitation();
+    if (await rejectInvitation()) {
+      toast.info("초대를 거절했습니다.");
+    }
   };
 
   if (isLoading) {

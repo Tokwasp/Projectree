@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../../api/apiClient";
 import { useAuthStore } from "../../../store/authStore";
+import { toast } from "../../../store/toastStore";
 import { logout as requestLogout } from "../api/authApi";
 
 export default function useLogout() {
@@ -13,6 +14,8 @@ export default function useLogout() {
   const finishLogout = () => {
     clearLoginState();
     navigate("/", { replace: true });
+    // 랜딩으로 튕겨서 눌렀던 화면이 사라진다 — 실패는 인라인에 남지만 성공은 흔적이 없다
+    toast.success("로그아웃했습니다.");
   };
 
   const logout = async () => {

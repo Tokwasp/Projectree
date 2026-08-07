@@ -9,6 +9,7 @@ import {
 } from "../api/meetingApi";
 import { useAuthStore } from "../../../../store/authStore";
 import { useMeetingStore } from "../../../../store/meetingStore";
+import { toast } from "../../../../store/toastStore";
 import {
   disconnectMeeting,
   enableSound,
@@ -175,9 +176,7 @@ export const useMeetingOverlay = () => {
         await endMeeting(roomName);
       } catch (caught) {
         console.error("회의 종료 요청 실패:", caught);
-        window.alert(
-          "회의를 종료하지 못했습니다. 다른 참가자는 아직 회의 중입니다.",
-        );
+        toast.error("회의를 종료하지 못했습니다. 다른 참가자는 아직 회의 중입니다.");
         setEnding(false);
         return;
       }
@@ -187,6 +186,12 @@ export const useMeetingOverlay = () => {
     setEndModalOpen(false);
     await disconnectMeeting();
     navigate(`/projects/${projectId}`);
+
+    toast.success(
+      options.generateSummary || options.generateNodes
+        ? "회의를 종료했습니다. 선택한 산출물은 잠시 후 생성됩니다."
+        : "회의를 종료했습니다.",
+    );
   };
 
   return {
