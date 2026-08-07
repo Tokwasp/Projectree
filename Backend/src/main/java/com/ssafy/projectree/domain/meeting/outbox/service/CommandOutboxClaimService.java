@@ -43,6 +43,7 @@ public class CommandOutboxClaimService {
         return new ClaimedCommandOutbox(
                 outbox.getId(),
                 outbox.getCommandId(),
+                outbox.getCommandType(),
                 outbox.getPayload(),
                 claimToken,
                 outbox.getAttemptCount()

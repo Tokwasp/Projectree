@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class MeetingAnalysisCommandOutboxTest {
 
@@ -26,6 +27,67 @@ class MeetingAnalysisCommandOutboxTest {
         assertThat(outbox.getNextAttemptAt()).isEqualTo(NOW);
         assertThat(outbox.getLeaseUntil()).isNull();
         assertThat(outbox.getClaimToken()).isNull();
+    }
+
+    @Test
+    void nodeContentUpdateIsMeetingIndependentAndUsesSameLifecycle() {
+        String nodeId = UUID.randomUUID().toString();
+        MeetingAnalysisCommandOutbox outbox =
+                MeetingAnalysisCommandOutbox.pendingNodeContentUpdate(
+                        UUID.randomUUID(),
+                        9,
+                        nodeId,
+                        MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                        "{\"commandType\":\"NODE_CONTENT_UPDATE_REQUESTED\"}",
+                        17,
+                        NOW
+                );
+
+        assertThat(outbox.getMeeting()).isNull();
+        assertThat(outbox.getTargetProjectId()).isEqualTo(9);
+        assertThat(outbox.getTargetNodeId()).isEqualTo(nodeId);
+        assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.PENDING);
+
+        String token = outbox.claim(NOW, NOW.plusSeconds(60), 3);
+        assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.PUBLISHING);
+        assertThat(outbox.markPublished(token, NOW.plusSeconds(1))).isTrue();
+        assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.PUBLISHED);
+    }
+
+    @Test
+    void meetingFactoryRejectsNodeContentUpdateCommandType() {
+        Project project = Project.builder().title("project").content("content").build();
+        ProjectMember creator = ProjectMember.createMember(17, ProjectRole.OWNER);
+        project.addMember(creator);
+        Meeting meeting = Meeting.create(
+                project,
+                creator,
+                "c6db7ac7-d3c7-4f18-928c-ce376ccfabba"
+        );
+
+        assertThatThrownBy(() -> MeetingAnalysisCommandOutbox.pending(
+                UUID.randomUUID(),
+                meeting,
+                MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                "{\"invalid\":true}",
+                17,
+                NOW
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("commandType must be MEETING_ANALYSIS_REQUESTED");
+    }
+
+    @Test
+    void nodeUpdateFactoryRejectsMeetingAnalysisCommandType() {
+        assertThatThrownBy(() -> MeetingAnalysisCommandOutbox.pendingNodeContentUpdate(
+                UUID.randomUUID(),
+                1,
+                UUID.randomUUID().toString(),
+                MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
+                "{\"invalid\":true}",
+                17,
+                NOW
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("commandType must be NODE_CONTENT_UPDATE_REQUESTED");
     }
 
     @Test

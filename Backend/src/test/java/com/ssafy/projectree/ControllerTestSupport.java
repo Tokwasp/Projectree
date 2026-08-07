@@ -10,6 +10,8 @@ import com.ssafy.projectree.domain.meeting.record.service.MeetingRecordQueryServ
 import com.ssafy.projectree.domain.meeting.record.service.MeetingRecordUpdateService;
 import com.ssafy.projectree.domain.meeting.result.graph.query.GraphQueryController;
 import com.ssafy.projectree.domain.meeting.result.graph.query.GraphQueryService;
+import com.ssafy.projectree.domain.meeting.result.graph.command.GraphNodeCommandController;
+import com.ssafy.projectree.domain.meeting.result.graph.command.GraphNodeUpdateService;
 import com.ssafy.projectree.domain.meeting.service.MeetingAnalysisRequestService;
 import com.ssafy.projectree.domain.nodeCategory.controller.NodeCategoryController;
 import com.ssafy.projectree.domain.nodeCategory.service.NodeCategoryService;
@@ -38,6 +40,7 @@ import tools.jackson.databind.ObjectMapper;
         MeetingController.class,
         MeetingRecordController.class,
         GraphQueryController.class,
+        GraphNodeCommandController.class,
         NotificationController.class,
         S3Controller.class
 })
@@ -75,6 +78,9 @@ public abstract class ControllerTestSupport {
 
     @MockitoBean
     protected GraphQueryService graphQueryService;
+
+    @MockitoBean
+    protected GraphNodeUpdateService graphNodeUpdateService;
 
     @MockitoBean
     protected NotificationService notificationService;

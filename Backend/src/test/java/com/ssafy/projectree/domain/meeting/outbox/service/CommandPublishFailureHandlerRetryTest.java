@@ -25,6 +25,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class CommandPublishFailureHandlerRetryTest {
@@ -78,6 +79,43 @@ class CommandPublishFailureHandlerRetryTest {
                 new IllegalStateException("second failure")
         )).isEqualTo(CommandPublishFailureOutcome.RETRY_SCHEDULED);
         assertThat(outbox.getNextAttemptAt()).isEqualTo(NOW.plusSeconds(150));
+    }
+
+    @Test
+    void finalNodeUpdateFailureDoesNotTouchMeetingOrNotification() {
+        MeetingAnalysisCommandOutboxRepository outboxRepository =
+                mock(MeetingAnalysisCommandOutboxRepository.class);
+        MeetingRepository meetingRepository = mock(MeetingRepository.class);
+        MeetingAnalysisNotificationOutboxRepository notificationRepository =
+                mock(MeetingAnalysisNotificationOutboxRepository.class);
+        CommandPublishFailureHandler handler = new CommandPublishFailureHandler(
+                outboxRepository,
+                meetingRepository,
+                notificationRepository,
+                properties(),
+                mock(ObjectMapper.class),
+                Clock.fixed(Instant.parse("2026-08-04T01:00:00Z"), ZoneOffset.UTC)
+        );
+        MeetingAnalysisCommandOutbox outbox =
+                MeetingAnalysisCommandOutbox.pendingNodeContentUpdate(
+                        UUID.randomUUID(),
+                        1,
+                        UUID.randomUUID().toString(),
+                        MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                        "{\"stored\":true}",
+                        17,
+                        NOW
+                );
+        ReflectionTestUtils.setField(outbox, "id", 32);
+        ReflectionTestUtils.setField(outbox, "attemptCount", 2);
+        String token = outbox.claim(NOW, NOW.plusSeconds(60), 3);
+        when(outboxRepository.findOwnedPublishingForUpdate(32, token))
+                .thenReturn(Optional.of(outbox));
+
+        assertThat(handler.handle(claimed(outbox, token, 3), new IllegalStateException("failed")))
+                .isEqualTo(CommandPublishFailureOutcome.FINAL_FAILED);
+        assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.FAILED);
+        verifyNoInteractions(meetingRepository, notificationRepository);
     }
 
     private ClaimedCommandOutbox claimed(

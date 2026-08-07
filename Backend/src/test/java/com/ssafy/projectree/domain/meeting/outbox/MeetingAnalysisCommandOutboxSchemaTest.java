@@ -2,6 +2,7 @@ package com.ssafy.projectree.domain.meeting.outbox;
 
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandOutbox;
 import jakarta.persistence.Table;
+import jakarta.persistence.JoinColumn;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -22,6 +23,23 @@ class MeetingAnalysisCommandOutboxSchemaTest {
             assertThat(index.name()).isEqualTo("idx_meeting_analysis_outbox_expired_lease");
             assertThat(index.columnList()).isEqualTo("status, lease_until, created_at, id");
         });
+    }
+
+    @Test
+    void meetingAssociationAndManualDdlAreNullableForNodeCommands() throws Exception {
+        JoinColumn meetingColumn = MeetingAnalysisCommandOutbox.class
+                .getDeclaredField("meeting")
+                .getAnnotation(JoinColumn.class);
+        String ddl = Files.readString(Path.of(
+                "docs/migrations/20260804_create_meeting_analysis_command_outbox.sql"
+        ));
+
+        assertThat(meetingColumn.nullable()).isTrue();
+        assertThat(ddl)
+                .contains("meeting_id INT NULL")
+                .contains("target_project_id INT NULL")
+                .contains("target_node_id VARCHAR(36) NULL")
+                .contains("UNIQUE (meeting_id, command_type)");
     }
 
     @Test

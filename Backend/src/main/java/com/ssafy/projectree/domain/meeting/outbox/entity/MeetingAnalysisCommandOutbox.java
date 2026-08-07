@@ -60,13 +60,19 @@ public class MeetingAnalysisCommandOutbox extends BaseEntity {
     @Column(name = "command_id", nullable = false, length = 36)
     private String commandId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(
             name = "meeting_id",
-            nullable = false,
+            nullable = true,
             foreignKey = @ForeignKey(name = "fk_meeting_analysis_command_outbox_meeting")
     )
     private Meeting meeting;
+
+    @Column(name = "target_project_id")
+    private Integer targetProjectId;
+
+    @Column(name = "target_node_id", length = 36)
+    private String targetNodeId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "command_type", nullable = false, length = 64)
@@ -108,10 +114,15 @@ public class MeetingAnalysisCommandOutbox extends BaseEntity {
             int requestedByMemberId,
             LocalDateTime now
     ) {
+        if (commandType != MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED) {
+            throw new IllegalArgumentException(
+                    "commandType must be MEETING_ANALYSIS_REQUESTED"
+            );
+        }
         MeetingAnalysisCommandOutbox outbox = new MeetingAnalysisCommandOutbox();
         outbox.commandId = Objects.requireNonNull(commandId, "commandId must not be null").toString();
         outbox.meeting = Objects.requireNonNull(meeting, "meeting must not be null");
-        outbox.commandType = Objects.requireNonNull(commandType, "commandType must not be null");
+        outbox.commandType = commandType;
         if (payload == null || payload.isBlank()) {
             throw new IllegalArgumentException("payload must not be null or blank");
         }
@@ -121,6 +132,45 @@ public class MeetingAnalysisCommandOutbox extends BaseEntity {
         if (requestedByMemberId <= 0) {
             throw new IllegalArgumentException("requestedByMemberId must be positive");
         }
+        outbox.requestedByMemberId = requestedByMemberId;
+        outbox.nextAttemptAt = Objects.requireNonNull(now, "now must not be null");
+        return outbox;
+    }
+
+    public static MeetingAnalysisCommandOutbox pendingNodeContentUpdate(
+            UUID commandId,
+            int projectId,
+            String nodeId,
+            MeetingAnalysisCommandType commandType,
+            String payload,
+            int requestedByMemberId,
+            LocalDateTime now
+    ) {
+        if (projectId <= 0) {
+            throw new IllegalArgumentException("projectId must be positive");
+        }
+        if (nodeId == null || nodeId.isBlank()) {
+            throw new IllegalArgumentException("nodeId must not be null or blank");
+        }
+        if (commandType != MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED) {
+            throw new IllegalArgumentException("commandType must be NODE_CONTENT_UPDATE_REQUESTED");
+        }
+        if (payload == null || payload.isBlank()) {
+            throw new IllegalArgumentException("payload must not be null or blank");
+        }
+        if (requestedByMemberId <= 0) {
+            throw new IllegalArgumentException("requestedByMemberId must be positive");
+        }
+
+        MeetingAnalysisCommandOutbox outbox = new MeetingAnalysisCommandOutbox();
+        outbox.commandId = Objects.requireNonNull(commandId, "commandId must not be null").toString();
+        outbox.meeting = null;
+        outbox.targetProjectId = projectId;
+        outbox.targetNodeId = nodeId;
+        outbox.commandType = commandType;
+        outbox.payload = payload;
+        outbox.status = MeetingAnalysisOutboxStatus.PENDING;
+        outbox.attemptCount = 0;
         outbox.requestedByMemberId = requestedByMemberId;
         outbox.nextAttemptAt = Objects.requireNonNull(now, "now must not be null");
         return outbox;

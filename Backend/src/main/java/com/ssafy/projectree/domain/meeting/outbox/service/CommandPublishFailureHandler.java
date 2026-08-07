@@ -2,6 +2,7 @@ package com.ssafy.projectree.domain.meeting.outbox.service;
 
 import com.ssafy.projectree.domain.meeting.entity.AnalysisTaskStatus;
 import com.ssafy.projectree.domain.meeting.entity.Meeting;
+import com.ssafy.projectree.domain.meeting.command.MeetingAnalysisCommandType;
 import com.ssafy.projectree.domain.meeting.notification.entity.MeetingAnalysisNotificationOutbox;
 import com.ssafy.projectree.domain.meeting.notification.entity.NotificationAudience;
 import com.ssafy.projectree.domain.meeting.notification.repository.MeetingAnalysisNotificationOutboxRepository;
@@ -50,7 +51,7 @@ public class CommandPublishFailureHandler {
             return CommandPublishFailureOutcome.STALE;
         }
 
-        String safeError = sanitize(failure, claimed.payload());
+        String safeError = sanitize(failure);
         boolean finalFailure = outbox.rescheduleOrFail(
                 claimed.claimToken(),
                 LocalDateTime.now(clock),
@@ -61,6 +62,17 @@ public class CommandPublishFailureHandler {
         );
         if (!finalFailure) {
             return CommandPublishFailureOutcome.RETRY_SCHEDULED;
+        }
+
+        if (outbox.getCommandType() == MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED) {
+            log.error(
+                    "Node content update command publish permanently failed. commandId={}, targetProjectId={}, targetNodeId={}, attemptCount={}",
+                    outbox.getCommandId(),
+                    outbox.getTargetProjectId(),
+                    outbox.getTargetNodeId(),
+                    outbox.getAttemptCount()
+            );
+            return CommandPublishFailureOutcome.FINAL_FAILED;
         }
 
         Meeting meeting = meetingRepository.findByIdForUpdate(outbox.getMeeting().getId())
@@ -128,20 +140,7 @@ public class CommandPublishFailureHandler {
         }
     }
 
-    private String sanitize(RuntimeException failure, String payload) {
-        String type = failure == null ? "RuntimeException" : failure.getClass().getSimpleName();
-        String message = failure == null ? null : failure.getMessage();
-        if (message == null || message.isBlank()) {
-            return type;
-        }
-        String queueUrl = properties.queueUrl();
-        String sanitized = queueUrl.isBlank()
-                ? message
-                : message.replace(queueUrl, "[redacted-queue-url]");
-        if (payload != null && !payload.isBlank()) {
-            sanitized = sanitized.replace(payload, "[redacted-payload]");
-        }
-        sanitized = sanitized.replaceAll("https?://\\S+", "[redacted-url]");
-        return type + ": " + sanitized;
+    private String sanitize(RuntimeException failure) {
+        return failure == null ? "RuntimeException" : failure.getClass().getSimpleName();
     }
 }
