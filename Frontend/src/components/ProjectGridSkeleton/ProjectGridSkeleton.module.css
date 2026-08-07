@@ -1,0 +1,112 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  height: 240px;
+  overflow: hidden;
+  flex-direction: column;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardCompact {
+  height: 208px;
+}
+
+.visual {
+  flex: 2 1 0;
+  min-height: 0;
+}
+
+.content {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  flex-direction: column;
+  padding: var(--space-4);
+}
+
+.cardCompact .content {
+  padding: var(--space-3);
+}
+
+.title {
+  width: 64%;
+  height: 18px;
+  border-radius: var(--radius-sm);
+}
+
+.cardCompact .title {
+  height: 16px;
+}
+
+.meta {
+  width: 42%;
+  height: 14px;
+  margin-top: auto;
+  margin-left: auto;
+  border-radius: var(--radius-sm);
+}
+
+.cardCompact .meta {
+  height: 12px;
+}
+
+.visual,
+.title,
+.meta {
+  background: linear-gradient(
+    90deg,
+    var(--color-gray-100) 25%,
+    var(--color-gray-50) 50%,
+    var(--color-gray-100) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visual,
+  .title,
+  .meta {
+    animation: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .grid:not(.gridCompact) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .gridCompact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grid:not(.gridCompact) .card:nth-child(n + 5) {
+    display: none;
+  }
+}

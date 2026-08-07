@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { LoginUser } from "../page/Auth/api/authApi";
+import { clearMemberProfileCache } from "../page/MyPage/api/memberProfileApi";
 import { clearProjectListCache } from "../page/Project/List/api/projectListApi";
 import { disconnectMeeting } from "../utils/meetingSession";
 
@@ -21,11 +22,14 @@ export const useAuthStore = create<AuthStore>()(
       name: null,
       imageUrl: null,
 
-      login: ({ memberId, name, imageUrl }) =>
-        set({ memberId, name, imageUrl }),
+      login: ({ memberId, name, imageUrl }) => {
+        clearMemberProfileCache();
+        set({ memberId, name, imageUrl });
+      },
 
       logout: () => {
         disconnectMeeting();
+        clearMemberProfileCache();
         clearProjectListCache();
         set({ memberId: null, name: null, imageUrl: null });
         useAuthStore.persist.clearStorage();

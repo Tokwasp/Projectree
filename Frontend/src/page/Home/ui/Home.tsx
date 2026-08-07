@@ -15,21 +15,23 @@ export default function Home() {
     PROJECT_LIST_SIZE,
   );
 
-  if (isLoading) {
-    return <p>최근 프로젝트를 불러오는 중입니다.</p>;
-  }
-
-  if (error) {
-    return <p role="alert">{error}</p>;
-  }
-
   return (
     <div className={style.home}>
-      <HomeIntro name={name ?? "Projectree"} projectCount={totalElements} />
-      <QuickActions recentProjectId={projects[0]?.projectId} />
-      <RecentProjectSection
-        projects={projects.slice(0, RECENT_PROJECT_COUNT)}
+      <HomeIntro
+        name={name ?? "Projectree"}
+        projectCount={totalElements}
+        isLoading={isLoading}
+        hasError={error !== null}
       />
+      <QuickActions recentProjectId={projects[0]?.projectId} />
+      {error ? (
+        <p role="alert">{error}</p>
+      ) : (
+        <RecentProjectSection
+          projects={projects.slice(0, RECENT_PROJECT_COUNT)}
+          isLoading={isLoading}
+        />
+      )}
     </div>
   );
 }

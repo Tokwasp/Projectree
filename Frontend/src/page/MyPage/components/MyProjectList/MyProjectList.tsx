@@ -1,13 +1,16 @@
 import { Link } from "react-router-dom";
 import type { ProjectSummary } from "../../../../types/Project";
+import MyProjectListSkeleton from "./MyProjectListSkeleton";
 import style from "./MyProjectList.module.css";
 
 interface MyProjectListProps {
   projects: ProjectSummary[];
+  isLoading: boolean;
 }
 
 export default function MyProjectList({
   projects,
+  isLoading,
 }: MyProjectListProps) {
   return (
     <section className={style.section}>
@@ -21,7 +24,9 @@ export default function MyProjectList({
         </Link>
       </div>
 
-      {projects.length === 0 ? (
+      {isLoading ? (
+        <MyProjectListSkeleton />
+      ) : projects.length === 0 ? (
         <p className={style.emptyMessage}>
           참여 중인 프로젝트가 없습니다.
         </p>
