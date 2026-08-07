@@ -1,6 +1,9 @@
 package com.ssafy.projectree.domain.project.service;
 
 import com.ssafy.projectree.IntegrationTestSupport;
+import com.ssafy.projectree.domain.meeting.entity.Meeting;
+import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
+import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
 import com.ssafy.projectree.domain.meetingreview.exception.MeetingReviewErrorCode;
@@ -22,9 +25,9 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -44,6 +47,9 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
     @Autowired
     private MeetingRepository meetingRepository;
+
+    @Autowired
+    private MeetingRecordRepository meetingRecordRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -493,7 +499,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when // then
         assertThatThrownBy(() ->
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, outsider.getId()))
+                projectService.getProjectHome(projectId, outsider.getId()))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ProjectMemberErrorCode.IS_NOT_PROJECT_MEMBER);
@@ -511,7 +517,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getProjectDetail())
@@ -534,7 +540,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getProjectDetail().getParticipantCount()).isEqualTo(2);
@@ -558,7 +564,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getMyReview())
@@ -585,7 +591,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getPersonalSpeakingList()).hasSize(3)
@@ -614,13 +620,91 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
-        assertThat(response.getMeetingRecordList()).isNull();
+        assertThat(response.getMeetingRecordList()).isEmpty();
         assertThat(response.getMyReview())
                 .extracting("speedFeedback", "personalFeedback", "overallFeedback")
                 .containsExactly("속도가 빠릅니다.", "발언이 많습니다.", "적극적인 회의였습니다.");
+        assertThat(response.getPersonalSpeakingList()).hasSize(2)
+                .extracting("name", "speakPercent")
+                .containsExactlyInAnyOrder(
+                        tuple("김오너", 70.0),
+                        tuple("이멤버", 30.0)
+                );
+    }
+
+    @DisplayName("프로젝트 홈을 조회하면 로그인한 회원의 회의 리뷰가 없는 경우 프로젝트 내용과 회의록이 조회된다.")
+    @Test
+    void getProjectHome_meetingRecordWithoutMyReview() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+
+        String projectTitle = "포트폴리오 사이트";
+        String content = "React로 만든 개인 포트폴리오입니다.";
+        int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
+
+        saveMeetingRecord(projectId, "1회차 회의록");
+        saveMeetingRecord(projectId, "2회차 회의록");
+        flushAndClear();
+
+        // when
+        ProjectHomeResponse response =
+                projectService.getProjectHome(projectId, owner.getId());
+
+        // then
+        assertThat(response.getProjectDetail())
+                .extracting("projectTitle", "projectContent", "participantCount")
+                .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 1);
+
+        assertThat(response.getMeetingRecordList()).hasSize(2)
+                .extracting("name")
+                .containsExactly("2회차 회의록", "1회차 회의록");
+
+        assertThat(response.getPersonalSpeakingList()).isEmpty();
+        assertThat(response.getMyReview()).isNull();
+    }
+
+    @DisplayName("프로젝트 홈을 조회하면 회의 리뷰가 있는 경우 프로젝트 내용, 회의록, 발화 비율, 내 리뷰가 모두 조회되고 회의록은 최근순으로 정렬된다.")
+    @Test
+    void getProjectHome_allContents() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+
+        String projectTitle = "포트폴리오 사이트";
+        String content = "React로 만든 개인 포트폴리오입니다.";
+        int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
+        joinAsMember(projectId, member);
+
+        saveMeetingRecord(projectId, "1회차 회의록");
+        saveMeetingRecord(projectId, "2회차 회의록");
+        saveMeetingRecord(projectId, "3회차 회의록");
+
+        String roomName = "room-" + projectId;
+        saveMeetingReview(roomName, projectId, owner.getId(), 70,
+                "속도가 빠릅니다.", "발언이 많습니다.", "적극적인 회의였습니다.");
+        saveMeetingReview(roomName, projectId, member.getId(), 30, "", "", "");
+        flushAndClear();
+
+        // when
+        ProjectHomeResponse response =
+                projectService.getProjectHome(projectId, owner.getId());
+
+        // then
+        assertThat(response.getProjectDetail())
+                .extracting("projectTitle", "projectContent", "participantCount")
+                .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 2);
+
+        assertThat(response.getMeetingRecordList()).hasSize(3)
+                .extracting("name")
+                .containsExactly("3회차 회의록", "2회차 회의록", "1회차 회의록");
+
+        assertThat(response.getMyReview())
+                .extracting("speedFeedback", "personalFeedback", "overallFeedback")
+                .containsExactly("속도가 빠릅니다.", "발언이 많습니다.", "적극적인 회의였습니다.");
+
         assertThat(response.getPersonalSpeakingList()).hasSize(2)
                 .extracting("name", "speakPercent")
                 .containsExactlyInAnyOrder(
@@ -673,6 +757,15 @@ class ProjectServiceTest extends IntegrationTestSupport {
     private void flushAndClear() {
         entityManager.flush();
         entityManager.clear();
+    }
+
+    private void saveMeetingRecord(int projectId, String title) {
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        Meeting meeting = meetingRepository.save(
+                Meeting.create(project, project.getProjectMembers().get(0), UUID.randomUUID().toString()));
+
+        meetingRecordRepository.save(
+                MeetingRecord.create(meeting, UUID.randomUUID(), title, null, null, null, null));
     }
 
     private void saveMeetingReview(String roomName, int projectId, int memberId, int speakingSeconds,

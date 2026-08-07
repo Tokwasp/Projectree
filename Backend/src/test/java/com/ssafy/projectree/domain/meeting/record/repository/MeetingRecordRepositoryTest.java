@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,6 +33,7 @@ class MeetingRecordRepositoryTest {
 
     private static final String ROOM_NAME = "550e8400-e29b-41d4-a716-446655440000";
     private static final String OTHER_ROOM_NAME = "550e8400-e29b-41d4-a716-446655440001";
+    private static final String EXCLUDED_ROOM_NAME = "550e8400-e29b-41d4-a716-446655440002";
 
     @Autowired
     private MeetingRecordRepository meetingRecordRepository;
@@ -110,6 +112,29 @@ class MeetingRecordRepositoryTest {
                 .isEqualTo("회의록 제목");
         assertThat(meetingRecordRepository.findByMeetingId(meeting.getId() + 1000)).isEmpty();
         assertThat(meetingRecordRepository.existsByMeetingId(meeting.getId() + 1000)).isFalse();
+    }
+
+    @DisplayName("meetingId 목록으로 여러 회의록을 조회하면 목록에 포함된 Meeting의 회의록만 반환된다.")
+    @Test
+    void findByMeetingIdIn() {
+        // given
+        Project project = saveProject();
+        Meeting first = saveMeeting(project, ROOM_NAME);
+        Meeting second = saveMeeting(project, OTHER_ROOM_NAME);
+        Meeting excluded = saveMeeting(project, EXCLUDED_ROOM_NAME);
+        saveMeetingRecord(first, "첫 번째 회의록");
+        saveMeetingRecord(second, "두 번째 회의록");
+        saveMeetingRecord(excluded, "조회 대상이 아닌 회의록");
+        entityManager.clear();
+
+        // when
+        List<MeetingRecord> found =
+                meetingRecordRepository.findByMeetingIdIn(List.of(first.getId(), second.getId()));
+
+        // then
+        assertThat(found).hasSize(2)
+                .extracting(MeetingRecord::getTitle)
+                .containsExactlyInAnyOrder("첫 번째 회의록", "두 번째 회의록");
     }
 
     @DisplayName("commandId로 회의록 존재 여부와 엔티티를 조회한다.")
@@ -203,6 +228,12 @@ class MeetingRecordRepositoryTest {
         assertThat(reloaded.getVersion()).isEqualTo(1L);
         assertThat(reloaded.getTitle()).isEqualTo("수정한 제목");
         assertThat(reloaded.getSummaryJson()).isEqualTo("[\"수정한 요약\"]");
+    }
+
+    private void saveMeetingRecord(Meeting meeting, String title) {
+        meetingRecordRepository.saveAndFlush(MeetingRecord.create(
+                meeting, UUID.randomUUID(), title, null, null, null, null
+        ));
     }
 
     private Meeting saveMeeting(String roomName) {

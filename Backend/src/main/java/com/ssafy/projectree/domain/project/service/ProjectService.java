@@ -1,14 +1,14 @@
 package com.ssafy.projectree.domain.project.service;
 
+import com.ssafy.projectree.domain.meeting.entity.Meeting;
+import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
+import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
+import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
-import com.ssafy.projectree.domain.project.controller.dto.response.home.MyMeetingReviewResponse;
-import com.ssafy.projectree.domain.project.controller.dto.response.home.PersonalSpeakingResponse;
-import com.ssafy.projectree.domain.meetingreview.exception.MeetingReviewErrorCode;
 import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
-import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectDetailResponse;
-import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectHomeResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.*;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
@@ -27,6 +27,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,7 +40,9 @@ public class ProjectService {
     private final MemberRepository memberRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final MeetingRepository meetingRepository;
     private final MeetingReviewRepository meetingReviewRepository;
+    private final MeetingRecordRepository meetingRecordRepository;
 
     @Transactional
     public int createProject(ProjectCreateRequest request, int memberId) {
@@ -100,32 +103,21 @@ public class ProjectService {
         return new ProjectListResponse(projectPage);
     }
 
-    public ProjectHomeResponse getProjectHome(Pageable pageable, int projectId, int memberId) {
-        if (isNotProjectMember(projectId, memberId)) {
-            throw new CustomException(ProjectMemberErrorCode.IS_NOT_PROJECT_MEMBER);
+    public ProjectHomeResponse getProjectHome(int projectId, int memberId) {
+        checkingValidate(projectId, memberId);
+
+        ProjectDetailResponse projectDetail = getProjectDetail(projectId);
+        List<MeetingRecordResponse> meetingRecords = getRecentFiveMeetingRecord(projectId);
+        List<MeetingReview> recentOneMeetingReviews = getRecentOneMeetingReviews(projectId, memberId);
+
+        if (isRecentReviewNotExist(recentOneMeetingReviews)) {
+            return ProjectHomeResponse.notExistRecentReview(projectDetail, meetingRecords);
         }
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
-        ProjectDetailResponse projectDetail = ProjectDetailResponse.of(project);
-
-        List<MeetingReview> recentMeetingReviews = meetingReviewRepository.getRecentReview(projectId, memberId)
-                .map(MeetingReview::getRoomName)
-                .map(meetingReviewRepository::findAllByRoomName)
-                .orElseGet(List::of);
-
-        if (isRecentReviewNotExist(recentMeetingReviews)) {
-            return ProjectHomeResponse.notExistRecentReview(projectDetail);
-        }
-
-        MeetingReview myMeetingReview = recentMeetingReviews.stream()
-                .filter(mr -> mr.getMemberId() == memberId)
-                .findFirst()
-                .get();
-
-        List<PersonalSpeakingResponse> speakingResponses = calculatePersonalSpeakPercentBy(recentMeetingReviews);
+        MeetingReview myMeetingReview = findMyReviewOf(recentOneMeetingReviews, memberId);
+        List<PersonalSpeakingResponse> speakingResponses = calculatePersonalSpeakPercentBy(recentOneMeetingReviews);
         MyMeetingReviewResponse myReviewResponse = MyMeetingReviewResponse.of(myMeetingReview);
-        return ProjectHomeResponse.of(projectDetail,null, speakingResponses, myReviewResponse);
+        return ProjectHomeResponse.of(projectDetail, meetingRecords, speakingResponses, myReviewResponse);
     }
 
     private void validateMember(int memberId) {
@@ -140,8 +132,54 @@ public class ProjectService {
                         new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
     }
 
+    private void checkingValidate(int projectId, int memberId) {
+        if(isNotExistProject(projectId)){
+            throw new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND);
+        }
+
+        if (isNotProjectMember(projectId, memberId)) {
+            throw new CustomException(ProjectMemberErrorCode.IS_NOT_PROJECT_MEMBER);
+        }
+    }
+
+    private boolean isNotExistProject(int projectId) {
+        return !projectRepository.existsById(projectId);
+    }
+
     private boolean isNotProjectMember(int projectId, int memberId) {
         return !projectMemberRepository.existsByProjectIdAndMemberId(projectId, memberId);
+    }
+
+    private ProjectDetailResponse getProjectDetail(int projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
+        return ProjectDetailResponse.of(project);
+    }
+
+    private List<MeetingReview> getRecentOneMeetingReviews(int projectId, int memberId) {
+        return meetingReviewRepository.getRecentReview(projectId, memberId)
+                .map(MeetingReview::getRoomName)
+                .map(meetingReviewRepository::findAllByRoomName)
+                .orElseGet(List::of);
+    }
+
+    private MeetingReview findMyReviewOf(List<MeetingReview> recentOneMeetingReviews, int memberId) {
+        return recentOneMeetingReviews.stream()
+                .filter(mr -> mr.getMemberId() == memberId)
+                .findFirst()
+                .get();
+    }
+
+    private List<MeetingRecordResponse> getRecentFiveMeetingRecord(int projectId) {
+        List<Meeting> recentMeetings = meetingRepository.findRecentFiveBy(projectId);
+        List<Integer> meetingIdList = recentMeetings.stream()
+                .map(Meeting::getId)
+                .toList();
+
+        return meetingRecordRepository.findByMeetingIdIn(meetingIdList).stream()
+                .sorted(Comparator.comparingLong((MeetingRecord record) -> record.getId()).reversed())
+                .map(MeetingRecordResponse::of)
+                .toList();
     }
 
     private boolean isRecentReviewNotExist(List<MeetingReview> recentMeetingReviews) {
