@@ -2,19 +2,22 @@ import useLogout from "../../Auth/hooks/useLogout";
 import ProfileSection from "../components/ProfileSection/ProfileSection";
 import MyProjectList from "../components/MyProjectList/MyProjectList";
 import useProjectList from "../../Project/List/hooks/useProjectList";
-import { useAuthStore } from "../../../store/authStore";
+import useMemberProfile from "../hooks/useMemberProfile";
 import style from "../css/MyPage.module.css";
 
 const MY_PROJECT_LIST_SIZE = 100;
 
 export default function MyPage() {
-  const name = useAuthStore((state) => state.name);
-  const imageUrl = useAuthStore((state) => state.imageUrl);
   const {
     logout,
     isLoggingOut,
     error: logoutError,
   } = useLogout();
+  const {
+    profile,
+    isLoading: isProfileLoading,
+    error: profileError,
+  } = useMemberProfile();
   const { projects, isLoading, error: projectError } = useProjectList(
     0,
     MY_PROJECT_LIST_SIZE,
@@ -29,10 +32,17 @@ export default function MyPage() {
         </p>
       </header>
 
-      <ProfileSection
-        name={name ?? "사용자"}
-        profileImageUrl={imageUrl}
-      />
+      {isProfileLoading ? (
+        <p>회원 정보를 불러오는 중입니다.</p>
+      ) : profileError ? (
+        <p role="alert">{profileError}</p>
+      ) : profile ? (
+        <ProfileSection
+          name={profile.name}
+          email={profile.email}
+          profileImageUrl={profile.profileImageUrl}
+        />
+      ) : null}
 
       {isLoading && projects.length === 0 ? (
         <p>프로젝트 목록을 불러오는 중입니다.</p>
