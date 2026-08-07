@@ -12,6 +12,7 @@ import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventEnvel
 import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContractException;
 import com.ssafy.projectree.domain.meeting.result.exception.InvalidAnalysisTaskStateException;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayload;
+import com.ssafy.projectree.domain.meeting.result.graph.event.GraphResultSourceType;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.ProjectGraphSnapshot;
@@ -55,6 +56,16 @@ public class AnalysisGraphProjectionApplier {
         Objects.requireNonNull(event, "event must not be null");
         Objects.requireNonNull(payload, "payload must not be null");
         Objects.requireNonNull(snapshot, "snapshot must not be null");
+        if (payload.sourceType() != GraphResultSourceType.MEETING_ANALYSIS) {
+            throw new AnalysisResultContractException(
+                    "Graph result sourceType does not match meeting analysis"
+            );
+        }
+        if (event.meetingId() == null || event.meetingId() <= 0) {
+            throw new AnalysisResultContractException(
+                    "Meeting analysis result meetingId must be positive"
+            );
+        }
 
         projectRepository.findByIdForUpdate(event.projectId())
                 .orElseThrow(() -> new AnalysisResultContractException("Analysis result project does not exist"));

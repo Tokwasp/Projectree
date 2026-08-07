@@ -4,6 +4,7 @@ import com.ssafy.projectree.domain.meeting.result.inbox.entity.MeetingAnalysisRe
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Column;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -49,5 +50,18 @@ class MeetingAnalysisResultInboxSchemaTest {
                 .contains("idx_meeting_analysis_result_meeting")
                 .doesNotContain("FOREIGN KEY")
                 .doesNotContain("REFERENCES");
+    }
+
+    @Test
+    void meetingIdIsNullableForMeetingIndependentGraphResults() throws Exception {
+        Column meetingId = MeetingAnalysisResultInbox.class
+                .getDeclaredField("meetingId")
+                .getAnnotation(Column.class);
+        String ddl = Files.readString(Path.of(
+                "docs/migrations/20260804_create_meeting_analysis_result_inbox.sql"
+        ));
+
+        assertThat(meetingId.nullable()).isTrue();
+        assertThat(ddl).contains("meeting_id INT NULL");
     }
 }

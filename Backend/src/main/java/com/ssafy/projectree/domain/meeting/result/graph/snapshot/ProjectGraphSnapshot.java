@@ -8,7 +8,7 @@ import java.util.List;
 public record ProjectGraphSnapshot(
         int snapshotSchemaVersion,
         int projectId,
-        int meetingId,
+        Integer meetingId,
         String commandId,
         long graphVersion,
         Instant generatedAt,

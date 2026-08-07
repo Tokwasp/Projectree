@@ -73,6 +73,70 @@ class ProjectGraphSnapshotTest extends IntegrationTestSupport {
                 .isInstanceOf(AnalysisResultContractException.class);
     }
 
+    @Test
+    void acceptsNullMeetingForNodeContentUpdateAndRejectsMixedContract() {
+        Fixture fixture = fixture();
+        AnalysisResultEventEnvelope event = new AnalysisResultEventEnvelope(
+                3,
+                fixture.event().eventId(),
+                AnalysisResultEventType.PROJECT_GRAPH_CHANGED,
+                fixture.event().occurredAt(),
+                fixture.event().projectId(),
+                null,
+                fixture.commandId(),
+                fixture.event().payload()
+        );
+        ProjectGraphChangedPayload payload = new ProjectGraphChangedPayload(
+                GraphResultSourceType.NODE_CONTENT_UPDATE,
+                fixture.payload().graphVersion(),
+                fixture.payload().snapshotRef()
+        );
+        ProjectGraphSnapshot snapshot = new ProjectGraphSnapshot(
+                fixture.snapshot().snapshotSchemaVersion(),
+                fixture.snapshot().projectId(),
+                null,
+                fixture.snapshot().commandId(),
+                fixture.snapshot().graphVersion(),
+                fixture.snapshot().generatedAt(),
+                fixture.snapshot().nodes(),
+                fixture.snapshot().evidences(),
+                fixture.snapshot().mergeRecords()
+        );
+
+        assertThat(validator.validate(event, payload, snapshot).meetingId()).isNull();
+        assertThatThrownBy(() -> validator.validate(event, payload, fixture.snapshot()))
+                .isInstanceOf(AnalysisResultContractException.class);
+    }
+
+    @Test
+    void acceptsLongKoreanContentWithoutApplyingMysqlByteLimitInJavaValidation() {
+        Fixture fixture = fixture();
+        String longKoreanContent = "가".repeat(65_535);
+        ProjectGraphSnapshotNode original = fixture.snapshot().nodes().getFirst();
+        ProjectGraphSnapshotNode longContentNode = new ProjectGraphSnapshotNode(
+                original.nodeId(),
+                original.sourceMeetingId(),
+                original.parentNodeId(),
+                original.mergedIntoNodeId(),
+                original.nodeType(),
+                original.category(),
+                original.graphState(),
+                original.title(),
+                longKoreanContent,
+                original.linkSource(),
+                original.nodeVersion(),
+                original.createdAt(),
+                original.updatedAt()
+        );
+        ProjectGraphSnapshot snapshot = replaceNodes(
+                fixture.snapshot(),
+                List.of(longContentNode, fixture.snapshot().nodes().get(1))
+        );
+
+        assertThat(validator.validate(fixture.event(), fixture.payload(), snapshot)
+                .nodes().getFirst().content()).hasSize(65_535);
+    }
+
     private ProjectGraphSnapshot replaceNodes(ProjectGraphSnapshot snapshot, List<ProjectGraphSnapshotNode> nodes) {
         return new ProjectGraphSnapshot(
                 snapshot.snapshotSchemaVersion(), snapshot.projectId(), snapshot.meetingId(), snapshot.commandId(),

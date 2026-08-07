@@ -3,6 +3,7 @@ package com.ssafy.projectree.domain.meeting.result.graph;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.NodeEvidenceProjection;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectNodeProjection;
+import jakarta.persistence.Column;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
@@ -46,5 +47,14 @@ class ProjectGraphProjectionSchemaTest {
                 .doesNotContain("node_merge_projection")
                 .doesNotContain("project_id) REFERENCES")
                 .doesNotContain("meeting_id) REFERENCES");
+    }
+
+    @Test
+    void nodeContentUsesMediumText() throws Exception {
+        Column content = ProjectNodeProjection.class
+                .getDeclaredField("content")
+                .getAnnotation(Column.class);
+
+        assertThat(content.columnDefinition()).isEqualTo("MEDIUMTEXT");
     }
 }

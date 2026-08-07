@@ -7,6 +7,7 @@ import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChange
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayloadValidator;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.AnalysisGraphProjectionApplier;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.GraphProjectionApplyResult;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.NodeContentUpdateGraphProjectionApplier;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.ProjectGraphSnapshot;
 import com.ssafy.projectree.domain.meeting.result.graph.storage.GraphSnapshotLoader;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class AnalysisGraphEventHandler implements AnalysisResultEventHandler {
     private final ProjectGraphChangedPayloadValidator payloadValidator;
     private final GraphSnapshotLoader snapshotLoader;
     private final AnalysisGraphProjectionApplier projectionApplier;
+    private final NodeContentUpdateGraphProjectionApplier nodeContentUpdateProjectionApplier;
 
     @Override
     public AnalysisResultEventType supportedType() {
@@ -38,11 +40,15 @@ public class AnalysisGraphEventHandler implements AnalysisResultEventHandler {
         ProjectGraphChangedPayload payload = payloadParser.parse(event.payload());
         payloadValidator.validate(payload);
         ProjectGraphSnapshot snapshot = snapshotLoader.load(event, payload);
-        GraphProjectionApplyResult result = projectionApplier.apply(event, payload, snapshot);
+        GraphProjectionApplyResult result = switch (payload.sourceType()) {
+            case MEETING_ANALYSIS -> projectionApplier.apply(event, payload, snapshot);
+            case NODE_CONTENT_UPDATE -> nodeContentUpdateProjectionApplier.apply(event, payload, snapshot);
+        };
         log.info(
-                "[AnalysisFlow] GRAPH_PROJECTION_APPLIED. eventId={}, commandId={}, projectId={}, meetingId={}, requestedGraphVersion={}, currentGraphVersion={}, projectionUpdated={}, completionResult={}, nodeCount={}, evidenceCount={}",
+                "[AnalysisFlow] GRAPH_PROJECTION_APPLIED. eventId={}, commandId={}, sourceType={}, projectId={}, meetingId={}, requestedGraphVersion={}, currentGraphVersion={}, projectionUpdated={}, completionResult={}, nodeCount={}, evidenceCount={}",
                 event.eventId(),
                 event.commandId(),
+                payload.sourceType(),
                 event.projectId(),
                 event.meetingId(),
                 result.requestedGraphVersion(),

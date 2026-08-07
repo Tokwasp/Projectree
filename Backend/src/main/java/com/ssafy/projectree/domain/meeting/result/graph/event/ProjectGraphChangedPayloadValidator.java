@@ -17,8 +17,12 @@ public class ProjectGraphChangedPayloadValidator {
     private final GraphSnapshotProperties properties;
 
     public void validate(ProjectGraphChangedPayload payload) {
-        if (payload == null || payload.sourceType() != GraphResultSourceType.MEETING_ANALYSIS) {
-            throw new AnalysisResultContractException("Graph result sourceType must be MEETING_ANALYSIS");
+        if (payload == null || payload.sourceType() == null) {
+            throw new AnalysisResultContractException("Graph result sourceType is not supported");
+        }
+        if (payload.sourceType() != GraphResultSourceType.MEETING_ANALYSIS
+                && payload.sourceType() != GraphResultSourceType.NODE_CONTENT_UPDATE) {
+            throw new AnalysisResultContractException("Graph result sourceType is not supported");
         }
         if (payload.graphVersion() <= 0) {
             throw new AnalysisResultContractException("graphVersion must be positive");

@@ -52,28 +52,31 @@ public class CommandOutboxPublisher {
         try {
             sendResult = sender.send(claimed.commandId(), claimed.payload());
             log.info(
-                    "[AnalysisFlow] COMMAND_SQS_PUBLISHED. commandId={}, outboxId={}, sqsMessageId={}, attemptCount={}",
+                    "[AnalysisFlow] COMMAND_SQS_PUBLISHED. commandId={}, commandType={}, outboxId={}, sqsMessageId={}, attemptCount={}",
                     claimed.commandId(),
+                    claimed.commandType(),
                     claimed.outboxId(),
                     sendResult.messageId(),
                     claimed.attemptCount()
             );
         } catch (RuntimeException failure) {
             log.warn(
-                    "[AnalysisFlow] COMMAND_SQS_PUBLISH_FAILED. commandId={}, outboxId={}, attemptCount={}, exceptionType={}",
+                    "[AnalysisFlow] COMMAND_SQS_PUBLISH_FAILED. commandId={}, commandType={}, outboxId={}, attemptCount={}, exceptionType={}",
                     claimed.commandId(),
+                    claimed.commandType(),
                     claimed.outboxId(),
                     claimed.attemptCount(),
-                    failure.getClass().getSimpleName(),
-                    failure
+                    failure.getClass().getSimpleName()
             );
             try {
                 failureHandler.handle(claimed, failure);
             } catch (RuntimeException handlingFailure) {
                 log.error(
-                        "Meeting analysis publish failure handling failed. outboxId={}",
+                        "Command publish failure handling failed. commandId={}, commandType={}, outboxId={}, exceptionType={}",
+                        claimed.commandId(),
+                        claimed.commandType(),
                         claimed.outboxId(),
-                        handlingFailure
+                        handlingFailure.getClass().getSimpleName()
                 );
             }
             return;
@@ -84,9 +87,11 @@ public class CommandOutboxPublisher {
         } catch (RuntimeException successHandlingFailure) {
             // SQS 성공 후 DB 반영 실패 여부는 알 수 없으므로 PUBLISHING lease 만료 복구에 맡긴다.
             log.error(
-                    "SQS send succeeded but publish success handling failed. outboxId={}",
+                    "SQS send succeeded but publish success handling failed. commandId={}, commandType={}, outboxId={}, exceptionType={}",
+                    claimed.commandId(),
+                    claimed.commandType(),
                     claimed.outboxId(),
-                    successHandlingFailure
+                    successHandlingFailure.getClass().getSimpleName()
             );
         }
     }

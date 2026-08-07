@@ -46,7 +46,7 @@ class AnalysisEventReferenceValidatorTest {
         given(command.getCommandType()).willReturn(MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED);
         given(command.getStatus()).willReturn(MeetingAnalysisOutboxStatus.PENDING);
         given(meetingRepository.findByIdWithProject(20)).willReturn(Optional.of(meeting));
-        given(commandRepository.findByCommandIdWithMeetingAndProject(event.commandId()))
+        given(commandRepository.findByCommandId(event.commandId()))
                 .willReturn(Optional.of(command));
 
         assertThatCode(() -> validator.validateReferences(event)).doesNotThrowAnyException();
@@ -57,6 +57,9 @@ class AnalysisEventReferenceValidatorTest {
     @Test
     void rejectsMissingAndMismatchedReferences() {
         AnalysisResultEventEnvelope event = event(10, 20, 30);
+        MeetingAnalysisCommandOutbox command = mock(MeetingAnalysisCommandOutbox.class);
+        given(command.getCommandType()).willReturn(MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED);
+        given(commandRepository.findByCommandId(event.commandId())).willReturn(Optional.of(command));
         given(meetingRepository.findByIdWithProject(20)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> validator.validateReferences(event))
@@ -67,8 +70,7 @@ class AnalysisEventReferenceValidatorTest {
     void rejectsMissingCommandAndCommandForAnotherProject() {
         AnalysisResultEventEnvelope event = event(10, 20, 30);
         Meeting meeting = meeting(20, 10);
-        given(meetingRepository.findByIdWithProject(20)).willReturn(Optional.of(meeting));
-        given(commandRepository.findByCommandIdWithMeetingAndProject(event.commandId()))
+        given(commandRepository.findByCommandId(event.commandId()))
                 .willReturn(Optional.empty());
 
         assertThatThrownBy(() -> validator.validateReferences(event))
@@ -76,8 +78,9 @@ class AnalysisEventReferenceValidatorTest {
 
         Meeting commandMeeting = meeting(20, 11);
         MeetingAnalysisCommandOutbox command = command(commandMeeting);
-        given(commandRepository.findByCommandIdWithMeetingAndProject(event.commandId()))
+        given(commandRepository.findByCommandId(event.commandId()))
                 .willReturn(Optional.of(command));
+        given(meetingRepository.findByIdWithProject(20)).willReturn(Optional.of(meeting));
 
         assertThatThrownBy(() -> validator.validateReferences(event))
                 .isInstanceOf(AnalysisResultContractException.class);
@@ -91,7 +94,8 @@ class AnalysisEventReferenceValidatorTest {
         given(otherMeeting.getId()).willReturn(21);
         MeetingAnalysisCommandOutbox command = command(otherMeeting);
         given(meetingRepository.findByIdWithProject(20)).willReturn(Optional.of(meeting));
-        given(commandRepository.findByCommandIdWithMeetingAndProject(event.commandId()))
+        given(command.getCommandType()).willReturn(MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED);
+        given(commandRepository.findByCommandId(event.commandId()))
                 .willReturn(Optional.of(command));
 
         assertThatThrownBy(() -> validator.validateReferences(event))
@@ -100,7 +104,7 @@ class AnalysisEventReferenceValidatorTest {
         MeetingAnalysisCommandOutbox invalidType = mock(MeetingAnalysisCommandOutbox.class);
         given(invalidType.getMeeting()).willReturn(meeting);
         given(invalidType.getCommandType()).willReturn(null);
-        given(commandRepository.findByCommandIdWithMeetingAndProject(event.commandId()))
+        given(commandRepository.findByCommandId(event.commandId()))
                 .willReturn(Optional.of(invalidType));
 
         assertThatThrownBy(() -> validator.validateReferences(event))

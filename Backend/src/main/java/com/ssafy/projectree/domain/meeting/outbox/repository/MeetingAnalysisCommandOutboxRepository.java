@@ -15,6 +15,8 @@ import java.util.Optional;
 public interface MeetingAnalysisCommandOutboxRepository
         extends JpaRepository<MeetingAnalysisCommandOutbox, Integer> {
 
+    Optional<MeetingAnalysisCommandOutbox> findByCommandId(String commandId);
+
     Optional<MeetingAnalysisCommandOutbox> findByMeetingIdAndCommandType(
             int meetingId,
             MeetingAnalysisCommandType commandType
