@@ -57,6 +57,39 @@ public class ProjectService {
     }
 
     @Transactional
+    public void updateImage(int projectId, int memberId, String imageURL) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
+
+        if (isNotProjectOwner(projectId, memberId)) {
+            throw new CustomException(ProjectMemberErrorCode.IS_NOT_PROJECT_OWNER);
+        }
+        project.updateImageURL(imageURL);
+    }
+
+    @Transactional
+    public void updateTitle(int projectId, int memberId, String title) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
+
+        if (isNotProjectOwner(projectId, memberId)) {
+            throw new CustomException(ProjectMemberErrorCode.IS_NOT_PROJECT_OWNER);
+        }
+        project.updateTitle(title);
+    }
+
+    @Transactional
+    public void updateContent(int projectId, int memberId, String content) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
+
+        if (isNotProjectOwner(projectId, memberId)) {
+            throw new CustomException(ProjectMemberErrorCode.IS_NOT_PROJECT_OWNER);
+        }
+        project.updateContent(content);
+    }
+
+    @Transactional
     public void deleteProject(int projectId, int memberId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
@@ -126,6 +159,10 @@ public class ProjectService {
         }
     }
 
+    private boolean isNotProjectOwner(int projectId, int memberId) {
+        return !projectMemberRepository.existsByProjectIdAndMemberIdAndRole(projectId, memberId, ProjectRole.OWNER);
+    }
+
     private Project findProject(int projectId) {
         return projectRepository.findById(projectId)
                 .orElseThrow(() ->
@@ -133,7 +170,7 @@ public class ProjectService {
     }
 
     private void checkingValidate(int projectId, int memberId) {
-        if(isNotExistProject(projectId)){
+        if (isNotExistProject(projectId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND);
         }
 
