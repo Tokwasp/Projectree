@@ -4,6 +4,11 @@
 
 OpenVidu Recording Ready Queue는 `projectId`, UUID `roomName`, `kind=MIXED`, `objectKey`, `egressId`, `memberId`, `endedAt`을 전달한다. Java Command Queue는 `commandSchemaVersion=1`, UUID `commandId`, `commandType=MEETING_ANALYSIS_REQUESTED`, UTC `requestedAt`, 양의 64-bit 정수 `projectId`, 그리고 `meetingId`, 같은 UUID `roomName`, 두 boolean 옵션을 전달한다.
 
+같은 Java Command Queue의 `NODE_CONTENT_UPDATE_REQUESTED`는 recording join 대상이
+아니다. 공통 consumer가 commandType을 먼저 분기하고
+[`node-content-update-command-v1.md`](node-content-update-command-v1.md)의 원자적
+Node 수정 handler로 전달한다.
+
 Join key는 `(projectId, roomName)`이다. Recording message에는 meetingId/commandId가 없으므로 추측하지 않는다.
 
 ## 소비와 순서 역전

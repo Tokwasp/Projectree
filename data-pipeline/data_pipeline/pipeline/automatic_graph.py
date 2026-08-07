@@ -1594,6 +1594,7 @@ def _apply_planned_logical_merge(
     suggested_title = decision.suggestedTitle.strip()
     if not suggested_title:
         raise GraphMutationValidationError("automatic merge title must not be blank")
+    user_content_protected = canonical_target.last_actor_type == "USER"
     evidence_specs = _deduplicate_evidence_specs(
         project_id=plan.project_id,
         specs=[
@@ -1604,8 +1605,12 @@ def _apply_planned_logical_merge(
     create_node_revision(
         session,
         node=canonical_target,
-        title=suggested_title,
-        content=decision.suggestedContent,
+        title=(canonical_target.title if user_content_protected else suggested_title),
+        content=(
+            canonical_target.content
+            if user_content_protected
+            else decision.suggestedContent
+        ),
         node_type=canonical_target.node_type,
         category=canonical_target.category,
         due_date=canonical_target.due_date,
@@ -1615,6 +1620,11 @@ def _apply_planned_logical_merge(
         evidence_specs=evidence_specs,
         requires_evidence=True,
     )
+    if user_content_protected:
+        # The revision itself is SYSTEM-authored because the automatic merge
+        # appended Evidence, but the last user-authored title/content remain the
+        # protected projection for later automatic merges.
+        canonical_target.last_actor_type = "USER"
     mark_node_embedding_stale(session, node=canonical_target)
     source_node.parent_id = None
     retrieval = next(

@@ -210,7 +210,12 @@ class RecordingReadyEvent(Base):
 
 
 class MeetingAnalysisCommand(Base):
-    """Idempotent Java request joined to a recording by project and room."""
+    """Idempotent Java command inbox.
+
+    The historical table name is retained for compatibility.  Meeting analysis
+    commands are joined to a recording; Node content updates are applied in the
+    consumer transaction and use the same command-id/payload-hash boundary.
+    """
 
     __tablename__ = "meeting_analysis_command"
     __table_args__ = (
@@ -225,7 +230,28 @@ class MeetingAnalysisCommand(Base):
             "command_id",
             name="uq_meeting_analysis_command_project_id",
         ),
-        CheckConstraint("length(trim(room_name)) > 0", name="ck_analysis_command_room"),
+        CheckConstraint(
+            "command_type IN ('MEETING_ANALYSIS_REQUESTED', "
+            "'NODE_CONTENT_UPDATE_REQUESTED')",
+            name="ck_analysis_command_type",
+        ),
+        CheckConstraint(
+            "(command_type = 'MEETING_ANALYSIS_REQUESTED' AND "
+            "meeting_id IS NOT NULL AND room_name IS NOT NULL AND "
+            "length(trim(room_name)) > 0 AND generate_summary IS NOT NULL AND "
+            "generate_nodes IS NOT NULL AND target_node_id IS NULL AND "
+            "expected_node_version IS NULL AND requested_by_member_id IS NULL) OR "
+            "(command_type = 'NODE_CONTENT_UPDATE_REQUESTED' AND "
+            "meeting_id IS NULL AND room_name IS NULL AND "
+            "generate_summary IS NULL AND generate_nodes IS NULL AND "
+            "target_node_id IS NOT NULL AND expected_node_version IS NOT NULL AND "
+            "requested_by_member_id IS NOT NULL)",
+            name="ck_analysis_command_shape",
+        ),
+        CheckConstraint(
+            "expected_node_version IS NULL OR expected_node_version >= 1",
+            name="ck_analysis_command_node_version_positive",
+        ),
         CheckConstraint("length(payload_hash) = 64", name="ck_analysis_command_hash"),
         CheckConstraint(
             "status IN ('WAITING_FOR_RECORDING', 'READY', 'CLAIMED', "
@@ -242,16 +268,26 @@ class MeetingAnalysisCommand(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
     command_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    command_type: Mapped[str] = mapped_column(
+        String(48), nullable=False, default="MEETING_ANALYSIS_REQUESTED"
+    )
     project_id: Mapped[str] = mapped_column(String(128), nullable=False)
-    meeting_id: Mapped[str] = mapped_column(String(128), nullable=False)
-    room_name: Mapped[str] = mapped_column(String(128), nullable=False)
-    generate_summary: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    generate_nodes: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    meeting_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    room_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    generate_summary: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    generate_nodes: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    target_node_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    expected_node_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    requested_by_member_id: Mapped[str | None] = mapped_column(
+        String(128), nullable=True
+    )
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="WAITING_FOR_RECORDING"
     )
     payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    failure_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    failure_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, nullable=False
     )
@@ -355,7 +391,7 @@ class GraphSnapshotArtifact(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
     project_id: Mapped[str] = mapped_column(String(128), nullable=False)
-    meeting_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    meeting_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     command_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     graph_version: Mapped[int] = mapped_column(Integer, nullable=False)
     snapshot_schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

@@ -568,8 +568,31 @@ def test_clean_alembic_baseline_round_trip(tmp_path, monkeypatch):
     engine.dispose()
     assert (
         ScriptDirectory.from_config(config).get_current_head()
-            == "0010_meeting_analysis_join_v3"
+            == "0011_node_content_update_command"
     )
+
+
+def test_node_update_command_schema_generalizes_existing_inbox(session_factory):
+    inspector = inspect(_engine(session_factory))
+    command_columns = {
+        column["name"]: column
+        for column in inspector.get_columns("meeting_analysis_command")
+    }
+    assert {
+        "command_type",
+        "target_node_id",
+        "expected_node_version",
+        "requested_by_member_id",
+        "failure_code",
+        "failure_message",
+    } <= set(command_columns)
+    assert command_columns["meeting_id"]["nullable"] is True
+    assert command_columns["room_name"]["nullable"] is True
+    artifact_columns = {
+        column["name"]: column
+        for column in inspector.get_columns("graph_snapshot_artifact")
+    }
+    assert artifact_columns["meeting_id"]["nullable"] is True
 
 
 def test_0008_to_0009_upgrade_preserves_meeting_and_adds_graph_contract(
@@ -933,6 +956,7 @@ def test_revision_files_do_not_use_live_orm_metadata():
         "0008_meeting_summary.py",
         "0009_graph_event_contract_v1.py",
         "0010_meeting_analysis_join_and_result_v3.py",
+        "0011_node_content_update_command.py",
     }
 
 

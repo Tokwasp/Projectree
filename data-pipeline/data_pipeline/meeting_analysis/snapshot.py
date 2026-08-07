@@ -90,7 +90,7 @@ def build_full_graph_snapshot(
     session,
     *,
     project_id: str,
-    meeting_id: str,
+    meeting_id: str | None,
     command_id: str,
     graph_version: int,
     generated_at: datetime | None = None,
@@ -188,7 +188,9 @@ def build_full_graph_snapshot(
     return {
         "snapshotSchemaVersion": 1,
         "projectId": public_identifier(project_id),
-        "meetingId": public_identifier(meeting_id),
+        "meetingId": (
+            public_identifier(meeting_id) if meeting_id is not None else None
+        ),
         "commandId": command_id,
         "graphVersion": graph_version,
         "generatedAt": utc_z(generated),
