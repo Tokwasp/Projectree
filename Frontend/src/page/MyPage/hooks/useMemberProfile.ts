@@ -1,20 +1,25 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/apiClient";
 import {
+  getCachedMemberProfile,
   getMemberProfile,
   type MemberProfileResponse,
 } from "../api/memberProfileApi";
 
 export default function useMemberProfile() {
-  const [profile, setProfile] = useState<MemberProfileResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<MemberProfileResponse | null>(() =>
+    getCachedMemberProfile(),
+  );
+  const [isLoading, setIsLoading] = useState(
+    () => getCachedMemberProfile() === null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isCancelled = false;
 
     const fetchMemberProfile = async () => {
-      setIsLoading(true);
+      setIsLoading(getCachedMemberProfile() === null);
       setError(null);
 
       try {
