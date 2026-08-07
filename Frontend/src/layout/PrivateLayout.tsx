@@ -10,10 +10,8 @@ export default function PrivateLayout() {
   useEffect(() => {
     connect();
 
-    return () => {
-      disconnect();
-    };
-  }, []);
+    return () => disconnect();
+  }, [connect, disconnect]);
 
   return <Outlet />;
 }
