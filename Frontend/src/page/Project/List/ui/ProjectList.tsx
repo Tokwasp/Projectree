@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProjectGrid from "../../../../components/ProjectGrid/ProjectGrid";
+import ProjectGridSkeleton from "../../../../components/ProjectGridSkeleton/ProjectGridSkeleton";
 import CreateProjectIcon from "../../../Home/assets/create_project_icon.png";
 import useProjectList from "../hooks/useProjectList";
 import style from "../css/ProjectList.module.css";
 
 const PROJECTS_PER_PAGE = 12;
+const SKELETON_CARD_COUNT = 8;
 
 export default function ProjectList() {
   const navigate = useNavigate();
@@ -43,7 +45,7 @@ export default function ProjectList() {
       </div>
 
       {isLoading && projects.length === 0 ? (
-        <p>프로젝트 목록을 불러오는 중입니다.</p>
+        <ProjectGridSkeleton count={SKELETON_CARD_COUNT} />
       ) : error ? (
         <p role="alert">{error}</p>
       ) : (

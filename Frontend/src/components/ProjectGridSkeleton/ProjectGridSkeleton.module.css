@@ -6,13 +6,17 @@
 
 .card {
   display: flex;
-  height: 208px;
+  height: 240px;
   overflow: hidden;
   flex-direction: column;
   background: var(--color-white);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+}
+
+.cardCompact {
+  height: 208px;
 }
 
 .visual {
@@ -25,21 +29,33 @@
   flex: 1 1 0;
   min-height: 0;
   flex-direction: column;
+  padding: var(--space-4);
+}
+
+.cardCompact .content {
   padding: var(--space-3);
 }
 
 .title {
   width: 64%;
-  height: 16px;
+  height: 18px;
   border-radius: var(--radius-sm);
+}
+
+.cardCompact .title {
+  height: 16px;
 }
 
 .meta {
   width: 42%;
-  height: 12px;
+  height: 14px;
   margin-top: auto;
   margin-left: auto;
   border-radius: var(--radius-sm);
+}
+
+.cardCompact .meta {
+  height: 12px;
 }
 
 .visual,
@@ -73,8 +89,14 @@
   }
 }
 
+@media (max-width: 1200px) {
+  .grid:not(.gridCompact) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 960px) {
-  .grid {
+  .gridCompact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -82,5 +104,9 @@
 @media (max-width: 768px) {
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .grid:not(.gridCompact) .card:nth-child(n + 5) {
+    display: none;
   }
 }

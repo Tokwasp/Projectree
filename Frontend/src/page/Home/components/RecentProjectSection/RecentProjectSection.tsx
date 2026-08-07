@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import ProjectGrid from "../../../../components/ProjectGrid/ProjectGrid";
+import ProjectGridSkeleton from "../../../../components/ProjectGridSkeleton/ProjectGridSkeleton";
 import type { ProjectSummary } from "../../../../types/Project";
-import RecentProjectSkeleton from "../RecentProjectSkeleton/RecentProjectSkeleton";
 import RecentProjectTitleIcon from "../../assets/recent_project_title_icon.png";
 import style from "./RecentProjectSection.module.css";
 
@@ -30,7 +30,7 @@ export default function RecentProjectSection({
       </div>
 
       {isLoading ? (
-        <RecentProjectSkeleton />
+        <ProjectGridSkeleton count={4} variant="compact" />
       ) : (
         <ProjectGrid
           projects={projects}
