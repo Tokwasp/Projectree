@@ -9,3 +9,8 @@ export interface MemberProfileResponse {
 
 export const getMemberProfile = (): Promise<MemberProfileResponse> =>
   apiRequest<MemberProfileResponse>("/members/me");
+
+export const deleteMember = (): Promise<void> =>
+  apiRequest<void>("/members/me", {
+    method: "DELETE",
+  });
