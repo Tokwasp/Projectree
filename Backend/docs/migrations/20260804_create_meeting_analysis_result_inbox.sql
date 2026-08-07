@@ -4,7 +4,7 @@ CREATE TABLE meeting_analysis_result_inbox (
     event_id CHAR(36) NOT NULL,
     event_type VARCHAR(50) NOT NULL,
     project_id INT NOT NULL,
-    meeting_id INT NULL,
+    meeting_id INT NOT NULL,
     command_id CHAR(36) NOT NULL,
     occurred_at DATETIME(6) NOT NULL,
     processed_at DATETIME(6) NOT NULL,
