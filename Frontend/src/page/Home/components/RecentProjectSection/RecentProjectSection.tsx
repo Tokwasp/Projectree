@@ -1,15 +1,18 @@
 import { Link } from "react-router-dom";
 import ProjectGrid from "../../../../components/ProjectGrid/ProjectGrid";
 import type { ProjectSummary } from "../../../../types/Project";
+import RecentProjectSkeleton from "../RecentProjectSkeleton/RecentProjectSkeleton";
 import RecentProjectTitleIcon from "../../assets/recent_project_title_icon.png";
 import style from "./RecentProjectSection.module.css";
 
 interface RecentProjectSectionProps {
   projects: ProjectSummary[];
+  isLoading: boolean;
 }
 
 export default function RecentProjectSection({
   projects,
+  isLoading,
 }: RecentProjectSectionProps) {
   return (
     <section className={style.section}>
@@ -26,11 +29,15 @@ export default function RecentProjectSection({
         </Link>
       </div>
 
-      <ProjectGrid
-        projects={projects}
-        emptyMessage="참여 중인 프로젝트가 없습니다."
-        variant="compact"
-      />
+      {isLoading ? (
+        <RecentProjectSkeleton />
+      ) : (
+        <ProjectGrid
+          projects={projects}
+          emptyMessage="참여 중인 프로젝트가 없습니다."
+          variant="compact"
+        />
+      )}
     </section>
   );
 }
