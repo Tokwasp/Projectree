@@ -6,7 +6,9 @@ from .contracts import (
     JavaCommandMessage,
     MeetingAnalysisCommandMessage,
     NodeContentUpdateCommandMessage,
+    NodeDeleteCommandMessage,
 )
+from .node_deletes import process_node_delete
 from .node_updates import process_node_content_update
 from .persistence import persist_analysis_command
 
@@ -16,6 +18,8 @@ def dispatch_java_command(session_factory, *, command: JavaCommandMessage):
         return persist_analysis_command(session_factory, command=command)
     if isinstance(command, NodeContentUpdateCommandMessage):
         return process_node_content_update(session_factory, command=command)
+    if isinstance(command, NodeDeleteCommandMessage):
+        return process_node_delete(session_factory, command=command)
     raise TypeError(f"unsupported Java command: {type(command).__name__}")
 
 

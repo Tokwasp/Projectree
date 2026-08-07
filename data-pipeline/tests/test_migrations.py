@@ -568,7 +568,7 @@ def test_clean_alembic_baseline_round_trip(tmp_path, monkeypatch):
     engine.dispose()
     assert (
         ScriptDirectory.from_config(config).get_current_head()
-            == "0011_node_content_update_command"
+            == "0012_node_delete_command"
     )
 
 
@@ -957,6 +957,7 @@ def test_revision_files_do_not_use_live_orm_metadata():
         "0009_graph_event_contract_v1.py",
         "0010_meeting_analysis_join_and_result_v3.py",
         "0011_node_content_update_command.py",
+        "0012_node_delete_command.py",
     }
 
 

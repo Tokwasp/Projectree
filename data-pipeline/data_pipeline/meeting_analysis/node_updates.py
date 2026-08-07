@@ -24,6 +24,10 @@ from data_pipeline.storage import (
     NodeRevision,
     OutboxEvent,
 )
+from data_pipeline.pipeline.event_contract import (
+    lock_project_graph_state,
+    release_unmutated_graph_state,
+)
 from data_pipeline.pipeline.revisions import (
     create_node_revision,
     current_revision_evidence_specs,
@@ -146,10 +150,13 @@ def _record_failure(
     command: NodeContentUpdateCommandMessage,
     code: str,
     message: str,
+    materialized_graph_state: bool = False,
 ) -> NodeContentUpdateResult:
     row.status = "FAILED"
     row.failure_code = code
     row.failure_message = message[:2000]
+    if materialized_graph_state:
+        release_unmutated_graph_state(session, project_id=command.project_id)
     session.commit()
     return NodeContentUpdateResult(
         command_id=command.command_id,
@@ -319,6 +326,14 @@ def process_node_content_update(
         session.add(row)
         session.flush()
 
+        # Project lock before the Node lock. Node delete acquires the same two
+        # resources in this order, so neither command can hold one and wait on
+        # the other. This does not change the expectedNodeVersion policy below;
+        # it only fixes the order in which the locks are taken.
+        _, materialized = lock_project_graph_state(
+            session, project_id=command.project_id
+        )
+
         node = session.execute(
             select(Node)
             .where(
@@ -334,6 +349,7 @@ def process_node_content_update(
                 command=command,
                 code="NODE_NOT_FOUND",
                 message="Node is missing or belongs to another project",
+                materialized_graph_state=materialized,
             )
         if (
             node.deleted_at is not None
@@ -345,6 +361,7 @@ def process_node_content_update(
                 command=command,
                 code="NODE_NOT_EDITABLE",
                 message="deleted, archived, or excluded Nodes are not editable",
+                materialized_graph_state=materialized,
             )
         if node.graph_state == "MERGED" or node.merged_into_node_id is not None:
             return _record_failure(
@@ -353,6 +370,7 @@ def process_node_content_update(
                 command=command,
                 code="MERGED_SOURCE_NOT_EDITABLE",
                 message="edit the canonical merge target instead",
+                materialized_graph_state=materialized,
             )
         if node.graph_state not in {"ACTIVE", "UNATTACHED"}:
             return _record_failure(
@@ -361,6 +379,7 @@ def process_node_content_update(
                 command=command,
                 code="NODE_NOT_EDITABLE",
                 message="only ACTIVE or UNATTACHED canonical Nodes are editable",
+                materialized_graph_state=materialized,
             )
         if node.version != command.expected_node_version:
             return _record_failure(
@@ -369,12 +388,17 @@ def process_node_content_update(
                 command=command,
                 code="NODE_VERSION_CONFLICT",
                 message="expected Node version does not match current version",
+                materialized_graph_state=materialized,
             )
 
         next_title = command.title.strip() if command.title is not None else node.title
         next_content = command.content if command.content is not None else node.content
         if next_title == node.title and next_content == node.content:
             row.status = "COMPLETED"
+            if materialized:
+                release_unmutated_graph_state(
+                    session, project_id=command.project_id
+                )
             session.commit()
             return NodeContentUpdateResult(
                 command_id=command.command_id,
@@ -397,6 +421,7 @@ def process_node_content_update(
                 command=command,
                 code="INVALID_CURRENT_REVISION",
                 message="Node has no valid current Revision",
+                materialized_graph_state=materialized,
             )
         before = {
             "nodeId": str(node.id),
@@ -416,6 +441,7 @@ def process_node_content_update(
                 command=command,
                 code="INVALID_CURRENT_REVISION",
                 message="current Revision has no required Evidence",
+                materialized_graph_state=materialized,
             )
         create_node_revision(
             session,
