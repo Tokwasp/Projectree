@@ -170,6 +170,141 @@ class ProjectServiceTest extends IntegrationTestSupport {
         assertThat(projectRepository.count()).isZero();
     }
 
+    @DisplayName("OWNER가 프로젝트 이미지를 수정하면 photoUrl이 변경된다.")
+    @Test
+    void updateImage() {
+        // given
+        Member owner = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when
+        projectService.updateImage(projectId, owner.getId(), "https://cdn.example.com/new.png");
+        flushAndClear();
+
+        // then
+        Project found = projectRepository.findById(projectId).orElseThrow();
+        assertThat(found.getPhotoUrl()).isEqualTo("https://cdn.example.com/new.png");
+    }
+
+    @DisplayName("OWNER가 아닌 참여 멤버가 이미지를 수정하려 하면 IS_NOT_PROJECT_OWNER 예외가 발생한다.")
+    @Test
+    void updateImage_notOwner() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateImage(projectId, member.getId(), "https://cdn.example.com/new.png"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectMemberErrorCode.IS_NOT_PROJECT_OWNER);
+    }
+
+    @DisplayName("존재하지 않는 프로젝트의 이미지를 수정하면 PROJECT_NOT_FOUND 예외가 발생한다.")
+    @Test
+    void updateImage_projectNotFound() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateImage(999, member.getId(), "https://cdn.example.com/new.png"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    @DisplayName("OWNER가 프로젝트 제목을 수정하면 title이 변경된다.")
+    @Test
+    void updateTitle() {
+        // given
+        Member owner = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when
+        projectService.updateTitle(projectId, owner.getId(), "수정된 제목");
+        flushAndClear();
+
+        // then
+        Project found = projectRepository.findById(projectId).orElseThrow();
+        assertThat(found.getTitle()).isEqualTo("수정된 제목");
+    }
+
+    @DisplayName("OWNER가 아닌 참여 멤버가 제목을 수정하려 하면 IS_NOT_PROJECT_OWNER 예외가 발생한다.")
+    @Test
+    void updateTitle_notOwner() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateTitle(projectId, member.getId(), "수정된 제목"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectMemberErrorCode.IS_NOT_PROJECT_OWNER);
+    }
+
+    @DisplayName("존재하지 않는 프로젝트의 제목을 수정하면 PROJECT_NOT_FOUND 예외가 발생한다.")
+    @Test
+    void updateTitle_projectNotFound() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateTitle(999, member.getId(), "수정된 제목"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    @DisplayName("OWNER가 프로젝트 내용을 수정하면 content가 변경된다.")
+    @Test
+    void updateContent() {
+        // given
+        Member owner = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when
+        projectService.updateContent(projectId, owner.getId(), "수정된 내용");
+        flushAndClear();
+
+        // then
+        Project found = projectRepository.findById(projectId).orElseThrow();
+        assertThat(found.getContent()).isEqualTo("수정된 내용");
+    }
+
+    @DisplayName("OWNER가 아닌 참여 멤버가 내용을 수정하려 하면 IS_NOT_PROJECT_OWNER 예외가 발생한다.")
+    @Test
+    void updateContent_notOwner() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateContent(projectId, member.getId(), "수정된 내용"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectMemberErrorCode.IS_NOT_PROJECT_OWNER);
+    }
+
+    @DisplayName("존재하지 않는 프로젝트의 내용을 수정하면 PROJECT_NOT_FOUND 예외가 발생한다.")
+    @Test
+    void updateContent_projectNotFound() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateContent(999, member.getId(), "수정된 내용"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+    }
+
     @DisplayName("OWNER는 자신의 프로젝트를 삭제할 수 있다.")
     @Test
     void deleteProject() {

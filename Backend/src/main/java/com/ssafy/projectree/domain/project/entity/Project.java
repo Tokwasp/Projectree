@@ -63,4 +63,16 @@ public class Project extends BaseEntity {
     public boolean isNotParticipant(int memberId) {
         return !isParticipant(memberId);
     }
+
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
+    public void updateImageURL(String imageURL) {
+        this.photoUrl = imageURL;
+    }
 }
