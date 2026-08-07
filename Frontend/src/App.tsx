@@ -16,6 +16,7 @@ import PrivateLayout from "./layout/PrivateLayout";
 import ProjectMeeting from "./page/Project/Meeting/ui/ProjectMeeting";
 import ProjectTree from "./page/Project/Tree/ui/ProjectTree";
 import MeetingOverlay from "./page/Project/Meeting/components/MeetingOverlay/MeetingOverlay";
+import ToastViewport from "./components/Toast/ToastViewport";
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
         </Route>
       </Routes>
       <MeetingOverlay />
+      <ToastViewport />
     </>
   );
 }

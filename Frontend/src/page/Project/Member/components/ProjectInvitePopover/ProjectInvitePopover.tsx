@@ -8,6 +8,7 @@ import type {
   MemberSearchResponse,
 } from "../../api/projectInvitationApi";
 import useProjectInvitation from "../../hooks/useProjectInvitation";
+import { toast } from "../../../../../store/toastStore";
 import style from "./ProjectInvitePopover.module.css";
 
 interface ProjectInvitePopoverProps {
@@ -146,6 +147,8 @@ export default function ProjectInvitePopover({
     );
 
     if (failedResults.length === 0) {
+      // 팝오버가 닫히면서 결과가 같이 사라진다 — 몇 명에게 갔는지는 토스트로 남긴다
+      toast.success(`${selectedMembers.length}명에게 초대를 보냈습니다.`);
       close();
       return;
     }
