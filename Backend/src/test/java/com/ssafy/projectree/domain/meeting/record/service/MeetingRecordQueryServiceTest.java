@@ -8,6 +8,7 @@ import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandO
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.record.codec.MeetingRecordContentCodec;
 import com.ssafy.projectree.domain.meeting.record.dto.response.MeetingRecordDetailResponse;
+import com.ssafy.projectree.domain.meeting.record.dto.response.MeetingRecordPageResponse;
 import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
 import com.ssafy.projectree.domain.meeting.record.exception.MeetingRecordContentCodecException;
 import com.ssafy.projectree.domain.meeting.record.exception.MeetingRecordErrorCode;
@@ -119,6 +120,109 @@ class MeetingRecordQueryServiceTest {
         assertThat(response.version()).isZero();
         assertThat(response.createdAt()).isEqualTo(persisted.getCreatedAt());
         assertThat(response.updatedAt()).isEqualTo(persisted.getUpdatedAt());
+    }
+
+    @DisplayName("회의록 목록은 최신순으로 DB 페이징하며 초과 페이지는 빈 목록을 반환한다.")
+    @Test
+    void getsRecordsWithStablePagination() {
+        Fixture fixture = fixtureWithoutRecord();
+        StoredRecord first = saveListRecord(fixture, "R1");
+        StoredRecord second = saveListRecord(fixture, "R2");
+        StoredRecord third = saveListRecord(fixture, "R3");
+
+        MeetingRecordPageResponse firstPage = service.getRecords(
+                fixture.projectId(),
+                fixture.memberId(),
+                0,
+                2
+        );
+        MeetingRecordPageResponse secondPage = service.getRecords(
+                fixture.projectId(),
+                fixture.memberId(),
+                1,
+                2
+        );
+        MeetingRecordPageResponse overflowPage = service.getRecords(
+                fixture.projectId(),
+                fixture.memberId(),
+                100,
+                2
+        );
+
+        assertThat(firstPage.records())
+                .extracting(item -> item.meetingRecordId())
+                .containsExactly(third.recordId(), second.recordId());
+        assertThat(firstPage.records())
+                .extracting(item -> item.title())
+                .containsExactly("R3", "R2");
+        assertThat(firstPage.records().getFirst().meetingId())
+                .isEqualTo(third.meetingId());
+        assertThat(firstPage.records().getFirst().meetingDate())
+                .isEqualTo(firstPage.records().getFirst().startedAt().toLocalDate());
+        assertThat(firstPage.page()).isZero();
+        assertThat(firstPage.size()).isEqualTo(2);
+        assertThat(firstPage.totalElements()).isEqualTo(3);
+        assertThat(firstPage.totalPages()).isEqualTo(2);
+
+        assertThat(secondPage.records())
+                .extracting(item -> item.meetingRecordId())
+                .containsExactly(first.recordId());
+        assertThat(overflowPage.records()).isEmpty();
+        assertThat(overflowPage.page()).isEqualTo(100);
+        assertThat(overflowPage.totalElements()).isEqualTo(3);
+        assertThat(overflowPage.totalPages()).isEqualTo(2);
+    }
+
+    @DisplayName("회의록 목록은 요청 프로젝트의 회의록만 반환한다.")
+    @Test
+    void isolatesRecordListByProject() {
+        Fixture projectA = fixtureWithoutRecord();
+        Fixture projectB = fixtureWithoutRecord(OTHER_ROOM_NAME);
+        StoredRecord recordA = saveListRecord(projectA, "A1");
+        StoredRecord recordB = saveListRecord(projectB, "B1");
+
+        MeetingRecordPageResponse response = service.getRecords(
+                projectA.projectId(),
+                projectA.memberId(),
+                0,
+                10
+        );
+
+        assertThat(response.records())
+                .extracting(item -> item.meetingRecordId())
+                .containsExactly(recordA.recordId())
+                .doesNotContain(recordB.recordId());
+        assertThat(response.totalElements()).isEqualTo(1);
+    }
+
+    @DisplayName("회의록이 없는 프로젝트는 빈 페이지를 반환한다.")
+    @Test
+    void returnsEmptyRecordPage() {
+        Fixture fixture = fixtureWithoutRecord();
+
+        MeetingRecordPageResponse response = service.getRecords(
+                fixture.projectId(),
+                fixture.memberId(),
+                0,
+                10
+        );
+
+        assertThat(response.records()).isEmpty();
+        assertThat(response.page()).isZero();
+        assertThat(response.size()).isEqualTo(10);
+        assertThat(response.totalElements()).isZero();
+        assertThat(response.totalPages()).isZero();
+    }
+
+    @DisplayName("비회원은 회의록 목록을 조회할 수 없다.")
+    @Test
+    void rejectsNonMemberRecordList() {
+        Fixture fixture = fixture();
+
+        assertBusinessError(
+                () -> service.getRecords(fixture.projectId(), OUTSIDER_ID, 0, 10),
+                ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND
+        );
     }
 
     @DisplayName("존재하지 않는 프로젝트는 404다.")
@@ -419,6 +523,37 @@ class MeetingRecordQueryServiceTest {
         });
     }
 
+    private StoredRecord saveListRecord(Fixture fixture, String title) {
+        return executeInTransaction(() -> {
+            Project project = entityManager.find(Project.class, fixture.projectId());
+            ProjectMember creator = project.getProjectMembers().stream()
+                    .filter(member -> member.hasMemberId(fixture.memberId()))
+                    .findFirst()
+                    .orElseThrow();
+            Meeting meeting = Meeting.create(
+                    project,
+                    creator,
+                    UUID.randomUUID().toString()
+            );
+            meeting.confirmAnalysisOptions(true, false);
+            entityManager.persist(meeting);
+            entityManager.flush();
+
+            MeetingRecord record = MeetingRecord.create(
+                    meeting,
+                    UUID.randomUUID(),
+                    title,
+                    "[]",
+                    "[]",
+                    "[]",
+                    "[]"
+            );
+            entityManager.persist(record);
+            entityManager.flush();
+            return new StoredRecord(record.getId(), meeting.getId());
+        });
+    }
+
     private void addMember(int projectId, int memberId) {
         executeInTransaction(() -> {
             entityManager.find(Project.class, projectId)
@@ -454,5 +589,8 @@ class MeetingRecordQueryServiceTest {
     }
 
     private record Fixture(int projectId, int meetingId, int memberId, UUID commandId) {
+    }
+
+    private record StoredRecord(long recordId, int meetingId) {
     }
 }

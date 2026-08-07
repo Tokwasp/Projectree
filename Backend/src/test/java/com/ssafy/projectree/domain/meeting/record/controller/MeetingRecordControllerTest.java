@@ -3,6 +3,8 @@ package com.ssafy.projectree.domain.meeting.record.controller;
 import com.ssafy.projectree.ControllerTestSupport;
 import com.ssafy.projectree.domain.meeting.exception.MeetingErrorCode;
 import com.ssafy.projectree.domain.meeting.record.dto.response.MeetingRecordDetailResponse;
+import com.ssafy.projectree.domain.meeting.record.dto.response.MeetingRecordListItemResponse;
+import com.ssafy.projectree.domain.meeting.record.dto.response.MeetingRecordPageResponse;
 import com.ssafy.projectree.domain.meeting.record.exception.MeetingRecordErrorCode;
 import com.ssafy.projectree.domain.member.LoginMember;
 import com.ssafy.projectree.global.config.session.SessionConst;
@@ -10,6 +12,8 @@ import com.ssafy.projectree.global.exception.CustomException;
 import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.mock.web.MockHttpSession;
 
 import java.time.LocalDate;
@@ -31,6 +35,7 @@ class MeetingRecordControllerTest extends ControllerTestSupport {
     private static final int MEMBER_ID = 22;
     private static final long MEETING_RECORD_ID = 12L;
     private static final String URI = "/api/projects/{projectId}/meetings/{meetingId}/record";
+    private static final String LIST_URI = "/api/projects/{projectId}/meetings/records";
     private static final LocalDateTime STARTED_AT = LocalDateTime.of(2026, 8, 5, 15, 0, 0);
     private static final LocalDateTime ENDED_AT = LocalDateTime.of(2026, 8, 5, 16, 31, 0);
     private static final LocalDateTime RECORD_CREATED_AT = LocalDateTime.of(2026, 8, 5, 16, 35, 0);
@@ -167,6 +172,58 @@ class MeetingRecordControllerTest extends ControllerTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.commandId").doesNotExist())
                 .andExpect(jsonPath("$.data.participants").doesNotExist());
+    }
+
+    @DisplayName("회의록 목록은 기본 페이징 값과 목록 전용 필드를 반환한다.")
+    @Test
+    void getRecords() throws Exception {
+        MeetingRecordListItemResponse item = new MeetingRecordListItemResponse(
+                MEETING_RECORD_ID,
+                MEETING_ID,
+                "백엔드 아키텍처 회의",
+                STARTED_AT.toLocalDate(),
+                STARTED_AT,
+                RECORD_CREATED_AT,
+                RECORD_CREATED_AT
+        );
+        when(meetingRecordQueryService.getRecords(PROJECT_ID, MEMBER_ID, 0, 10))
+                .thenReturn(new MeetingRecordPageResponse(
+                        List.of(item),
+                        0,
+                        10,
+                        23,
+                        3
+                ));
+
+        mockMvc.perform(get(LIST_URI, PROJECT_ID).session(loginSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.records[0].meetingRecordId")
+                        .value(MEETING_RECORD_ID))
+                .andExpect(jsonPath("$.data.records[0].meetingId").value(MEETING_ID))
+                .andExpect(jsonPath("$.data.records[0].title").value("백엔드 아키텍처 회의"))
+                .andExpect(jsonPath("$.data.records[0].meetingDate").value("2026-08-05"))
+                .andExpect(jsonPath("$.data.records[0].startedAt")
+                        .value("2026-08-05T15:00:00"))
+                .andExpect(jsonPath("$.data.records[0].summary").doesNotExist())
+                .andExpect(jsonPath("$.data.records[0].durationMinutes").doesNotExist())
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.totalElements").value(23))
+                .andExpect(jsonPath("$.data.totalPages").value(3));
+
+        verify(meetingRecordQueryService).getRecords(PROJECT_ID, MEMBER_ID, 0, 10);
+    }
+
+    @DisplayName("회의록 목록의 page와 size 범위를 검증한다.")
+    @ParameterizedTest
+    @ValueSource(strings = {"?page=-1&size=10", "?page=0&size=0", "?page=0&size=51"})
+    void validatesRecordListPagination(String query) throws Exception {
+        mockMvc.perform(get(LIST_URI + query, PROJECT_ID).session(loginSession()))
+                .andExpect(status().isBadRequest());
+
+        verify(meetingRecordQueryService, never())
+                .getRecords(anyInt(), anyInt(), anyInt(), anyInt());
     }
 
     private MeetingRecordDetailResponse response() {
