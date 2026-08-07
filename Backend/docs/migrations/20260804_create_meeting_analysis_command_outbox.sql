@@ -4,7 +4,9 @@
 CREATE TABLE meeting_analysis_command_outbox (
     id INT NOT NULL AUTO_INCREMENT,
     command_id VARCHAR(36) NOT NULL,
-    meeting_id INT NOT NULL,
+    meeting_id INT NULL,
+    target_project_id INT NULL,
+    target_node_id VARCHAR(36) NULL,
     command_type VARCHAR(64) NOT NULL,
     payload LONGTEXT NOT NULL,
     status VARCHAR(30) NOT NULL,
