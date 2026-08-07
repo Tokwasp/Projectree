@@ -58,8 +58,8 @@ public class MeetingAnalysisResultInbox {
     @Column(name = "project_id", nullable = false)
     private int projectId;
 
-    @Column(name = "meeting_id", nullable = false)
-    private int meetingId;
+    @Column(name = "meeting_id")
+    private Integer meetingId;
 
     @Column(name = "command_id", nullable = false, length = 36)
     private String commandId;
@@ -80,7 +80,7 @@ public class MeetingAnalysisResultInbox {
         inbox.eventId = Objects.requireNonNull(event.eventId(), "eventId must not be null");
         inbox.eventType = Objects.requireNonNull(event.eventType(), "eventType must not be null");
         inbox.projectId = requirePositive(event.projectId(), "projectId");
-        inbox.meetingId = requirePositive(event.meetingId(), "meetingId");
+        inbox.meetingId = optionalPositive(event.meetingId(), "meetingId");
         inbox.commandId = Objects.requireNonNull(event.commandId(), "commandId must not be null");
         inbox.occurredAt = Objects.requireNonNull(event.occurredAt(), "occurredAt must not be null");
         inbox.processedAt = Objects.requireNonNull(processedAt, "processedAt must not be null");
@@ -90,6 +90,13 @@ public class MeetingAnalysisResultInbox {
     private static int requirePositive(Integer value, String fieldName) {
         if (value == null || value <= 0) {
             throw new IllegalArgumentException(fieldName + " must be positive");
+        }
+        return value;
+    }
+
+    private static Integer optionalPositive(Integer value, String fieldName) {
+        if (value != null && value <= 0) {
+            throw new IllegalArgumentException(fieldName + " must be positive when present");
         }
         return value;
     }

@@ -3,6 +3,7 @@ package com.ssafy.projectree.domain.meeting.result.graph.snapshot;
 import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventEnvelope;
 import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContractException;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayload;
+import com.ssafy.projectree.domain.meeting.result.graph.event.GraphResultSourceType;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -68,9 +69,21 @@ public class ProjectGraphSnapshotValidator {
         if (snapshot.snapshotSchemaVersion() != SNAPSHOT_SCHEMA_VERSION) {
             throw contract("Unsupported graph snapshot schema version");
         }
-        if (snapshot.projectId() != requirePositive(event.projectId(), "event projectId")
-                || snapshot.meetingId() != requirePositive(event.meetingId(), "event meetingId")) {
-            throw contract("Graph snapshot projectId and meetingId must match the event");
+        if (snapshot.projectId() != requirePositive(event.projectId(), "event projectId")) {
+            throw contract("Graph snapshot projectId must match the event");
+        }
+        if (payload.sourceType() == GraphResultSourceType.MEETING_ANALYSIS) {
+            int eventMeetingId = requirePositive(event.meetingId(), "event meetingId");
+            int snapshotMeetingId = requirePositive(snapshot.meetingId(), "snapshot meetingId");
+            if (snapshotMeetingId != eventMeetingId) {
+                throw contract("Graph snapshot meetingId must match the event");
+            }
+        } else if (payload.sourceType() == GraphResultSourceType.NODE_CONTENT_UPDATE) {
+            if (event.meetingId() != null || snapshot.meetingId() != null) {
+                throw contract("Node content update event and snapshot meetingId must be null");
+            }
+        } else {
+            throw contract("Graph result sourceType is not supported");
         }
         if (!canonicalUuid(snapshot.commandId(), "commandId")
                 .equals(canonicalUuid(event.commandId(), "event commandId"))) {

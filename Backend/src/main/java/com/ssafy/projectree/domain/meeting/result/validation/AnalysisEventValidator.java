@@ -1,6 +1,7 @@
 package com.ssafy.projectree.domain.meeting.result.validation;
 
 import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventEnvelope;
+import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventType;
 import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContractException;
 import org.springframework.stereotype.Component;
 
@@ -24,8 +25,15 @@ public class AnalysisEventValidator {
         if (event.occurredAt() == null) {
             throw new AnalysisResultContractException("Analysis result occurredAt must not be null");
         }
-        if (!isPositive(event.projectId()) || !isPositive(event.meetingId())) {
-            throw new AnalysisResultContractException("Analysis result projectId and meetingId must be positive");
+        if (!isPositive(event.projectId())) {
+            throw new AnalysisResultContractException("Analysis result projectId must be positive");
+        }
+        if (event.meetingId() != null && !isPositive(event.meetingId())) {
+            throw new AnalysisResultContractException("Analysis result meetingId must be positive when present");
+        }
+        if (event.meetingId() == null
+                && event.eventType() != AnalysisResultEventType.PROJECT_GRAPH_CHANGED) {
+            throw new AnalysisResultContractException("Analysis result meetingId is required");
         }
         if (event.payload() == null || !event.payload().isObject()) {
             throw new AnalysisResultContractException("Analysis result payload must be a JSON object");

@@ -25,12 +25,17 @@ class ProjectGraphChangedPayloadTest extends IntegrationTestSupport {
     private ObjectMapper objectMapper;
 
     @Test
-    void acceptsOnlyTheMeetingAnalysisSnapshotContract() {
+    void acceptsMeetingAnalysisAndNodeContentUpdateSources() {
         ProjectGraphChangedPayload payload = parser.parse(validPayload());
         validator.validate(payload);
 
         assertThat(payload.graphVersion()).isEqualTo(3L);
         assertThat(payload.snapshotRef().sha256()).hasSize(64);
+
+        tools.jackson.databind.node.ObjectNode nodeUpdate =
+                (tools.jackson.databind.node.ObjectNode) validPayload();
+        nodeUpdate.put("sourceType", "NODE_CONTENT_UPDATE");
+        validator.validate(parser.parse(nodeUpdate));
     }
 
     @Test
