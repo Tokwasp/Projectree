@@ -49,9 +49,8 @@ public class GraphNodeUpdateService {
         String title = validateAndNormalizeTitle(request.title());
         String content = validateContent(request.content());
 
-        if (!projectRepository.existsById(projectId)) {
-            throw new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND);
-        }
+        projectRepository.findByIdForUpdate(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
         if (!projectMemberRepository.existsByProjectIdAndMemberId(projectId, memberId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND);
         }

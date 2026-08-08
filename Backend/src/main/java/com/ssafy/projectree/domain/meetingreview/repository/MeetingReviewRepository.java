@@ -2,6 +2,7 @@ package com.ssafy.projectree.domain.meetingreview.repository;
 
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -26,4 +27,8 @@ public interface MeetingReviewRepository extends JpaRepository<MeetingReview, In
         """
     )
     List<MeetingReview> findAllByRoomName(@Param("roomName") String roomName);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from MeetingReview review where review.projectId = :projectId")
+    void deleteAllByProjectId(@Param("projectId") int projectId);
 }

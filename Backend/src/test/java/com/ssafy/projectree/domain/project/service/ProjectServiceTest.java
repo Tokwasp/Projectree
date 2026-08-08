@@ -1,23 +1,52 @@
 package com.ssafy.projectree.domain.project.service;
 
 import com.ssafy.projectree.IntegrationTestSupport;
+import com.ssafy.projectree.domain.meeting.command.MeetingAnalysisCommandType;
 import com.ssafy.projectree.domain.meeting.entity.Meeting;
+import com.ssafy.projectree.domain.meeting.entity.AnalysisTaskStatus;
+import com.ssafy.projectree.domain.meeting.infrastructure.redis.MeetingRoomRedisReader;
+import com.ssafy.projectree.domain.meeting.notification.entity.MeetingAnalysisNotificationOutbox;
+import com.ssafy.projectree.domain.meeting.notification.entity.NotificationAudience;
+import com.ssafy.projectree.domain.meeting.notification.repository.MeetingAnalysisNotificationOutboxRepository;
+import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandOutbox;
+import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisOutboxStatus;
+import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.NodeEvidenceProjection;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectNodeProjection;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.NodeEvidenceProjectionRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectNodeProjectionRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.snapshot.GraphLinkSource;
+import com.ssafy.projectree.domain.meeting.result.graph.snapshot.GraphNodeCategory;
+import com.ssafy.projectree.domain.meeting.result.graph.snapshot.GraphNodeState;
+import com.ssafy.projectree.domain.meeting.result.graph.snapshot.GraphNodeType;
+import com.ssafy.projectree.domain.meeting.result.graph.snapshot.ProjectGraphSnapshotEvidence;
+import com.ssafy.projectree.domain.meeting.result.graph.snapshot.ProjectGraphSnapshotNode;
+import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventEnvelope;
+import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventType;
+import com.ssafy.projectree.domain.meeting.result.inbox.entity.MeetingAnalysisResultInbox;
+import com.ssafy.projectree.domain.meeting.result.inbox.repository.MeetingAnalysisResultInboxRepository;
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
 import com.ssafy.projectree.domain.meetingreview.exception.MeetingReviewErrorCode;
 import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
+import com.ssafy.projectree.domain.mail.entity.InvitationMail;
+import com.ssafy.projectree.domain.mail.repository.InvitationMailRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectHomeResponse;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectMemberResponse;
 import com.ssafy.projectree.domain.project.entity.Project;
+import com.ssafy.projectree.domain.project.entity.ProjectInvitation;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectMemberErrorCode;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
+import com.ssafy.projectree.domain.project.repository.ProjectInvitationRepository;
 import com.ssafy.projectree.global.exception.CustomException;
 import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import jakarta.persistence.EntityManager;
@@ -25,9 +54,12 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.Instant;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -51,8 +83,35 @@ class ProjectServiceTest extends IntegrationTestSupport {
     @Autowired
     private MeetingRecordRepository meetingRecordRepository;
 
+    @Autowired
+    private ProjectInvitationRepository projectInvitationRepository;
+
+    @Autowired
+    private InvitationMailRepository invitationMailRepository;
+
+    @Autowired
+    private ProjectNodeProjectionRepository projectNodeProjectionRepository;
+
+    @Autowired
+    private NodeEvidenceProjectionRepository nodeEvidenceProjectionRepository;
+
+    @Autowired
+    private ProjectGraphSyncRepository projectGraphSyncRepository;
+
+    @Autowired
+    private MeetingAnalysisCommandOutboxRepository commandOutboxRepository;
+
+    @Autowired
+    private MeetingAnalysisNotificationOutboxRepository notificationOutboxRepository;
+
+    @Autowired
+    private MeetingAnalysisResultInboxRepository resultInboxRepository;
+
     @PersistenceContext
     private EntityManager entityManager;
+
+    @MockitoBean
+    private MeetingRoomRedisReader meetingRoomRedisReader;
 
     @DisplayName("프로젝트를 생성하면 생성된 프로젝트의 id를 반환한다.")
     @Test
@@ -335,6 +394,254 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // then
         assertThat(countProjectMembers()).isZero();
+    }
+
+    @DisplayName("종료된 Meeting과 회의록, 리뷰가 있어도 프로젝트 aggregate를 삭제한다.")
+    @Test
+    void deleteProject_removesHistoricalMeetingAggregate() {
+        Member owner = memberRepository.save(createMember("owner-history@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        Meeting meeting = meetingRepository.saveAndFlush(
+                Meeting.create(project, project.getProjectMembers().getFirst(), UUID.randomUUID().toString())
+        );
+        meetingRecordRepository.saveAndFlush(MeetingRecord.create(
+                meeting,
+                UUID.randomUUID(),
+                "회의록",
+                null,
+                null,
+                null,
+                null
+        ));
+        meetingReviewRepository.saveAndFlush(MeetingReview.of(
+                meeting.getRoomName(),
+                projectId,
+                owner.getId()
+        ));
+        Member invitee = memberRepository.save(createMember("invitee-history@gmail.com", "초대대상"));
+        ProjectInvitation invitation = projectInvitationRepository.saveAndFlush(ProjectInvitation.builder()
+                .project(project)
+                .inviterMemberId(owner.getId())
+                .inviteeMemberId(invitee.getId())
+                .tokenHash(UUID.randomUUID().toString())
+                .lastInvitedAt(LocalDateTime.now())
+                .build());
+        invitationMailRepository.saveAndFlush(InvitationMail.queue(
+                invitation.getId(),
+                invitee.getEmail(),
+                "https://projectree.site/invitations/token"
+        ));
+        String nodeId = UUID.randomUUID().toString();
+        projectNodeProjectionRepository.saveAndFlush(ProjectNodeProjection.from(
+                projectId,
+                new ProjectGraphSnapshotNode(
+                        nodeId,
+                        meeting.getId(),
+                        null,
+                        null,
+                        GraphNodeType.DECISION,
+                        GraphNodeCategory.BACKEND,
+                        GraphNodeState.ACTIVE,
+                        "노드",
+                        "내용",
+                        GraphLinkSource.LLM_GENERATED,
+                        1,
+                        Instant.now(),
+                        Instant.now()
+                ),
+                Instant.now()
+        ));
+        nodeEvidenceProjectionRepository.saveAndFlush(NodeEvidenceProjection.from(
+                new ProjectGraphSnapshotEvidence(
+                        UUID.randomUUID().toString(),
+                        nodeId,
+                        meeting.getId(),
+                        "근거",
+                        null,
+                        null,
+                        null,
+                        0
+                ),
+                Instant.now()
+        ));
+        projectGraphSyncRepository.saveAndFlush(ProjectGraphSync.initial(projectId, Instant.now()));
+        commandOutboxRepository.saveAndFlush(MeetingAnalysisCommandOutbox.pending(
+                UUID.randomUUID(),
+                meeting,
+                com.ssafy.projectree.domain.meeting.command.MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
+                "{\"command\":\"historical\"}",
+                owner.getId(),
+                LocalDateTime.now()
+        ));
+        notificationOutboxRepository.saveAndFlush(MeetingAnalysisNotificationOutbox.pending(
+                UUID.randomUUID().toString(),
+                meeting.getId(),
+                projectId,
+                owner.getId(),
+                NotificationAudience.USER,
+                "{\"notification\":\"historical\"}"
+        ));
+
+        projectService.deleteProject(projectId, owner.getId());
+        flushAndClear();
+
+        assertThat(projectRepository.findById(projectId)).isEmpty();
+        assertThat(meetingRepository.findById(meeting.getId())).isEmpty();
+        assertThat(meetingRecordRepository.findByMeetingId(meeting.getId())).isEmpty();
+        assertThat(count("select count(*) from meeting_review where project_id = " + projectId)).isZero();
+        assertThat(count("select count(*) from project_invitation where project_id = " + projectId)).isZero();
+        assertThat(count("select count(*) from project_invitation_mail where invitation_id = " + invitation.getId())).isZero();
+        assertThat(projectNodeProjectionRepository.countByProjectId(projectId)).isZero();
+        assertThat(nodeEvidenceProjectionRepository.countByNodeId(nodeId)).isZero();
+        assertThat(projectGraphSyncRepository.findById(projectId)).isEmpty();
+        assertThat(commandOutboxRepository.countByMeetingId(meeting.getId())).isZero();
+        assertThat(notificationOutboxRepository.count()).isZero();
+    }
+
+    @DisplayName("PROCESSING summary 분석이 있으면 프로젝트 삭제를 막고 데이터를 유지한다.")
+    @Test
+    void deleteProject_rejectsProcessingSummaryAnalysis() {
+        Member owner = memberRepository.save(createMember("owner-processing-summary@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        Meeting meeting = meetingRepository.saveAndFlush(
+                Meeting.create(project, project.getProjectMembers().getFirst(), UUID.randomUUID().toString())
+        );
+        meeting.confirmAnalysisOptions(true, false);
+        meetingRepository.flush();
+
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_DELETE_ANALYSIS_IN_PROGRESS);
+
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(meetingRepository.findById(meeting.getId()))
+                .isPresent()
+                .get()
+                .extracting(Meeting::getSummaryStatus)
+                .isEqualTo(AnalysisTaskStatus.PROCESSING);
+    }
+
+    @DisplayName("PROCESSING node 분석이 있으면 프로젝트 삭제를 막는다.")
+    @Test
+    void deleteProject_rejectsProcessingNodeAnalysis() {
+        Member owner = memberRepository.save(createMember("owner-processing-node@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        Meeting meeting = meetingRepository.saveAndFlush(
+                Meeting.create(project, project.getProjectMembers().getFirst(), UUID.randomUUID().toString())
+        );
+        meeting.confirmAnalysisOptions(false, true);
+        meetingRepository.flush();
+
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_DELETE_ANALYSIS_IN_PROGRESS);
+
+        assertThat(projectRepository.findById(projectId)).isPresent();
+    }
+
+    @DisplayName("Redis에 활성 회의방이 있으면 프로젝트 삭제를 막고 데이터를 유지한다.")
+    @Test
+    void deleteProject_rejectsActiveMeetingRoom() {
+        Member owner = memberRepository.save(createMember("owner-active-room@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        org.mockito.BDDMockito.given(meetingRoomRedisReader.existsByProjectId(projectId)).willReturn(true);
+
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_DELETE_ACTIVE_MEETING);
+
+        assertThat(projectRepository.findById(projectId)).isPresent();
+    }
+
+    @DisplayName("PUBLISHED 상태의 meeting 없는 Node Content Update는 Result 처리 전까지 프로젝트 삭제를 막는다.")
+    @Test
+    void deleteProject_rejectsPublishedNodeContentUpdateWithoutTerminalResult() {
+        Member owner = memberRepository.save(createMember("owner-node-update-in-flight@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        MeetingAnalysisCommandOutbox outbox = saveNodeContentUpdateOutbox(projectId, owner.getId());
+        LocalDateTime now = LocalDateTime.now();
+        String claimToken = outbox.claim(now, now.plusMinutes(1), 3);
+        outbox.markPublished(claimToken, now);
+        commandOutboxRepository.saveAndFlush(outbox);
+
+        assertThat(outbox.getMeeting()).isNull();
+        assertThat(outbox.getTargetProjectId()).isEqualTo(projectId);
+        assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.PUBLISHED);
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_DELETE_GRAPH_OPERATION_IN_PROGRESS);
+
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(commandOutboxRepository.findById(outbox.getId())).isPresent();
+    }
+
+    @DisplayName("Node Content Update의 PROJECT_GRAPH_CHANGED가 Inbox에 terminal 처리되면 프로젝트를 삭제할 수 있다.")
+    @Test
+    void deleteProject_allowsTerminalNodeContentUpdate() {
+        Member owner = memberRepository.save(createMember("owner-node-update-terminal@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        MeetingAnalysisCommandOutbox outbox = saveNodeContentUpdateOutbox(projectId, owner.getId());
+        resultInboxRepository.saveAndFlush(MeetingAnalysisResultInbox.processed(
+                new AnalysisResultEventEnvelope(
+                        1,
+                        UUID.randomUUID().toString(),
+                        AnalysisResultEventType.PROJECT_GRAPH_CHANGED,
+                        Instant.now(),
+                        projectId,
+                        null,
+                        outbox.getCommandId(),
+                        null
+                ),
+                Instant.now()
+        ));
+
+        projectService.deleteProject(projectId, owner.getId());
+        flushAndClear();
+
+        assertThat(projectRepository.findById(projectId)).isEmpty();
+    }
+
+    @DisplayName("Node Content Update Outbox가 영구 FAILED이면 프로젝트 삭제를 막지 않는다.")
+    @Test
+    void deleteProject_allowsPermanentlyFailedNodeContentUpdate() {
+        Member owner = memberRepository.save(createMember("owner-node-update-failed@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        MeetingAnalysisCommandOutbox outbox = saveNodeContentUpdateOutbox(projectId, owner.getId());
+        LocalDateTime now = LocalDateTime.now();
+        String claimToken = outbox.claim(now, now.plusMinutes(1), 1);
+        outbox.rescheduleOrFail(claimToken, now, 1, 1, 1, "publish failed");
+        commandOutboxRepository.saveAndFlush(outbox);
+
+        assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.FAILED);
+        projectService.deleteProject(projectId, owner.getId());
+        flushAndClear();
+
+        assertThat(projectRepository.findById(projectId)).isEmpty();
+    }
+
+    @DisplayName("다른 프로젝트의 in-flight Node Content Update는 현재 프로젝트 삭제를 막지 않는다.")
+    @Test
+    void deleteProject_ignoresOtherProjectsInFlightNodeContentUpdate() {
+        Member owner = memberRepository.save(createMember("owner-node-update-other@gmail.com", "김오너"));
+        int targetProjectId = createProjectOwnedBy(owner);
+        int otherProjectId = projectService.createProject(
+                createRequest("다른 프로젝트", null),
+                owner.getId()
+        );
+        saveNodeContentUpdateOutbox(otherProjectId, owner.getId());
+
+        projectService.deleteProject(targetProjectId, owner.getId());
+        flushAndClear();
+
+        assertThat(projectRepository.findById(targetProjectId)).isEmpty();
+        assertThat(projectRepository.findById(otherProjectId)).isPresent();
     }
 
     @DisplayName("OWNER가 아닌 참여 멤버가 삭제하려 하면 PROJECT_DELETE_FORBIDDEN 예외가 발생한다.")
@@ -901,6 +1208,23 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         meetingRecordRepository.save(
                 MeetingRecord.create(meeting, UUID.randomUUID(), title, null, null, null, null));
+    }
+
+    private MeetingAnalysisCommandOutbox saveNodeContentUpdateOutbox(
+            int projectId,
+            int requestedByMemberId
+    ) {
+        return commandOutboxRepository.saveAndFlush(
+                MeetingAnalysisCommandOutbox.pendingNodeContentUpdate(
+                        UUID.randomUUID(),
+                        projectId,
+                        UUID.randomUUID().toString(),
+                        MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                        "{\"commandType\":\"NODE_CONTENT_UPDATE_REQUESTED\"}",
+                        requestedByMemberId,
+                        LocalDateTime.now()
+                )
+        );
     }
 
     private void saveMeetingReview(String roomName, int projectId, int memberId, int speakingSeconds,

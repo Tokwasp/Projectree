@@ -43,6 +43,7 @@ public class ProjectService {
     private final MeetingRepository meetingRepository;
     private final MeetingReviewRepository meetingReviewRepository;
     private final MeetingRecordRepository meetingRecordRepository;
+    private final ProjectDeletionService projectDeletionService;
 
     @Transactional
     public int createProject(ProjectCreateRequest request, int memberId) {
@@ -91,28 +92,27 @@ public class ProjectService {
 
     @Transactional
     public void deleteProject(int projectId, int memberId) {
-        Project project = projectRepository.findById(projectId)
+        Project project = projectRepository.findByIdForUpdate(projectId)
                 .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
 
         if (project.isNotOwner(memberId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_DELETE_FORBIDDEN);
         }
 
-        projectMemberRepository.deleteByProjectId(projectId);
-        projectRepository.deleteById(projectId);
+        projectDeletionService.deleteProjectAggregate(projectId);
     }
 
     @Transactional
     public void leaveProject(int projectId, int memberId) {
-        Project project = findProject(projectId);
+        Project project = projectRepository.findByIdForUpdate(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
 
         if (project.isNotParticipant(memberId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND);
         }
 
         if (project.isOwner(memberId)) {
-            projectMemberRepository.deleteByProjectId(projectId);
-            projectRepository.deleteById(projectId);
+            projectDeletionService.deleteProjectAggregate(projectId);
             return;
         }
 
