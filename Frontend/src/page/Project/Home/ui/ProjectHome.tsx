@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useAuthStore } from "../../../../store/authStore";
 import AiFeedback from "../components/AiFeedback/AiFeedback";
 import SpeakingDistribution from "../components/SpeakingDistribution/SpeakingDistribution";
@@ -109,6 +109,12 @@ export default function ProjectHome() {
                   >
                     최근 회의록
                   </h2>
+                  <Link
+                    className={style.viewAllLink}
+                    to={`/projects/${validProjectId}/meetings/records`}
+                  >
+                    전체보기 <span aria-hidden="true">›</span>
+                  </Link>
                 </div>
 
                 {recentMeetingRecords.length === 0 ? (
@@ -118,11 +124,13 @@ export default function ProjectHome() {
                 ) : (
                   <ul className={style.meetingList}>
                     {recentMeetingRecords.map((meeting) => (
-                      <li
-                        className={style.meetingItem}
-                        key={meeting.id}
-                      >
-                        <strong>{meeting.name}</strong>
+                      <li key={meeting.meetingId}>
+                        <Link
+                          className={style.meetingItem}
+                          to={`/projects/${validProjectId}/meetings/${meeting.meetingId}/record`}
+                        >
+                          <strong>{meeting.name}</strong>
+                        </Link>
                       </li>
                     ))}
                   </ul>

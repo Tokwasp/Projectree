@@ -8,7 +8,7 @@ export interface ProjectDetailResponse {
 }
 
 export interface MeetingRecordResponse {
-  id: number;
+  meetingId: number;
   name: string;
 }
 
