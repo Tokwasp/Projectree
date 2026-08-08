@@ -19,18 +19,29 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
     Optional<Project> findByIdForUpdate(@Param("projectId") int projectId);
 
     @Query(value = """
-            select new com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse(
-                       p.id, p.title, p.photoUrl,
-                       (select count(pm2.id) from ProjectMember pm2 where pm2.project = p))
-            from Project p
-            join p.projectMembers pm
-            where pm.memberId = :memberId
-    """,
+        select new com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse(
+                   p.id, p.title, p.photoUrl,
+                   (select count(pm2.id)
+                    from ProjectMember pm2
+                    where pm2.project = p)
+        )
+        from Project p
+        join p.projectMembers pm
+        where pm.memberId = :memberId
+          and (:keyword is null
+               or lower(p.title) like lower(concat('%', :keyword, '%')) escape '!')
+        """,
             countQuery = """
-            select count(p)
-            from Project p
-            join p.projectMembers pm
-            where pm.memberId = :memberId
-    """)
-    Page<ProjectItemResponse> findProjectItemsByMemberId(@Param("memberId") int memberId, Pageable pageable);
+        select count(p)
+        from Project p
+        join p.projectMembers pm
+        where pm.memberId = :memberId
+          and (:keyword is null
+               or lower(p.title) like lower(concat('%', :keyword, '%')) escape '!')
+        """)
+    Page<ProjectItemResponse> findProjectItemsByMemberId(
+            @Param("memberId") int memberId,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
 }
