@@ -21,8 +21,10 @@ public interface MeetingRecordRepository extends JpaRepository<MeetingRecord, Lo
     @Query("""
         select r
         from MeetingRecord r
-        join fetch r.meeting
-        where r.meeting.id in :meetingIdList
+        join fetch r.meeting m
+        where m.project.id = :projectId
+        order by r.createdAt desc
+        limit 5
         """)
-    List<MeetingRecord> findByMeetingIdIn(@Param("meetingIdList") List<Integer> meetingIdList);
+    List<MeetingRecord> findRecentFiveByProjectId(@Param("projectId") int projectId);
 }

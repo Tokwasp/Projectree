@@ -118,32 +118,52 @@ class MeetingRecordRepositoryTest {
         assertThat(meetingRecordRepository.existsByMeetingId(meeting.getId() + 1000)).isFalse();
     }
 
-    @DisplayName("meetingId 목록으로 여러 회의록을 조회하면 목록에 포함된 Meeting의 회의록만 반환된다.")
+    @DisplayName("프로젝트의 회의록을 최신순으로 최대 5개까지 조회하고 다른 프로젝트의 회의록은 제외한다.")
     @Test
-    void findByMeetingIdIn() {
+    void findRecentFiveByProjectId() {
         // given
         Project project = saveProject();
-        Meeting first = saveMeeting(project, ROOM_NAME);
-        Meeting second = saveMeeting(project, OTHER_ROOM_NAME);
-        Meeting excluded = saveMeeting(project, EXCLUDED_ROOM_NAME);
-        saveMeetingRecord(first, "첫 번째 회의록");
-        saveMeetingRecord(second, "두 번째 회의록");
-        saveMeetingRecord(excluded, "조회 대상이 아닌 회의록");
+        Project otherProject = saveProject();
+        for (int round = 1; round <= 6; round++) {
+            saveMeetingRecord(saveMeeting(project, randomRoomName()), round + "회차 회의록");
+        }
+        saveMeetingRecord(saveMeeting(otherProject, randomRoomName()), "다른 프로젝트 회의록");
         entityManager.clear();
 
         // when
-        List<MeetingRecord> found =
-                meetingRecordRepository.findByMeetingIdIn(List.of(first.getId(), second.getId()));
+        List<MeetingRecord> found = meetingRecordRepository.findRecentFiveByProjectId(project.getId());
 
         // then
-        assertThat(found).hasSize(2)
+        assertThat(found).hasSize(5)
                 .extracting(MeetingRecord::getTitle)
-                .containsExactlyInAnyOrder("첫 번째 회의록", "두 번째 회의록");
+                .containsExactly(
+                        "6회차 회의록", "5회차 회의록", "4회차 회의록", "3회차 회의록", "2회차 회의록"
+                );
     }
 
-    @DisplayName("meetingId 목록으로 회의록을 조회하면 Meeting을 fetch join 해 쿼리 한 번으로 회의 정보까지 읽는다.")
+    @DisplayName("회의록에서 회의를 조인하므로 회의록이 없는 회의는 조회되지 않는다.")
     @Test
-    void findByMeetingIdInFetchesMeeting() {
+    void findRecentFiveByProjectIdExcludesMeetingWithoutRecord() {
+        // given
+        Project project = saveProject();
+        Meeting recorded = saveMeeting(project, ROOM_NAME);
+        saveMeeting(project, OTHER_ROOM_NAME);
+        saveMeeting(project, EXCLUDED_ROOM_NAME);
+        saveMeetingRecord(recorded, "유일한 회의록");
+        entityManager.clear();
+
+        // when
+        List<MeetingRecord> found = meetingRecordRepository.findRecentFiveByProjectId(project.getId());
+
+        // then
+        assertThat(found).hasSize(1)
+                .extracting(MeetingRecord::getTitle, record -> record.getMeeting().getId())
+                .containsExactly(tuple("유일한 회의록", recorded.getId()));
+    }
+
+    @DisplayName("회의록 조회 시 Meeting을 fetch join 해 쿼리 한 번으로 회의 정보까지 읽는다.")
+    @Test
+    void findRecentFiveByProjectIdFetchesMeeting() {
         // given
         Project project = saveProject();
         Meeting first = saveMeeting(project, ROOM_NAME);
@@ -159,8 +179,7 @@ class MeetingRecordRepositoryTest {
         statistics.clear();
 
         // when
-        List<MeetingRecord> found =
-                meetingRecordRepository.findByMeetingIdIn(List.of(first.getId(), second.getId()));
+        List<MeetingRecord> found = meetingRecordRepository.findRecentFiveByProjectId(project.getId());
 
         // then
         assertThat(found).hasSize(2)
@@ -170,9 +189,9 @@ class MeetingRecordRepositoryTest {
                         record -> record.getMeeting().getId(),
                         record -> record.getMeeting().getRoomName()
                 )
-                .containsExactlyInAnyOrder(
-                        tuple("첫 번째 회의록", first.getId(), ROOM_NAME),
-                        tuple("두 번째 회의록", second.getId(), OTHER_ROOM_NAME)
+                .containsExactly(
+                        tuple("두 번째 회의록", second.getId(), OTHER_ROOM_NAME),
+                        tuple("첫 번째 회의록", first.getId(), ROOM_NAME)
                 );
         assertThat(statistics.getPrepareStatementCount()).isEqualTo(1);
     }
@@ -274,6 +293,10 @@ class MeetingRecordRepositoryTest {
         meetingRecordRepository.saveAndFlush(MeetingRecord.create(
                 meeting, UUID.randomUUID(), title, null, null, null, null
         ));
+    }
+
+    private String randomRoomName() {
+        return UUID.randomUUID().toString();
     }
 
     private Meeting saveMeeting(String roomName) {
