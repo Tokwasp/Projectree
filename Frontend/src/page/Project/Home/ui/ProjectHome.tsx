@@ -51,6 +51,7 @@ export default function ProjectHome() {
       isCurrentUser: member.name === currentUserName,
     })) ?? [];
   const meetingRecords = data?.meetingRecordList ?? [];
+  const recentMeetingRecords = meetingRecords.slice(0, 3);
   const projectDetail = data?.projectDetail;
 
   return (
@@ -110,16 +111,16 @@ export default function ProjectHome() {
                   </h2>
                 </div>
 
-                {meetingRecords.length === 0 ? (
+                {recentMeetingRecords.length === 0 ? (
                   <p className={style.meetingEmpty}>
                     최근 회의록이 없습니다.
                   </p>
                 ) : (
                   <ul className={style.meetingList}>
-                    {meetingRecords.slice(0, 2).map((meeting, index) => (
+                    {recentMeetingRecords.map((meeting) => (
                       <li
                         className={style.meetingItem}
-                        key={`${meeting.name}-${index}`}
+                        key={meeting.id}
                       >
                         <strong>{meeting.name}</strong>
                       </li>

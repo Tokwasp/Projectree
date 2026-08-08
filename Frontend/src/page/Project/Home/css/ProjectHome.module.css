@@ -111,6 +111,7 @@
 
 .meetingItem {
   display: flex;
+  min-width: 0;
   align-items: center;
   padding: var(--space-4);
 }
@@ -120,9 +121,14 @@
 }
 
 .meetingItem strong {
+  min-width: 0;
+  overflow: hidden;
+  flex: 1;
   color: var(--color-text);
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dashboardGrid {
