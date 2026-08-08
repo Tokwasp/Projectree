@@ -12,18 +12,7 @@ import java.util.Optional;
 
 public interface MeetingRepository extends JpaRepository<Meeting, Integer> {
 
-    @Query("""
-            select m
-            from Meeting m
-            where m.project.id = :projectId
-            order by m.createdAt desc
-            limit 5
-            """)
-    List<Meeting> findRecentFiveBy(@Param("projectId") int projectId);
-
     boolean existsByRoomName(String roomName);
-
-    boolean existsByProjectId(int projectId);
 
     Optional<Meeting> findByRoomName(String roomName);
 

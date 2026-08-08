@@ -780,8 +780,8 @@ class ProjectServiceTest extends IntegrationTestSupport {
         String content = "React로 만든 개인 포트폴리오입니다.";
         int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
 
-        saveMeetingRecord(projectId, "1회차 회의록");
-        saveMeetingRecord(projectId, "2회차 회의록");
+        int firstMeetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        int secondMeetingId = saveMeetingRecord(projectId, "2회차 회의록");
         flushAndClear();
 
         // when
@@ -794,11 +794,35 @@ class ProjectServiceTest extends IntegrationTestSupport {
                 .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 1);
 
         assertThat(response.getMeetingRecordList()).hasSize(2)
-                .extracting("name")
-                .containsExactly("2회차 회의록", "1회차 회의록");
+                .extracting("meetingId", "name")
+                .containsExactly(
+                        tuple(secondMeetingId, "2회차 회의록"),
+                        tuple(firstMeetingId, "1회차 회의록")
+                );
 
         assertThat(response.getPersonalSpeakingList()).isEmpty();
         assertThat(response.getMyReview()).isNull();
+    }
+
+    @DisplayName("프로젝트 홈을 조회하면 회의록이 없는 회의는 회의록 목록에서 제외된다.")
+    @Test
+    void getProjectHome_excludesMeetingWithoutRecord() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+
+        int meetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        saveMeetingWithoutRecord(projectId);
+        flushAndClear();
+
+        // when
+        ProjectHomeResponse response =
+                projectService.getProjectHome(projectId, owner.getId());
+
+        // then
+        assertThat(response.getMeetingRecordList()).hasSize(1)
+                .extracting("meetingId", "name")
+                .containsExactly(tuple(meetingId, "1회차 회의록"));
     }
 
     @DisplayName("프로젝트 홈을 조회하면 회의 리뷰가 있는 경우 프로젝트 내용, 회의록, 발화 비율, 내 리뷰가 모두 조회되고 회의록은 최근순으로 정렬된다.")
@@ -813,9 +837,9 @@ class ProjectServiceTest extends IntegrationTestSupport {
         int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
         joinAsMember(projectId, member);
 
-        saveMeetingRecord(projectId, "1회차 회의록");
-        saveMeetingRecord(projectId, "2회차 회의록");
-        saveMeetingRecord(projectId, "3회차 회의록");
+        int firstMeetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        int secondMeetingId = saveMeetingRecord(projectId, "2회차 회의록");
+        int thirdMeetingId = saveMeetingRecord(projectId, "3회차 회의록");
 
         String roomName = "room-" + projectId;
         saveMeetingReview(roomName, projectId, owner.getId(), 70,
@@ -833,8 +857,12 @@ class ProjectServiceTest extends IntegrationTestSupport {
                 .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 2);
 
         assertThat(response.getMeetingRecordList()).hasSize(3)
-                .extracting("name")
-                .containsExactly("3회차 회의록", "2회차 회의록", "1회차 회의록");
+                .extracting("meetingId", "name")
+                .containsExactly(
+                        tuple(thirdMeetingId, "3회차 회의록"),
+                        tuple(secondMeetingId, "2회차 회의록"),
+                        tuple(firstMeetingId, "1회차 회의록")
+                );
 
         assertThat(response.getMyReview())
                 .extracting("speedFeedback", "personalFeedback", "overallFeedback")
@@ -894,13 +922,20 @@ class ProjectServiceTest extends IntegrationTestSupport {
         entityManager.clear();
     }
 
-    private void saveMeetingRecord(int projectId, String title) {
+    private int saveMeetingRecord(int projectId, String title) {
         Project project = projectRepository.findById(projectId).orElseThrow();
         Meeting meeting = meetingRepository.save(
                 Meeting.create(project, project.getProjectMembers().get(0), UUID.randomUUID().toString()));
 
         meetingRecordRepository.save(
                 MeetingRecord.create(meeting, UUID.randomUUID(), title, null, null, null, null));
+        return meeting.getId();
+    }
+
+    private void saveMeetingWithoutRecord(int projectId) {
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        meetingRepository.save(
+                Meeting.create(project, project.getProjectMembers().get(0), UUID.randomUUID().toString()));
     }
 
     private void saveMeetingReview(String roomName, int projectId, int memberId, int speakingSeconds,

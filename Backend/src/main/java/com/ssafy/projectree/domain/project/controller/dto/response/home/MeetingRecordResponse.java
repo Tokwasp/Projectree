@@ -6,18 +6,18 @@ import lombok.Getter;
 
 @Getter
 public class MeetingRecordResponse {
-    private long id;
+    private int meetingId;
     private String name;
 
     @Builder
-    private MeetingRecordResponse(long id, String name) {
-        this.id = id;
+    private MeetingRecordResponse(int meetingId, String name) {
+        this.meetingId = meetingId;
         this.name = name;
     }
 
     public static MeetingRecordResponse of(MeetingRecord meetingRecord) {
         return MeetingRecordResponse.builder()
-                .id(meetingRecord.getId())
+                .meetingId(meetingRecord.getMeeting().getId())
                 .name(meetingRecord.getTitle())
                 .build();
     }
