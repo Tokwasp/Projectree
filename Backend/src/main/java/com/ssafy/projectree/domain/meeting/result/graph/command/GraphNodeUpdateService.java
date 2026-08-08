@@ -6,6 +6,7 @@ import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandO
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.command.dto.NodeContentUpdateAcceptedResponse;
 import com.ssafy.projectree.domain.meeting.result.graph.command.dto.NodeContentUpdateRequest;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectNodeProjection;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectNodeProjectionRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.query.GraphQueryErrorCode;
@@ -37,6 +38,7 @@ public class GraphNodeUpdateService {
     private final MeetingAnalysisCommandOutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final ProjectGraphOperationGuard graphOperationGuard;
 
     @Transactional
     public NodeContentUpdateAcceptedResponse update(
@@ -49,9 +51,8 @@ public class GraphNodeUpdateService {
         String title = validateAndNormalizeTitle(request.title());
         String content = validateContent(request.content());
 
-        if (!projectRepository.existsById(projectId)) {
-            throw new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND);
-        }
+        projectRepository.findByIdForUpdate(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
         if (!projectMemberRepository.existsByProjectIdAndMemberId(projectId, memberId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND);
         }
@@ -62,11 +63,18 @@ public class GraphNodeUpdateService {
         }
 
         UUID commandId = UUID.randomUUID();
+        Instant requestedAt = Instant.now(clock);
+        graphOperationGuard.acquire(
+                projectId,
+                commandId,
+                MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                requestedAt
+        );
         NodeContentUpdateRequestedCommand command = new NodeContentUpdateRequestedCommand(
                 NodeContentUpdateRequestedCommand.CURRENT_SCHEMA_VERSION,
                 commandId,
                 MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
-                Instant.now(clock),
+                requestedAt,
                 projectId,
                 new NodeContentUpdateRequestedCommand.Payload(
                         nodeId,

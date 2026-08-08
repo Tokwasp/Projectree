@@ -31,8 +31,7 @@ public class AnalysisEventValidator {
         if (event.meetingId() != null && !isPositive(event.meetingId())) {
             throw new AnalysisResultContractException("Analysis result meetingId must be positive when present");
         }
-        if (event.meetingId() == null
-                && event.eventType() != AnalysisResultEventType.PROJECT_GRAPH_CHANGED) {
+        if (requiresMeetingId(event.eventType()) && event.meetingId() == null) {
             throw new AnalysisResultContractException("Analysis result meetingId is required");
         }
         if (event.payload() == null || !event.payload().isObject()) {
@@ -53,6 +52,13 @@ public class AnalysisEventValidator {
 
     private static boolean isPositive(Integer value) {
         return value != null && value > 0;
+    }
+
+    private static boolean requiresMeetingId(AnalysisResultEventType eventType) {
+        return switch (eventType) {
+            case MEETING_SUMMARY_READY, ANALYSIS_TASK_STATUS_CHANGED -> true;
+            case PROJECT_GRAPH_CHANGED, NODE_DELETE_REJECTED -> false;
+        };
     }
 
     private static String canonicalUuid(String value, String fieldName) {

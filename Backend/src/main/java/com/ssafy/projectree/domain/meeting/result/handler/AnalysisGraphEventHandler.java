@@ -8,6 +8,7 @@ import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChange
 import com.ssafy.projectree.domain.meeting.result.graph.projection.AnalysisGraphProjectionApplier;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.GraphProjectionApplyResult;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.NodeContentUpdateGraphProjectionApplier;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.NodeDeleteGraphProjectionApplier;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.ProjectGraphSnapshot;
 import com.ssafy.projectree.domain.meeting.result.graph.storage.GraphSnapshotLoader;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class AnalysisGraphEventHandler implements AnalysisResultEventHandler {
     private final GraphSnapshotLoader snapshotLoader;
     private final AnalysisGraphProjectionApplier projectionApplier;
     private final NodeContentUpdateGraphProjectionApplier nodeContentUpdateProjectionApplier;
+    private final NodeDeleteGraphProjectionApplier nodeDeleteProjectionApplier;
 
     @Override
     public AnalysisResultEventType supportedType() {
@@ -43,6 +45,7 @@ public class AnalysisGraphEventHandler implements AnalysisResultEventHandler {
         GraphProjectionApplyResult result = switch (payload.sourceType()) {
             case MEETING_ANALYSIS -> projectionApplier.apply(event, payload, snapshot);
             case NODE_CONTENT_UPDATE -> nodeContentUpdateProjectionApplier.apply(event, payload, snapshot);
+            case NODE_DELETE -> nodeDeleteProjectionApplier.apply(event, payload, snapshot);
         };
         log.info(
                 "[AnalysisFlow] GRAPH_PROJECTION_APPLIED. eventId={}, commandId={}, sourceType={}, projectId={}, meetingId={}, requestedGraphVersion={}, currentGraphVersion={}, projectionUpdated={}, completionResult={}, nodeCount={}, evidenceCount={}",

@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AnalysisEventValidatorTest {
@@ -45,6 +46,55 @@ class AnalysisEventValidatorTest {
         assertThatThrownBy(() -> validator.validateEnvelope(event(
                 UUID.randomUUID().toString(), UUID.randomUUID().toString(), objectMapper.createArrayNode()
         ))).isInstanceOf(AnalysisResultContractException.class);
+    }
+
+    @Test
+    void appliesMeetingIdRequirementsByEventType() {
+        assertThatCode(() -> validator.validateEnvelope(event(
+                AnalysisResultEventType.NODE_DELETE_REJECTED,
+                null
+        ))).doesNotThrowAnyException();
+        assertThatCode(() -> validator.validateEnvelope(event(
+                AnalysisResultEventType.PROJECT_GRAPH_CHANGED,
+                null
+        ))).doesNotThrowAnyException();
+
+        assertThatThrownBy(() -> validator.validateEnvelope(event(
+                AnalysisResultEventType.MEETING_SUMMARY_READY,
+                null
+        ))).isInstanceOf(AnalysisResultContractException.class);
+        assertThatThrownBy(() -> validator.validateEnvelope(event(
+                AnalysisResultEventType.ANALYSIS_TASK_STATUS_CHANGED,
+                null
+        ))).isInstanceOf(AnalysisResultContractException.class);
+    }
+
+    @Test
+    void rejectsNonPositiveMeetingIdEvenForOptionalMeetingEvent() {
+        assertThatThrownBy(() -> validator.validateEnvelope(event(
+                AnalysisResultEventType.NODE_DELETE_REJECTED,
+                0
+        ))).isInstanceOf(AnalysisResultContractException.class);
+        assertThatThrownBy(() -> validator.validateEnvelope(event(
+                AnalysisResultEventType.NODE_DELETE_REJECTED,
+                -1
+        ))).isInstanceOf(AnalysisResultContractException.class);
+    }
+
+    private AnalysisResultEventEnvelope event(
+            AnalysisResultEventType eventType,
+            Integer meetingId
+    ) {
+        return new AnalysisResultEventEnvelope(
+                3,
+                UUID.randomUUID().toString(),
+                eventType,
+                Instant.parse("2026-08-04T12:30:00Z"),
+                1,
+                meetingId,
+                UUID.randomUUID().toString(),
+                objectMapper.createObjectNode()
+        );
     }
 
     private AnalysisResultEventEnvelope event(String eventId, String commandId, tools.jackson.databind.JsonNode payload) {

@@ -47,12 +47,15 @@ class ProjectServiceUnitTest {
     @Mock
     private MemberRepository memberRepository;
 
+    @Mock
+    private ProjectDeletionService projectDeletionService;
+
     @DisplayName("MEMBER가 탈퇴하면 참여 멤버 목록에서 자신만 제거된다.")
     @Test
     void leaveProject() {
         // given
         Project project = createProjectWithOwnerAndMember();
-        given(projectRepository.findById(PROJECT_ID)).willReturn(Optional.of(project));
+        given(projectRepository.findByIdForUpdate(PROJECT_ID)).willReturn(Optional.of(project));
 
         // when
         projectService.leaveProject(PROJECT_ID, MEMBER_ID);
@@ -68,7 +71,7 @@ class ProjectServiceUnitTest {
     void leaveProject_notParticipating() {
         // given
         Project project = createProjectWithOwnerAndMember();
-        given(projectRepository.findById(PROJECT_ID)).willReturn(Optional.of(project));
+        given(projectRepository.findByIdForUpdate(PROJECT_ID)).willReturn(Optional.of(project));
 
         // when // then
         assertThatThrownBy(() -> projectService.leaveProject(PROJECT_ID, 999))
@@ -81,13 +84,27 @@ class ProjectServiceUnitTest {
     @Test
     void leaveProject_projectNotFound() {
         // given
-        given(projectRepository.findById(999)).willReturn(Optional.empty());
+        given(projectRepository.findByIdForUpdate(999)).willReturn(Optional.empty());
 
         // when // then
         assertThatThrownBy(() -> projectService.leaveProject(999, MEMBER_ID))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    @DisplayName("OWNER가 탈퇴하면 공통 프로젝트 aggregate 삭제 서비스에 위임한다.")
+    @Test
+    void leaveProject_byOwner_delegatesAggregateDeletion() {
+        // given
+        Project project = createProjectWithOwnerAndMember();
+        given(projectRepository.findByIdForUpdate(PROJECT_ID)).willReturn(Optional.of(project));
+
+        // when
+        projectService.leaveProject(PROJECT_ID, OWNER_ID);
+
+        // then
+        then(projectDeletionService).should().deleteProjectAggregate(PROJECT_ID);
     }
 
     @DisplayName("검색어의 LIKE 와일드카드 %는 리터럴로 이스케이프해서 Repository로 넘긴다.")

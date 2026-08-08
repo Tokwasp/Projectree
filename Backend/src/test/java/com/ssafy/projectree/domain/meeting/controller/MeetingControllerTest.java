@@ -64,15 +64,14 @@ class MeetingControllerTest extends ControllerTestSupport {
                 .requestAnalysis(PROJECT_ID, ROOM_NAME, MEMBER_ID, request);
     }
 
-    @DisplayName("네 가지 Boolean 조합은 모두 유효하다.")
+    @DisplayName("하나 이상의 분석 작업을 선택한 Boolean 조합은 유효하다.")
     @ParameterizedTest
     @ValueSource(strings = {
             "{\"generateSummary\":true,\"generateNodes\":true}",
             "{\"generateSummary\":true,\"generateNodes\":false}",
-            "{\"generateSummary\":false,\"generateNodes\":true}",
-            "{\"generateSummary\":false,\"generateNodes\":false}"
+            "{\"generateSummary\":false,\"generateNodes\":true}"
     })
-    void acceptsEveryBooleanCombination(String body) throws Exception {
+    void acceptsSelectedTaskCombinations(String body) throws Exception {
         when(meetingAnalysisRequestService.requestAnalysis(
                 eq(PROJECT_ID), eq(ROOM_NAME), eq(MEMBER_ID), any(MeetingAnalysisRequest.class)
         )).thenReturn(response(false, false));

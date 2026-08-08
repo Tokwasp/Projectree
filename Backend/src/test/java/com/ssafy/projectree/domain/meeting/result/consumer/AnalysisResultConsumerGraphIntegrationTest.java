@@ -13,6 +13,7 @@ import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventEnvel
 import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventType;
 import com.ssafy.projectree.domain.meeting.result.config.AnalysisResultConsumerProperties;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.AnalysisGraphProjectionApplier;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.NodeEvidenceProjectionRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectNodeProjectionRepository;
@@ -196,6 +197,16 @@ class AnalysisResultConsumerGraphIntegrationTest {
                         "{\"command\":true}", 17, LocalDateTime.now()
                 )
         );
+        ProjectGraphSync sync = ProjectGraphSync.initial(
+                project.getId(),
+                Instant.parse("2026-08-05T00:00:00Z")
+        );
+        sync.acquireGraphOperation(
+                command.getCommandId(),
+                MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
+                Instant.parse("2026-08-05T00:00:01Z")
+        );
+        graphSyncRepository.saveAndFlush(sync);
         return new Fixture(project.getId(), meeting.getId(), command.getCommandId());
     }
 

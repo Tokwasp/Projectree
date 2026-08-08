@@ -9,12 +9,16 @@ import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandO
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisOutboxStatus;
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationErrorCode;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
+import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.exception.CommonErrorCode;
 import com.ssafy.projectree.global.exception.CustomException;
+import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -38,8 +43,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 class MeetingAnalysisRequestServiceTest {
@@ -53,6 +61,9 @@ class MeetingAnalysisRequestServiceTest {
     private MeetingRepository meetingRepository;
 
     @Mock
+    private ProjectRepository projectRepository;
+
+    @Mock
     private ProjectMemberRepository projectMemberRepository;
 
     @Mock
@@ -61,20 +72,27 @@ class MeetingAnalysisRequestServiceTest {
     @Mock
     private ObjectMapper objectMapper;
 
+    @Mock
+    private ProjectGraphOperationGuard graphOperationGuard;
+
     private MeetingAnalysisRequestService service;
 
     @BeforeEach
     void setUp() {
         service = new MeetingAnalysisRequestService(
                 meetingRepository,
+                projectRepository,
                 projectMemberRepository,
                 outboxRepository,
                 objectMapper,
                 Clock.fixed(
                         Instant.parse("2026-08-04T01:00:00Z"),
                         ZoneId.of("Asia/Seoul")
-                )
+                ),
+                graphOperationGuard
         );
+        lenient().when(projectRepository.findByIdForUpdate(PROJECT_ID))
+                .thenReturn(Optional.of(mock(Project.class)));
     }
 
     @DisplayName("??媛吏 ?듭뀡 議고빀???뺤젙?섍퀬 PENDING Outbox瑜???ν븳??")
@@ -82,8 +100,7 @@ class MeetingAnalysisRequestServiceTest {
     @CsvSource({
             "true, true, PROCESSING, PROCESSING",
             "true, false, PROCESSING, SKIPPED",
-            "false, true, SKIPPED, PROCESSING",
-            "false, false, SKIPPED, SKIPPED"
+            "false, true, SKIPPED, PROCESSING"
     })
     void confirmsOptionsAndSavesOutbox(
             boolean generateSummary,
@@ -116,6 +133,23 @@ class MeetingAnalysisRequestServiceTest {
         ArgumentCaptor<MeetingAnalysisCommandOutbox> captor =
                 ArgumentCaptor.forClass(MeetingAnalysisCommandOutbox.class);
         verify(outboxRepository).saveAndFlush(captor.capture());
+        if (generateNodes) {
+            verify(graphOperationGuard).acquire(
+                    org.mockito.ArgumentMatchers.eq(PROJECT_ID),
+                    any(),
+                    org.mockito.ArgumentMatchers.eq(
+                            com.ssafy.projectree.domain.meeting.command.MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED
+                    ),
+                    any()
+            );
+        } else {
+            verify(graphOperationGuard, never()).acquire(
+                    any(Integer.class),
+                    any(),
+                    any(),
+                    any()
+            );
+        }
         MeetingAnalysisCommandOutbox outbox = captor.getValue();
         assertThat(outbox.getMeeting()).isSameAs(meeting);
         assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.PENDING);
@@ -123,6 +157,64 @@ class MeetingAnalysisRequestServiceTest {
         assertThat(outbox.getPublishedAt()).isNull();
         assertThat(outbox.getLastError()).isNull();
         assertThat(outbox.getCommandId()).isEqualTo(response.commandId().toString());
+
+        InOrder lockOrder = inOrder(projectRepository, meetingRepository);
+        lockOrder.verify(projectRepository).findByIdForUpdate(PROJECT_ID);
+        lockOrder.verify(meetingRepository)
+                .findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME);
+    }
+
+    @Test
+    void rejectsRequestWithNoSelectedTaskBeforeRepositoriesAndGuard() {
+        assertThatThrownBy(() -> service.requestAnalysis(
+                PROJECT_ID,
+                ROOM_NAME,
+                MEMBER_ID,
+                new MeetingAnalysisRequest(false, false)
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(MeetingErrorCode.ANALYSIS_TASK_NOT_SELECTED);
+
+        verify(meetingRepository, never())
+                .findByProjectIdAndRoomNameForUpdate(any(Integer.class), any());
+        verify(graphOperationGuard, never()).acquire(
+                any(Integer.class),
+                any(),
+                any(),
+                any()
+        );
+        verify(outboxRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void activeGraphOperationRejectsRequestBeforeMeetingStateAndOutboxChange() {
+        Meeting meeting = meeting();
+        when(meetingRepository.findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME))
+                .thenReturn(Optional.of(meeting));
+        when(projectMemberRepository.findByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
+                .thenReturn(Optional.of(creatorOf(meeting)));
+        doThrow(new CustomException(
+                ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS
+        )).when(graphOperationGuard).acquire(
+                org.mockito.ArgumentMatchers.eq(PROJECT_ID),
+                any(),
+                any(),
+                any()
+        );
+
+        assertThatThrownBy(() -> service.requestAnalysis(
+                PROJECT_ID,
+                ROOM_NAME,
+                MEMBER_ID,
+                new MeetingAnalysisRequest(true, true)
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS);
+
+        assertThat(meeting.isAnalysisRequestConfirmed()).isFalse();
+        verify(outboxRepository, never()).saveAndFlush(any());
     }
 
     @DisplayName("Meeting???놁쑝硫?404 ?ㅻ쪟瑜?諛쒖깮?쒗궎怨?Outbox瑜???ν븯吏 ?딅뒗??")
@@ -219,6 +311,7 @@ class MeetingAnalysisRequestServiceTest {
         );
         verify(meetingRepository, never())
                 .findByProjectIdAndRoomNameForUpdate(any(Integer.class), any());
+        verify(projectRepository, never()).findByIdForUpdate(any(Integer.class));
     }
 
     @Test
@@ -255,6 +348,22 @@ class MeetingAnalysisRequestServiceTest {
                 ),
                 MeetingErrorCode.OUTBOX_SERIALIZATION_FAILED
         );
+        verify(outboxRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void projectNotFoundBeforeMeetingLock() {
+        when(projectRepository.findByIdForUpdate(PROJECT_ID)).thenReturn(Optional.empty());
+
+        assertError(
+                () -> service.requestAnalysis(
+                        PROJECT_ID, ROOM_NAME, MEMBER_ID, new MeetingAnalysisRequest(true, false)
+                ),
+                ProjectErrorCode.PROJECT_NOT_FOUND
+        );
+
+        verify(meetingRepository, never())
+                .findByProjectIdAndRoomNameForUpdate(any(Integer.class), any());
         verify(outboxRepository, never()).saveAndFlush(any());
     }
 

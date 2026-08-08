@@ -7,6 +7,8 @@ import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandO
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.record.codec.MeetingRecordContentCodec;
 import com.ssafy.projectree.domain.meeting.record.dto.response.MeetingRecordDetailResponse;
+import com.ssafy.projectree.domain.meeting.record.dto.response.MeetingRecordListItemResponse;
+import com.ssafy.projectree.domain.meeting.record.dto.response.MeetingRecordPageResponse;
 import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
 import com.ssafy.projectree.domain.meeting.record.exception.MeetingRecordErrorCode;
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
@@ -18,17 +20,26 @@ import com.ssafy.projectree.global.exception.CustomException;
 import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MeetingRecordQueryService {
+
+    private static final Sort RECORD_LIST_SORT = Sort.by(
+            Sort.Order.desc("createdAt"),
+            Sort.Order.desc("id")
+    );
 
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
@@ -66,6 +77,54 @@ public class MeetingRecordQueryService {
                 contentCodec.decode(record.getNextTodosJson()),
                 contentCodec.decode(record.getIssuesJson()),
                 record.getVersion(),
+                record.getCreatedAt(),
+                record.getUpdatedAt()
+        );
+    }
+
+    public MeetingRecordPageResponse getRecords(
+            int projectId,
+            int memberId,
+            int page,
+            int size
+    ) {
+        requireProjectMember(projectId, memberId);
+
+        Page<MeetingRecord> recordPage = meetingRecordRepository.findPageByProjectId(
+                projectId,
+                PageRequest.of(page, size, RECORD_LIST_SORT)
+        );
+        List<MeetingRecordListItemResponse> records = recordPage.getContent().stream()
+                .map(this::toListItem)
+                .toList();
+
+        return new MeetingRecordPageResponse(
+                records,
+                recordPage.getNumber(),
+                recordPage.getSize(),
+                recordPage.getTotalElements(),
+                recordPage.getTotalPages()
+        );
+    }
+
+    private MeetingRecordListItemResponse toListItem(MeetingRecord record) {
+        Meeting meeting = record.getMeeting();
+        LocalDateTime startedAt = meeting.getCreatedAt();
+        if (startedAt == null) {
+            log.error(
+                    "Meeting 감사 시각이 없어 회의록 목록을 구성할 수 없다. meetingId={}, meetingRecordId={}",
+                    meeting.getId(),
+                    record.getId()
+            );
+            throw new CustomException(CommonErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        return new MeetingRecordListItemResponse(
+                record.getId(),
+                meeting.getId(),
+                record.getTitle(),
+                startedAt.toLocalDate(),
+                startedAt,
                 record.getCreatedAt(),
                 record.getUpdatedAt()
         );

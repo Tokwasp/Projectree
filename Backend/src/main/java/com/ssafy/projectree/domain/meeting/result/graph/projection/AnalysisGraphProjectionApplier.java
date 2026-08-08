@@ -13,6 +13,7 @@ import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContra
 import com.ssafy.projectree.domain.meeting.result.exception.InvalidAnalysisTaskStateException;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayload;
 import com.ssafy.projectree.domain.meeting.result.graph.event.GraphResultSourceType;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.ProjectGraphSnapshot;
@@ -46,6 +47,7 @@ public class AnalysisGraphProjectionApplier {
     private final EntityManager entityManager;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final ProjectGraphOperationGuard graphOperationGuard;
 
     @Transactional
     public GraphProjectionApplyResult apply(
@@ -72,7 +74,7 @@ public class AnalysisGraphProjectionApplier {
         Meeting meeting = meetingRepository.findByIdForUpdate(event.meetingId())
                 .orElseThrow(() -> new AnalysisResultContractException("Analysis result meeting does not exist"));
         MeetingAnalysisCommandOutbox command = lockedReferenceValidator.validate(event, meeting);
-        ProjectGraphSync sync = findOrCreateLockedSync(event.projectId());
+        ProjectGraphSync sync = findLockedSync(event.projectId());
 
         resultInboxService.registerProcessed(event);
 
@@ -106,6 +108,19 @@ public class AnalysisGraphProjectionApplier {
                     createSuccessNotification(context, event, sync.getCurrentGraphVersion(), projectionUpdated)
             );
         }
+        boolean released = graphOperationGuard.release(
+                sync,
+                event.commandId(),
+                "GRAPH_PROJECTION_APPLIED"
+        );
+        boolean alreadyApplied = !projectionUpdated
+                && !sync.hasActiveCommand()
+                && event.commandId().equals(sync.getLastCommandId());
+        if (!released && !alreadyApplied) {
+            throw new AnalysisResultContractException(
+                    "Meeting analysis result does not own the active graph operation"
+            );
+        }
         return new GraphProjectionApplyResult(
                 context.completionResult(),
                 projectionUpdated,
@@ -114,10 +129,10 @@ public class AnalysisGraphProjectionApplier {
         );
     }
 
-    private ProjectGraphSync findOrCreateLockedSync(int projectId) {
+    private ProjectGraphSync findLockedSync(int projectId) {
         return graphSyncRepository.findByProjectIdForUpdate(projectId)
-                .orElseGet(() -> graphSyncRepository.saveAndFlush(
-                        ProjectGraphSync.initial(projectId, Instant.now(clock))
+                .orElseThrow(() -> new IllegalStateException(
+                        "Project graph sync does not exist"
                 ));
     }
 

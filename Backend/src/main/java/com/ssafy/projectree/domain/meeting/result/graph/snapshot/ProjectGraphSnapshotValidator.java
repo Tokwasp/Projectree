@@ -78,9 +78,10 @@ public class ProjectGraphSnapshotValidator {
             if (snapshotMeetingId != eventMeetingId) {
                 throw contract("Graph snapshot meetingId must match the event");
             }
-        } else if (payload.sourceType() == GraphResultSourceType.NODE_CONTENT_UPDATE) {
+        } else if (payload.sourceType() == GraphResultSourceType.NODE_CONTENT_UPDATE
+                || payload.sourceType() == GraphResultSourceType.NODE_DELETE) {
             if (event.meetingId() != null || snapshot.meetingId() != null) {
-                throw contract("Node content update event and snapshot meetingId must be null");
+                throw contract("Meeting-independent graph event and snapshot meetingId must be null");
             }
         } else {
             throw contract("Graph result sourceType is not supported");

@@ -157,6 +157,7 @@ class NodeContentUpdateFlowIntegrationTest {
         ProjectGraphSync updatedSync = syncRepository.findById(fixture.projectId()).orElseThrow();
         assertThat(updatedSync.getCurrentGraphVersion()).isEqualTo(11);
         assertThat(updatedSync.getLastCommandId()).isEqualTo(commandId);
+        assertThat(updatedSync.hasActiveCommand()).isFalse();
         assertThat(inboxRepository.findAll())
                 .filteredOn(inbox -> inbox.getEventId().equals(appliedEvent.eventId()))
                 .singleElement()

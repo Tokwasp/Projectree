@@ -3,6 +3,7 @@ package com.ssafy.projectree.domain.meeting.result.graph.query;
 import com.ssafy.projectree.domain.meeting.entity.Meeting;
 import com.ssafy.projectree.domain.meeting.exception.MeetingErrorCode;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandItemRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.NodeEvidenceProjection;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectNodeProjection;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.NodeEvidenceProjectionRepository;
@@ -25,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -58,6 +60,10 @@ public class GraphQueryService {
     private static final Comparator<ProjectNodeProjection> NODE_CREATED_ORDER = Comparator
             .comparing(ProjectNodeProjection::getSourceCreatedAt)
             .thenComparing(ProjectNodeProjection::getNodeId);
+    private static final Comparator<ProjectNodeProjection> UNATTACHED_ORDER = Comparator
+            .comparing(ProjectNodeProjection::getSourceUpdatedAt)
+            .reversed()
+            .thenComparing(ProjectNodeProjection::getNodeId);
 
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
@@ -65,6 +71,7 @@ public class GraphQueryService {
     private final ProjectGraphSyncRepository graphSyncRepository;
     private final ProjectNodeProjectionRepository nodeRepository;
     private final NodeEvidenceProjectionRepository evidenceRepository;
+    private final NodeDeleteCommandItemRepository nodeDeleteCommandItemRepository;
     private final GraphTreeAssembler graphTreeAssembler;
 
     public GraphTreeResponse getTree(int projectId, int memberId) {
@@ -73,11 +80,22 @@ public class GraphQueryService {
         List<ProjectNodeProjection> activeNodes = metadata.hasProjection()
                 ? nodeRepository.findAllByProjectIdAndGraphState(projectId, GraphNodeState.ACTIVE)
                 : List.of();
+        Set<String> hiddenNodeIds = metadata.hasProjection()
+                ? findPendingDeleteNodeIds(projectId)
+                : Set.of();
+        List<ProjectNodeProjection> visibleNodes = activeNodes.stream()
+                .filter(node -> !hiddenNodeIds.contains(node.getNodeId()))
+                .toList();
         return new GraphTreeResponse(
                 projectId,
                 metadata.graphVersion(),
                 metadata.graphSyncedAt(),
-                graphTreeAssembler.assemble(projectId, project.getTitle(), metadata.graphVersion(), activeNodes)
+                graphTreeAssembler.assemble(
+                        projectId,
+                        project.getTitle(),
+                        metadata.graphVersion(),
+                        visibleNodes
+                )
         );
     }
 
@@ -92,10 +110,15 @@ public class GraphQueryService {
         validateUnattachedGraphState(graphState);
         GraphMetadata metadata = graphMetadata(projectId);
         Page<ProjectNodeProjection> nodes = metadata.hasProjection()
-                ? nodeRepository.findAllByProjectIdAndGraphState(
-                        projectId,
-                        GraphNodeState.UNATTACHED,
-                        PageRequest.of(page, size, UNATTACHED_SORT)
+                ? visiblePage(
+                        nodeRepository.findAllByProjectIdAndGraphState(
+                                projectId,
+                                GraphNodeState.UNATTACHED
+                        ),
+                        findPendingDeleteNodeIds(projectId),
+                        page,
+                        size,
+                        UNATTACHED_ORDER
                 )
                 : Page.empty(PageRequest.of(page, size, UNATTACHED_SORT));
         return pageResponse(projectId, metadata, nodes);
@@ -104,6 +127,10 @@ public class GraphQueryService {
     public GraphNodeDetailResponse getNodeDetail(int projectId, String nodeId, int memberId) {
         requireAccessibleProject(projectId, memberId);
         GraphMetadata metadata = graphMetadata(projectId);
+        if (nodeDeleteCommandItemRepository
+                .existsPendingNodeByProjectIdAndNodeId(projectId, nodeId)) {
+            throw new CustomException(GraphQueryErrorCode.NODE_NOT_FOUND);
+        }
         ProjectNodeProjection node = findNode(projectId, nodeId, metadata);
         List<GraphEvidenceResponse> evidences = evidenceRepository
                 .findAllByNodeIdOrderByEvidenceOrderAscEvidenceIdAsc(nodeId)
@@ -121,6 +148,10 @@ public class GraphQueryService {
     public GraphMergedSourcesResponse getMergedSources(int projectId, String targetNodeId, int memberId) {
         requireAccessibleProject(projectId, memberId);
         GraphMetadata metadata = graphMetadata(projectId);
+        Set<String> hiddenNodeIds = findPendingDeleteNodeIds(projectId);
+        if (hiddenNodeIds.contains(targetNodeId)) {
+            throw new CustomException(GraphQueryErrorCode.NODE_NOT_FOUND);
+        }
         ProjectNodeProjection target = findNode(projectId, targetNodeId, metadata);
         if (target.getGraphState() != GraphNodeState.ACTIVE) {
             throw new CustomException(GraphQueryErrorCode.INVALID_MERGED_SOURCE_TARGET);
@@ -132,6 +163,7 @@ public class GraphQueryService {
                         targetNodeId
                 )
                 .stream()
+                .filter(source -> !hiddenNodeIds.contains(source.getNodeId()))
                 .sorted(NODE_CREATED_ORDER)
                 .toList();
         Map<String, List<GraphEvidenceResponse>> evidencesByNodeId = evidenceResponsesByNodeId(
@@ -164,10 +196,15 @@ public class GraphQueryService {
         }
         GraphMetadata metadata = graphMetadata(projectId);
         Page<ProjectNodeProjection> nodes = metadata.hasProjection()
-                ? nodeRepository.findAllByProjectIdAndSourceMeetingId(
-                        projectId,
-                        meetingId,
-                        PageRequest.of(page, size, MEETING_NODE_SORT)
+                ? visiblePage(
+                        nodeRepository.findAllByProjectIdAndSourceMeetingId(
+                                projectId,
+                                meetingId
+                        ),
+                        findPendingDeleteNodeIds(projectId),
+                        page,
+                        size,
+                        NODE_CREATED_ORDER
                 )
                 : Page.empty(PageRequest.of(page, size, MEETING_NODE_SORT));
         return pageResponse(projectId, metadata, nodes);
@@ -238,6 +275,34 @@ public class GraphQueryService {
                 nodes.getSize(),
                 nodes.getTotalElements(),
                 nodes.getTotalPages()
+        );
+    }
+
+    private Set<String> findPendingDeleteNodeIds(int projectId) {
+        return Set.copyOf(
+                nodeDeleteCommandItemRepository.findPendingNodeIdsByProjectId(projectId)
+        );
+    }
+
+    private Page<ProjectNodeProjection> visiblePage(
+            List<ProjectNodeProjection> nodes,
+            Set<String> hiddenNodeIds,
+            int page,
+            int size,
+            Comparator<ProjectNodeProjection> order
+    ) {
+        List<ProjectNodeProjection> visibleNodes = nodes.stream()
+                .filter(node -> !hiddenNodeIds.contains(node.getNodeId()))
+                .sorted(order)
+                .toList();
+        Pageable pageable = PageRequest.of(page, size);
+        long offset = pageable.getOffset();
+        int fromIndex = (int) Math.min(offset, (long) visibleNodes.size());
+        int toIndex = Math.min(fromIndex + pageable.getPageSize(), visibleNodes.size());
+        return new PageImpl<>(
+                visibleNodes.subList(fromIndex, toIndex),
+                pageable,
+                visibleNodes.size()
         );
     }
 

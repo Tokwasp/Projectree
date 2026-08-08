@@ -37,6 +37,13 @@ public class MeetingRoomRedisReader {
         return entries == null ? List.of() : entries;
     }
 
+    public boolean existsByProjectId(int projectId) {
+        if (projectId <= 0) {
+            throw new IllegalArgumentException("projectId must be positive");
+        }
+        return Boolean.TRUE.equals(redisTemplate.hasKey(properties.keyPrefix() + projectId));
+    }
+
     private List<MeetingRoomRedisEntry> scan(RedisConnection connection) {
         ScanOptions options = ScanOptions.scanOptions()
                 .match(properties.keyPrefix() + "*")

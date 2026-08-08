@@ -6,6 +6,7 @@ import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandO
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventEnvelope;
+import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventType;
 import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContractException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -24,11 +25,14 @@ public class AnalysisEventReferenceValidator {
                 .findByCommandId(event.commandId())
                 .orElseThrow(() -> new AnalysisResultContractException("Analysis result command does not exist"));
 
-        if (command.getCommandType() == MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED) {
-            validateNodeContentUpdate(event, command);
-            return;
+        if (command.getCommandType() == null) {
+            throw new AnalysisResultContractException("Analysis result command type is not supported");
         }
-        validateMeetingAnalysis(event, command);
+        switch (command.getCommandType()) {
+            case MEETING_ANALYSIS_REQUESTED -> validateMeetingAnalysis(event, command);
+            case NODE_CONTENT_UPDATE_REQUESTED -> validateNodeContentUpdate(event, command);
+            case NODE_DELETE_REQUESTED -> validateNodeDelete(event, command);
+        }
     }
 
     private void validateMeetingAnalysis(
@@ -77,6 +81,30 @@ public class AnalysisEventReferenceValidator {
         }
         if (command.getTargetNodeId() == null || command.getTargetNodeId().isBlank()) {
             throw new AnalysisResultContractException("Node content update command target node is missing");
+        }
+    }
+
+    private void validateNodeDelete(
+            AnalysisResultEventEnvelope event,
+            MeetingAnalysisCommandOutbox command
+    ) {
+        if (event.eventType() != AnalysisResultEventType.PROJECT_GRAPH_CHANGED
+                && event.eventType() != AnalysisResultEventType.NODE_DELETE_REJECTED) {
+            throw new AnalysisResultContractException(
+                    "Node delete command does not support result eventType: " + event.eventType()
+            );
+        }
+        if (event.meetingId() != null) {
+            throw new AnalysisResultContractException("Node delete result meetingId must be null");
+        }
+        if (command.getMeeting() != null) {
+            throw new AnalysisResultContractException("Node delete command meeting must be null");
+        }
+        if (command.getTargetProjectId() == null
+                || !command.getTargetProjectId().equals(event.projectId())) {
+            throw new AnalysisResultContractException(
+                    "Node delete result projectId does not match command"
+            );
         }
     }
 }

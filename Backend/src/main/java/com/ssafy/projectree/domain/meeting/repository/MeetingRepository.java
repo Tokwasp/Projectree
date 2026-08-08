@@ -1,9 +1,11 @@
 package com.ssafy.projectree.domain.meeting.repository;
 
+import com.ssafy.projectree.domain.meeting.entity.AnalysisTaskStatus;
 import com.ssafy.projectree.domain.meeting.entity.Meeting;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -12,19 +14,27 @@ import java.util.Optional;
 
 public interface MeetingRepository extends JpaRepository<Meeting, Integer> {
 
-    @Query("""
-            select m
-            from Meeting m
-            where m.project.id = :projectId
-            order by m.createdAt desc
-            limit 5
-            """)
-    List<Meeting> findRecentFiveBy(@Param("projectId") int projectId);
-
     boolean existsByRoomName(String roomName);
 
     boolean existsByProjectId(int projectId);
 
+    @Query("""
+            select (count(m) > 0)
+            from Meeting m
+            where m.project.id = :projectId
+              and (
+                    m.summaryStatus = :processingStatus
+                    or m.nodeStatus = :processingStatus
+              )
+            """)
+    boolean existsProcessingAnalysisByProjectId(
+            @Param("projectId") int projectId,
+            @Param("processingStatus") AnalysisTaskStatus processingStatus
+    );
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from Meeting m where m.project.id = :projectId")
+    void deleteAllByProjectId(@Param("projectId") int projectId);
     Optional<Meeting> findByRoomName(String roomName);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

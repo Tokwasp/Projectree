@@ -48,4 +48,9 @@ public interface ProjectNodeProjectionRepository extends JpaRepository<ProjectNo
             int sourceMeetingId,
             Pageable pageable
     );
+
+    List<ProjectNodeProjection> findAllByProjectIdAndSourceMeetingId(
+            int projectId,
+            int sourceMeetingId
+    );
 }
