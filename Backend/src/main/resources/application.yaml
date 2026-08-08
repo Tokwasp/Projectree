@@ -57,6 +57,7 @@ spring:
       mail.smtp.starttls.enable: true
       mail.smtp.connectiontimeout: 5000
       mail.smtp.timeout: 5000
+      mail.debug: true
 
 #CORS
 app:
