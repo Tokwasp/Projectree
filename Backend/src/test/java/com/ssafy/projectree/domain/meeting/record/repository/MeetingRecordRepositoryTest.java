@@ -10,6 +10,9 @@ import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.config.JpaAuditingConfig;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.hibernate.Hibernate;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,10 +22,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 @ActiveProfiles("test")
 @Import(JpaAuditingConfig.class)
@@ -32,6 +37,7 @@ class MeetingRecordRepositoryTest {
 
     private static final String ROOM_NAME = "550e8400-e29b-41d4-a716-446655440000";
     private static final String OTHER_ROOM_NAME = "550e8400-e29b-41d4-a716-446655440001";
+    private static final String EXCLUDED_ROOM_NAME = "550e8400-e29b-41d4-a716-446655440002";
 
     @Autowired
     private MeetingRecordRepository meetingRecordRepository;
@@ -110,6 +116,84 @@ class MeetingRecordRepositoryTest {
                 .isEqualTo("회의록 제목");
         assertThat(meetingRecordRepository.findByMeetingId(meeting.getId() + 1000)).isEmpty();
         assertThat(meetingRecordRepository.existsByMeetingId(meeting.getId() + 1000)).isFalse();
+    }
+
+    @DisplayName("프로젝트의 회의록을 최신순으로 최대 5개까지 조회하고 다른 프로젝트의 회의록은 제외한다.")
+    @Test
+    void findRecentFiveByProjectId() {
+        // given
+        Project project = saveProject();
+        Project otherProject = saveProject();
+        for (int round = 1; round <= 6; round++) {
+            saveMeetingRecord(saveMeeting(project, randomRoomName()), round + "회차 회의록");
+        }
+        saveMeetingRecord(saveMeeting(otherProject, randomRoomName()), "다른 프로젝트 회의록");
+        entityManager.clear();
+
+        // when
+        List<MeetingRecord> found = meetingRecordRepository.findRecentFiveByProjectId(project.getId());
+
+        // then
+        assertThat(found).hasSize(5)
+                .extracting(MeetingRecord::getTitle)
+                .containsExactly(
+                        "6회차 회의록", "5회차 회의록", "4회차 회의록", "3회차 회의록", "2회차 회의록"
+                );
+    }
+
+    @DisplayName("회의록에서 회의를 조인하므로 회의록이 없는 회의는 조회되지 않는다.")
+    @Test
+    void findRecentFiveByProjectIdExcludesMeetingWithoutRecord() {
+        // given
+        Project project = saveProject();
+        Meeting recorded = saveMeeting(project, ROOM_NAME);
+        saveMeeting(project, OTHER_ROOM_NAME);
+        saveMeeting(project, EXCLUDED_ROOM_NAME);
+        saveMeetingRecord(recorded, "유일한 회의록");
+        entityManager.clear();
+
+        // when
+        List<MeetingRecord> found = meetingRecordRepository.findRecentFiveByProjectId(project.getId());
+
+        // then
+        assertThat(found).hasSize(1)
+                .extracting(MeetingRecord::getTitle, record -> record.getMeeting().getId())
+                .containsExactly(tuple("유일한 회의록", recorded.getId()));
+    }
+
+    @DisplayName("회의록 조회 시 Meeting을 fetch join 해 쿼리 한 번으로 회의 정보까지 읽는다.")
+    @Test
+    void findRecentFiveByProjectIdFetchesMeeting() {
+        // given
+        Project project = saveProject();
+        Meeting first = saveMeeting(project, ROOM_NAME);
+        Meeting second = saveMeeting(project, OTHER_ROOM_NAME);
+        saveMeetingRecord(first, "첫 번째 회의록");
+        saveMeetingRecord(second, "두 번째 회의록");
+        entityManager.clear();
+
+        Statistics statistics = entityManager.getEntityManagerFactory()
+                .unwrap(SessionFactory.class)
+                .getStatistics();
+        statistics.setStatisticsEnabled(true);
+        statistics.clear();
+
+        // when
+        List<MeetingRecord> found = meetingRecordRepository.findRecentFiveByProjectId(project.getId());
+
+        // then
+        assertThat(found).hasSize(2)
+                .allSatisfy(record -> assertThat(Hibernate.isInitialized(record.getMeeting())).isTrue())
+                .extracting(
+                        MeetingRecord::getTitle,
+                        record -> record.getMeeting().getId(),
+                        record -> record.getMeeting().getRoomName()
+                )
+                .containsExactly(
+                        tuple("두 번째 회의록", second.getId(), OTHER_ROOM_NAME),
+                        tuple("첫 번째 회의록", first.getId(), ROOM_NAME)
+                );
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(1);
     }
 
     @DisplayName("commandId로 회의록 존재 여부와 엔티티를 조회한다.")
@@ -203,6 +287,16 @@ class MeetingRecordRepositoryTest {
         assertThat(reloaded.getVersion()).isEqualTo(1L);
         assertThat(reloaded.getTitle()).isEqualTo("수정한 제목");
         assertThat(reloaded.getSummaryJson()).isEqualTo("[\"수정한 요약\"]");
+    }
+
+    private void saveMeetingRecord(Meeting meeting, String title) {
+        meetingRecordRepository.saveAndFlush(MeetingRecord.create(
+                meeting, UUID.randomUUID(), title, null, null, null, null
+        ));
+    }
+
+    private String randomRoomName() {
+        return UUID.randomUUID().toString();
     }
 
     private Meeting saveMeeting(String roomName) {

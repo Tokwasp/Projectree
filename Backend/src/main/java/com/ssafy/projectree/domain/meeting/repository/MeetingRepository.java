@@ -7,13 +7,12 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface MeetingRepository extends JpaRepository<Meeting, Integer> {
 
     boolean existsByRoomName(String roomName);
-
-    boolean existsByProjectId(int projectId);
 
     Optional<Meeting> findByRoomName(String roomName);
 

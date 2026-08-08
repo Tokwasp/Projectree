@@ -1,6 +1,9 @@
 package com.ssafy.projectree.domain.project.service;
 
 import com.ssafy.projectree.IntegrationTestSupport;
+import com.ssafy.projectree.domain.meeting.entity.Meeting;
+import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
+import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
@@ -26,10 +29,9 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 
-import java.util.List;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
@@ -53,6 +55,9 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
     @Autowired
     private ProjectGraphSyncRepository projectGraphSyncRepository;
+
+    @Autowired
+    private MeetingRecordRepository meetingRecordRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -177,6 +182,141 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // then
         assertThat(projectRepository.count()).isZero();
+    }
+
+    @DisplayName("OWNER가 프로젝트 이미지를 수정하면 photoUrl이 변경된다.")
+    @Test
+    void updateImage() {
+        // given
+        Member owner = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when
+        projectService.updateImage(projectId, owner.getId(), "https://cdn.example.com/new.png");
+        flushAndClear();
+
+        // then
+        Project found = projectRepository.findById(projectId).orElseThrow();
+        assertThat(found.getPhotoUrl()).isEqualTo("https://cdn.example.com/new.png");
+    }
+
+    @DisplayName("OWNER가 아닌 참여 멤버가 이미지를 수정하려 하면 IS_NOT_PROJECT_OWNER 예외가 발생한다.")
+    @Test
+    void updateImage_notOwner() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateImage(projectId, member.getId(), "https://cdn.example.com/new.png"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectMemberErrorCode.IS_NOT_PROJECT_OWNER);
+    }
+
+    @DisplayName("존재하지 않는 프로젝트의 이미지를 수정하면 PROJECT_NOT_FOUND 예외가 발생한다.")
+    @Test
+    void updateImage_projectNotFound() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateImage(999, member.getId(), "https://cdn.example.com/new.png"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    @DisplayName("OWNER가 프로젝트 제목을 수정하면 title이 변경된다.")
+    @Test
+    void updateTitle() {
+        // given
+        Member owner = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when
+        projectService.updateTitle(projectId, owner.getId(), "수정된 제목");
+        flushAndClear();
+
+        // then
+        Project found = projectRepository.findById(projectId).orElseThrow();
+        assertThat(found.getTitle()).isEqualTo("수정된 제목");
+    }
+
+    @DisplayName("OWNER가 아닌 참여 멤버가 제목을 수정하려 하면 IS_NOT_PROJECT_OWNER 예외가 발생한다.")
+    @Test
+    void updateTitle_notOwner() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateTitle(projectId, member.getId(), "수정된 제목"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectMemberErrorCode.IS_NOT_PROJECT_OWNER);
+    }
+
+    @DisplayName("존재하지 않는 프로젝트의 제목을 수정하면 PROJECT_NOT_FOUND 예외가 발생한다.")
+    @Test
+    void updateTitle_projectNotFound() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateTitle(999, member.getId(), "수정된 제목"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    @DisplayName("OWNER가 프로젝트 내용을 수정하면 content가 변경된다.")
+    @Test
+    void updateContent() {
+        // given
+        Member owner = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+        int projectId = createProjectOwnedBy(owner);
+
+        // when
+        projectService.updateContent(projectId, owner.getId(), "수정된 내용");
+        flushAndClear();
+
+        // then
+        Project found = projectRepository.findById(projectId).orElseThrow();
+        assertThat(found.getContent()).isEqualTo("수정된 내용");
+    }
+
+    @DisplayName("OWNER가 아닌 참여 멤버가 내용을 수정하려 하면 IS_NOT_PROJECT_OWNER 예외가 발생한다.")
+    @Test
+    void updateContent_notOwner() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateContent(projectId, member.getId(), "수정된 내용"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectMemberErrorCode.IS_NOT_PROJECT_OWNER);
+    }
+
+    @DisplayName("존재하지 않는 프로젝트의 내용을 수정하면 PROJECT_NOT_FOUND 예외가 발생한다.")
+    @Test
+    void updateContent_projectNotFound() {
+        // given
+        Member member = memberRepository.save(createMember("ssafy@gmail.com", "김싸피"));
+
+        // when // then
+        assertThatThrownBy(() -> projectService.updateContent(999, member.getId(), "수정된 내용"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
     }
 
     @DisplayName("OWNER는 자신의 프로젝트를 삭제할 수 있다.")
@@ -577,7 +717,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when // then
         assertThatThrownBy(() ->
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, outsider.getId()))
+                projectService.getProjectHome(projectId, outsider.getId()))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ProjectMemberErrorCode.IS_NOT_PROJECT_MEMBER);
@@ -595,7 +735,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getProjectDetail())
@@ -618,7 +758,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getProjectDetail().getParticipantCount()).isEqualTo(2);
@@ -642,7 +782,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getMyReview())
@@ -669,7 +809,7 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
         assertThat(response.getPersonalSpeakingList()).hasSize(3)
@@ -698,13 +838,119 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // when
         ProjectHomeResponse response =
-                projectService.getProjectHome(PageRequest.of(0, 10), projectId, owner.getId());
+                projectService.getProjectHome(projectId, owner.getId());
 
         // then
-        assertThat(response.getMeetingRecordList()).isNull();
+        assertThat(response.getMeetingRecordList()).isEmpty();
         assertThat(response.getMyReview())
                 .extracting("speedFeedback", "personalFeedback", "overallFeedback")
                 .containsExactly("속도가 빠릅니다.", "발언이 많습니다.", "적극적인 회의였습니다.");
+        assertThat(response.getPersonalSpeakingList()).hasSize(2)
+                .extracting("name", "speakPercent")
+                .containsExactlyInAnyOrder(
+                        tuple("김오너", 70.0),
+                        tuple("이멤버", 30.0)
+                );
+    }
+
+    @DisplayName("프로젝트 홈을 조회하면 로그인한 회원의 회의 리뷰가 없는 경우 프로젝트 내용과 회의록이 조회된다.")
+    @Test
+    void getProjectHome_meetingRecordWithoutMyReview() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+
+        String projectTitle = "포트폴리오 사이트";
+        String content = "React로 만든 개인 포트폴리오입니다.";
+        int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
+
+        int firstMeetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        int secondMeetingId = saveMeetingRecord(projectId, "2회차 회의록");
+        flushAndClear();
+
+        // when
+        ProjectHomeResponse response =
+                projectService.getProjectHome(projectId, owner.getId());
+
+        // then
+        assertThat(response.getProjectDetail())
+                .extracting("projectTitle", "projectContent", "participantCount")
+                .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 1);
+
+        assertThat(response.getMeetingRecordList()).hasSize(2)
+                .extracting("meetingId", "name")
+                .containsExactly(
+                        tuple(secondMeetingId, "2회차 회의록"),
+                        tuple(firstMeetingId, "1회차 회의록")
+                );
+
+        assertThat(response.getPersonalSpeakingList()).isEmpty();
+        assertThat(response.getMyReview()).isNull();
+    }
+
+    @DisplayName("프로젝트 홈을 조회하면 회의록이 없는 회의는 회의록 목록에서 제외된다.")
+    @Test
+    void getProjectHome_excludesMeetingWithoutRecord() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+
+        int meetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        saveMeetingWithoutRecord(projectId);
+        flushAndClear();
+
+        // when
+        ProjectHomeResponse response =
+                projectService.getProjectHome(projectId, owner.getId());
+
+        // then
+        assertThat(response.getMeetingRecordList()).hasSize(1)
+                .extracting("meetingId", "name")
+                .containsExactly(tuple(meetingId, "1회차 회의록"));
+    }
+
+    @DisplayName("프로젝트 홈을 조회하면 회의 리뷰가 있는 경우 프로젝트 내용, 회의록, 발화 비율, 내 리뷰가 모두 조회되고 회의록은 최근순으로 정렬된다.")
+    @Test
+    void getProjectHome_allContents() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("member@gmail.com", "이멤버"));
+
+        String projectTitle = "포트폴리오 사이트";
+        String content = "React로 만든 개인 포트폴리오입니다.";
+        int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
+        joinAsMember(projectId, member);
+
+        int firstMeetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        int secondMeetingId = saveMeetingRecord(projectId, "2회차 회의록");
+        int thirdMeetingId = saveMeetingRecord(projectId, "3회차 회의록");
+
+        String roomName = "room-" + projectId;
+        saveMeetingReview(roomName, projectId, owner.getId(), 70,
+                "속도가 빠릅니다.", "발언이 많습니다.", "적극적인 회의였습니다.");
+        saveMeetingReview(roomName, projectId, member.getId(), 30, "", "", "");
+        flushAndClear();
+
+        // when
+        ProjectHomeResponse response =
+                projectService.getProjectHome(projectId, owner.getId());
+
+        // then
+        assertThat(response.getProjectDetail())
+                .extracting("projectTitle", "projectContent", "participantCount")
+                .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 2);
+
+        assertThat(response.getMeetingRecordList()).hasSize(3)
+                .extracting("meetingId", "name")
+                .containsExactly(
+                        tuple(thirdMeetingId, "3회차 회의록"),
+                        tuple(secondMeetingId, "2회차 회의록"),
+                        tuple(firstMeetingId, "1회차 회의록")
+                );
+
+        assertThat(response.getMyReview())
+                .extracting("speedFeedback", "personalFeedback", "overallFeedback")
+                .containsExactly("속도가 빠릅니다.", "발언이 많습니다.", "적극적인 회의였습니다.");
+
         assertThat(response.getPersonalSpeakingList()).hasSize(2)
                 .extracting("name", "speakPercent")
                 .containsExactlyInAnyOrder(
@@ -757,6 +1003,22 @@ class ProjectServiceTest extends IntegrationTestSupport {
     private void flushAndClear() {
         entityManager.flush();
         entityManager.clear();
+    }
+
+    private int saveMeetingRecord(int projectId, String title) {
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        Meeting meeting = meetingRepository.save(
+                Meeting.create(project, project.getProjectMembers().get(0), UUID.randomUUID().toString()));
+
+        meetingRecordRepository.save(
+                MeetingRecord.create(meeting, UUID.randomUUID(), title, null, null, null, null));
+        return meeting.getId();
+    }
+
+    private void saveMeetingWithoutRecord(int projectId) {
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        meetingRepository.save(
+                Meeting.create(project, project.getProjectMembers().get(0), UUID.randomUUID().toString()));
     }
 
     private void saveMeetingReview(String roomName, int projectId, int memberId, int speakingSeconds,

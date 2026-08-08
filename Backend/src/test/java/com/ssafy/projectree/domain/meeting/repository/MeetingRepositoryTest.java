@@ -18,6 +18,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -126,6 +130,25 @@ class MeetingRepositoryTest {
                 "select summary_status, node_status from meeting"
         ).getSingleResult();
         assertThat(row).containsExactly("PROCESSING", "SKIPPED");
+    }
+
+    /**
+     * createdAt은 JPA Auditing이 채우므로 저장 순서만으로는 정렬 기준이 같아질 수 있다.
+     * 최신순 검증이 흔들리지 않도록 저장 직후 명시적으로 고정한다.
+     */
+    private Meeting saveMeetingCreatedAt(Project project, LocalDateTime createdAt) {
+        Meeting meeting = meetingRepository.saveAndFlush(
+                Meeting.create(project, creator(project), UUID.randomUUID().toString())
+        );
+        entityManager.createQuery("""
+                        update Meeting m
+                        set m.createdAt = :createdAt
+                        where m.id = :id
+                        """)
+                .setParameter("createdAt", createdAt)
+                .setParameter("id", meeting.getId())
+                .executeUpdate();
+        return meeting;
     }
 
     private Project saveProject(String title) {

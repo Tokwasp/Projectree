@@ -36,10 +36,10 @@ public class ProjectHomeResponse {
                 .build();
     }
 
-    public static ProjectHomeResponse notExistRecentReview(ProjectDetailResponse projectDetail) {
+    public static ProjectHomeResponse notExistRecentReview(ProjectDetailResponse projectDetail, List<MeetingRecordResponse> meetingRecordList) {
         return ProjectHomeResponse.builder()
                 .projectDetail(projectDetail)
-                .meetingRecordList(List.of())
+                .meetingRecordList(meetingRecordList)
                 .personalSpeakingList(List.of())
                 .myReview(null)
                 .build();

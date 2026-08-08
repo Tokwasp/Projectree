@@ -186,6 +186,66 @@ def _stage_v1(
     return event
 
 
+def _locked_graph_state(session, *, project_id: str) -> ProjectGraphState | None:
+    return session.execute(
+        select(ProjectGraphState)
+        .where(ProjectGraphState.project_id == project_id)
+        .with_for_update()
+    ).scalar_one_or_none()
+
+
+def lock_project_graph_state(session, *, project_id: str) -> tuple[int, bool]:
+    """Take the project-wide graph lock and report the current version.
+
+    Returns ``(current_version, materialized_here)``.
+
+    Every Java command that may bump the graph version takes this lock FIRST,
+    before locking any Node row. The two resources are always acquired in the
+    same order — coarse project row, then fine Node rows — so two concurrent
+    commands can never hold one and wait on the other.
+
+    A project whose graph has never changed has no row to lock, and absence of
+    the row is the system-wide encoding of version 0. Such a row is created at
+    0 purely as something to lock; a caller that ends without bumping must hand
+    it back through :func:`release_unmutated_graph_state` so the encoding is
+    restored.
+    """
+
+    state = _locked_graph_state(session, project_id=project_id)
+    if state is not None:
+        return state.graph_version, False
+    table = ProjectGraphState.__table__
+    values = {"project_id": project_id, "graph_version": 0}
+    dialect = session.get_bind().dialect.name
+    if dialect == "postgresql":
+        statement = pg_insert(table).values(**values)
+    elif dialect == "sqlite":
+        statement = sqlite_insert(table).values(**values)
+    else:
+        session.add(ProjectGraphState(project_id=project_id, graph_version=0))
+        session.flush()
+        return _locked_graph_state(session, project_id=project_id).graph_version, True
+    # RETURNING yields a row only when this statement performed the INSERT, so a
+    # racing transaction that got there first is never mistaken for our own.
+    inserted = session.execute(
+        statement.on_conflict_do_nothing(
+            index_elements=["project_id"]
+        ).returning(table.c.project_id)
+    ).first()
+    session.flush()
+    version = _locked_graph_state(session, project_id=project_id).graph_version
+    return version, inserted is not None
+
+
+def release_unmutated_graph_state(session, *, project_id: str) -> None:
+    """Drop a lock-scaffolding row when the command bumped nothing."""
+
+    state = _locked_graph_state(session, project_id=project_id)
+    if state is not None and state.graph_version == 0:
+        session.delete(state)
+        session.flush()
+
+
 def bump_graph_version(session, *, project_id: str) -> int:
     table = ProjectGraphState.__table__
     now = utcnow()
@@ -460,10 +520,12 @@ __all__ = [
     "bump_graph_version",
     "canonical_storage_identifier",
     "deleted_node_snapshot",
+    "lock_project_graph_state",
     "mark_graph_ready",
     "mark_summary_ready",
     "node_snapshot",
     "public_identifier",
+    "release_unmutated_graph_state",
     "stage_analysis_failed",
     "stage_analysis_processing",
     "stage_meeting_summary_ready",

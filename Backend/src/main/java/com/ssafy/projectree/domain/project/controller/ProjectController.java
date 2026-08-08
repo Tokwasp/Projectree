@@ -1,6 +1,9 @@
 package com.ssafy.projectree.domain.project.controller;
 
 import com.ssafy.projectree.domain.member.LoginMember;
+import com.ssafy.projectree.domain.project.controller.dto.request.ProjectContentUpdateRequest;
+import com.ssafy.projectree.domain.project.controller.dto.request.ProjectImageUpdateRequest;
+import com.ssafy.projectree.domain.project.controller.dto.request.ProjectTitleUpdateRequest;
 import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectHomeResponse;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
@@ -41,6 +44,30 @@ public class ProjectController {
                 .body(ApiResponse.success(projectId));
     }
 
+    @PutMapping(value = "/{projectId}/image")
+    public ResponseEntity<ApiResponse<Void>> updateImage(@PathVariable("projectId") int projectId,
+                                                         @RequestBody ProjectImageUpdateRequest request,
+                                                         @Login LoginMember loginMember) {
+        projectService.updateImage(projectId, loginMember.getId(), request.getImageURL());
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @PutMapping("/{projectId}/title")
+    public ResponseEntity<ApiResponse<Void>> updateTitle(@PathVariable("projectId") int projectId,
+                                                         @RequestBody ProjectTitleUpdateRequest request,
+                                                         @Login LoginMember loginMember) {
+        projectService.updateTitle(projectId, loginMember.getId(), request.getTitle());
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @PutMapping("/{projectId}/content")
+    public ResponseEntity<ApiResponse<Void>> updateContent(@PathVariable("projectId") int projectId,
+                                                           @RequestBody ProjectContentUpdateRequest request,
+                                                           @Login LoginMember loginMember) {
+        projectService.updateContent(projectId, loginMember.getId(), request.getContent());
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
     @DeleteMapping("/{projectId}")
     public ResponseEntity<ApiResponse<Void>> deleteProject(
             @PathVariable int projectId,
@@ -51,6 +78,7 @@ public class ProjectController {
 
         return ResponseEntity.ok(ApiResponse.success());
     }
+
 
     @DeleteMapping("/{projectId}/members/me")
     public ResponseEntity<ApiResponse<Void>> leaveProject(
@@ -89,10 +117,9 @@ public class ProjectController {
     @GetMapping("/{project-id}/home")
     public ResponseEntity<ApiResponse<ProjectHomeResponse>> getProjectHome(
             @PathVariable("project-id") int projectId,
-            @Login LoginMember loginMember,
-            @PageableDefault(size = 10) Pageable pageable
+            @Login LoginMember loginMember
     ) {
-        ProjectHomeResponse response = projectService.getProjectHome(pageable, projectId, loginMember.getId());
+        ProjectHomeResponse response = projectService.getProjectHome(projectId, loginMember.getId());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
