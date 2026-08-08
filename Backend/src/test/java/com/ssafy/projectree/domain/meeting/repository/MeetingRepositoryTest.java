@@ -79,33 +79,6 @@ class MeetingRepositoryTest {
                 .isEqualTo(roomName);
     }
 
-    @DisplayName("프로젝트에 회의가 6개 있으면 가장 최근에 생성된 5개만 최신순으로 조회된다.")
-    @Test
-    void findRecentFiveBy() {
-        // given
-        Project project = saveProject("project");
-        List<Meeting> meetings = new ArrayList<>();
-        for (int hour = 0; hour < 6; hour++) {
-            meetings.add(saveMeetingCreatedAt(project, LocalDateTime.of(2026, 1, 1, hour, 0)));
-        }
-        saveMeetingCreatedAt(saveProject("other project"), LocalDateTime.of(2026, 1, 1, 23, 0));
-        entityManager.clear();
-
-        // when
-        List<Meeting> found = meetingRepository.findRecentFiveBy(project.getId());
-
-        // then
-        assertThat(found).hasSize(5)
-                .extracting(Meeting::getRoomName)
-                .containsExactly(
-                        meetings.get(5).getRoomName(),
-                        meetings.get(4).getRoomName(),
-                        meetings.get(3).getRoomName(),
-                        meetings.get(2).getRoomName(),
-                        meetings.get(1).getRoomName()
-                );
-    }
-
     @DisplayName("roomName UNIQUE 제약이 중복 Meeting 저장을 차단한다.")
     @Test
     void roomNameMustBeUnique() {

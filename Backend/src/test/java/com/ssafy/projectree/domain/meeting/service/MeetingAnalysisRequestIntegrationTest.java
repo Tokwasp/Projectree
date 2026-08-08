@@ -11,6 +11,9 @@ import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandO
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisOutboxStatus;
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationErrorCode;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.member.service.GoogleOAuthClient;
@@ -79,11 +82,14 @@ class MeetingAnalysisRequestIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private ProjectGraphSyncRepository graphSyncRepository;
 
     @AfterEach
     void cleanUp() {
         outboxRepository.deleteAll();
         meetingRepository.deleteAll();
+        graphSyncRepository.deleteAll();
         projectRepository.deleteAll();
         memberRepository.deleteAll();
     }
@@ -93,8 +99,7 @@ class MeetingAnalysisRequestIntegrationTest {
     @CsvSource({
             "true, true, PROCESSING, PROCESSING",
             "true, false, PROCESSING, SKIPPED",
-            "false, true, SKIPPED, PROCESSING",
-            "false, false, SKIPPED, SKIPPED"
+            "false, true, SKIPPED, PROCESSING"
     })
     void savesMeetingAndCommandAtomically(
             boolean generateSummary,
@@ -137,6 +142,18 @@ class MeetingAnalysisRequestIntegrationTest {
         assertThat(outbox.getLastError()).isNull();
         assertThat(outbox.getCreatedAt()).isNotNull();
         assertThat(outbox.getUpdatedAt()).isNotNull();
+        assertThat(graphSyncRepository.findById(fixture.projectId()))
+                .get()
+                .satisfies(sync -> {
+                    if (!generateNodes) {
+                        assertThat(sync.hasActiveCommand()).isFalse();
+                        return;
+                    }
+                    assertThat(sync.getActiveCommandId())
+                            .isEqualTo(response.commandId().toString());
+                    assertThat(sync.getActiveCommandType())
+                            .isEqualTo(MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED);
+                });
 
         MeetingAnalysisRequestedCommand command = objectMapper.readValue(
                 outbox.getPayload(),
@@ -162,6 +179,81 @@ class MeetingAnalysisRequestIntegrationTest {
         assertThat(command.payload().roomName()).isEqualTo(ROOM_NAME);
         assertThat(command.payload().generateSummary()).isEqualTo(generateSummary);
         assertThat(command.payload().generateNodes()).isEqualTo(generateNodes);
+    }
+
+    @Test
+    void rejectsNoSelectedTaskWithoutChangingMeetingGuardOrOutbox() {
+        Fixture fixture = fixture(ProjectRole.OWNER, ROOM_NAME);
+
+        assertBusinessError(
+                () -> service.requestAnalysis(
+                        fixture.projectId(),
+                        ROOM_NAME,
+                        fixture.memberId(),
+                        new MeetingAnalysisRequest(false, false)
+                ),
+                MeetingErrorCode.ANALYSIS_TASK_NOT_SELECTED
+        );
+
+        assertNotRequested(fixture.meetingId());
+        assertThat(graphSyncRepository.findById(fixture.projectId()).orElseThrow()
+                .hasActiveCommand()).isFalse();
+        assertThat(outboxRepository.count()).isZero();
+    }
+
+    @Test
+    void summaryOnlyIsAllowedWhileAnotherGraphCommandOwnsGuard() {
+        Fixture fixture = fixture(ProjectRole.OWNER, ROOM_NAME);
+        ProjectGraphSync sync = graphSyncRepository.findById(fixture.projectId())
+                .orElseThrow();
+        String activeCommandId = UUID.randomUUID().toString();
+        sync.acquireGraphOperation(
+                activeCommandId,
+                MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                Instant.now()
+        );
+        graphSyncRepository.saveAndFlush(sync);
+
+        service.requestAnalysis(
+                fixture.projectId(),
+                ROOM_NAME,
+                fixture.memberId(),
+                new MeetingAnalysisRequest(true, false)
+        );
+
+        ProjectGraphSync unchanged = graphSyncRepository
+                .findById(fixture.projectId())
+                .orElseThrow();
+        assertThat(unchanged.getActiveCommandId()).isEqualTo(activeCommandId);
+        assertThat(unchanged.getActiveCommandType())
+                .isEqualTo(MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED);
+        assertThat(outboxRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void nodesRequestIsRejectedWhileAnotherGraphCommandOwnsGuard() {
+        Fixture fixture = fixture(ProjectRole.OWNER, ROOM_NAME);
+        ProjectGraphSync sync = graphSyncRepository.findById(fixture.projectId())
+                .orElseThrow();
+        sync.acquireGraphOperation(
+                UUID.randomUUID().toString(),
+                MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                Instant.now()
+        );
+        graphSyncRepository.saveAndFlush(sync);
+
+        assertThatThrownBy(() -> service.requestAnalysis(
+                fixture.projectId(),
+                ROOM_NAME,
+                fixture.memberId(),
+                new MeetingAnalysisRequest(true, true)
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS);
+
+        assertNotRequested(fixture.meetingId());
+        assertThat(outboxRepository.count()).isZero();
     }
 
     @DisplayName("OWNER? MEMBER 紐⑤몢 遺꾩꽍 ?붿껌???뺤젙?????덈떎.")
@@ -283,7 +375,7 @@ class MeetingAnalysisRequestIntegrationTest {
                 fixture.projectId(),
                 ROOM_NAME,
                 fixture.memberId(),
-                new MeetingAnalysisRequest(false, false)
+                new MeetingAnalysisRequest(true, false)
         );
 
         assertBusinessError(
@@ -297,8 +389,8 @@ class MeetingAnalysisRequestIntegrationTest {
         );
 
         Meeting meeting = meetingRepository.findById(fixture.meetingId()).orElseThrow();
-        assertThat(meeting.isGenerateSummary()).isFalse();
-        assertThat(meeting.getSummaryStatus()).isEqualTo(AnalysisTaskStatus.SKIPPED);
+        assertThat(meeting.isGenerateSummary()).isTrue();
+        assertThat(meeting.getSummaryStatus()).isEqualTo(AnalysisTaskStatus.PROCESSING);
         assertThat(meeting.isGenerateNodes()).isFalse();
         assertThat(meeting.getNodeStatus()).isEqualTo(AnalysisTaskStatus.SKIPPED);
         assertThat(outboxRepository.countByMeetingId(fixture.meetingId())).isEqualTo(1);
@@ -461,6 +553,9 @@ class MeetingAnalysisRequestIntegrationTest {
         ProjectMember creator = ProjectMember.createMember(member.getId(), role);
         project.addMember(creator);
         project = projectRepository.saveAndFlush(project);
+        graphSyncRepository.saveAndFlush(
+                ProjectGraphSync.initial(project.getId(), Instant.now())
+        );
         Meeting meeting = meetingRepository.saveAndFlush(
                 Meeting.create(project, creator, roomName)
         );

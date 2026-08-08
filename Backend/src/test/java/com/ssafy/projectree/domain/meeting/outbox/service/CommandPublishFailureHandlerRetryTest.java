@@ -9,6 +9,10 @@ import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandO
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisOutboxStatus;
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.entity.NodeDeleteCommand;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.NodeDeleteCommandStatus;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
@@ -26,6 +30,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CommandPublishFailureHandlerRetryTest {
@@ -88,13 +93,17 @@ class CommandPublishFailureHandlerRetryTest {
         MeetingRepository meetingRepository = mock(MeetingRepository.class);
         MeetingAnalysisNotificationOutboxRepository notificationRepository =
                 mock(MeetingAnalysisNotificationOutboxRepository.class);
+        ProjectGraphOperationGuard graphOperationGuard =
+                mock(ProjectGraphOperationGuard.class);
         CommandPublishFailureHandler handler = new CommandPublishFailureHandler(
                 outboxRepository,
                 meetingRepository,
                 notificationRepository,
                 properties(),
                 mock(ObjectMapper.class),
-                Clock.fixed(Instant.parse("2026-08-04T01:00:00Z"), ZoneOffset.UTC)
+                Clock.fixed(Instant.parse("2026-08-04T01:00:00Z"), ZoneOffset.UTC),
+                mock(NodeDeleteCommandRepository.class),
+                graphOperationGuard
         );
         MeetingAnalysisCommandOutbox outbox =
                 MeetingAnalysisCommandOutbox.pendingNodeContentUpdate(
@@ -115,6 +124,77 @@ class CommandPublishFailureHandlerRetryTest {
         assertThat(handler.handle(claimed(outbox, token, 3), new IllegalStateException("failed")))
                 .isEqualTo(CommandPublishFailureOutcome.FINAL_FAILED);
         assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.FAILED);
+        verify(graphOperationGuard).release(
+                1,
+                outbox.getCommandId(),
+                "COMMAND_PUBLISH_FAILED"
+        );
+        verifyNoInteractions(meetingRepository, notificationRepository);
+    }
+
+    @Test
+    void finalNodeDeleteFailureMarksPendingCommandAndReleasesGuardWithoutMeetingAccess() {
+        MeetingAnalysisCommandOutboxRepository outboxRepository =
+                mock(MeetingAnalysisCommandOutboxRepository.class);
+        MeetingRepository meetingRepository = mock(MeetingRepository.class);
+        MeetingAnalysisNotificationOutboxRepository notificationRepository =
+                mock(MeetingAnalysisNotificationOutboxRepository.class);
+        NodeDeleteCommandRepository nodeDeleteCommandRepository =
+                mock(NodeDeleteCommandRepository.class);
+        ProjectGraphOperationGuard graphOperationGuard =
+                mock(ProjectGraphOperationGuard.class);
+        CommandPublishFailureHandler handler = new CommandPublishFailureHandler(
+                outboxRepository,
+                meetingRepository,
+                notificationRepository,
+                properties(),
+                mock(ObjectMapper.class),
+                Clock.fixed(Instant.parse("2026-08-04T01:00:00Z"), ZoneOffset.UTC),
+                nodeDeleteCommandRepository,
+                graphOperationGuard
+        );
+        UUID commandId = UUID.randomUUID();
+        MeetingAnalysisCommandOutbox outbox =
+                MeetingAnalysisCommandOutbox.pendingNodeDelete(
+                        commandId,
+                        1,
+                        "{\"stored\":true}",
+                        17,
+                        NOW
+                );
+        NodeDeleteCommand nodeDeleteCommand = NodeDeleteCommand.pending(
+                commandId,
+                1,
+                10,
+                17,
+                1,
+                0,
+                NOW
+        );
+        ReflectionTestUtils.setField(outbox, "id", 33);
+        ReflectionTestUtils.setField(outbox, "attemptCount", 2);
+        String token = outbox.claim(NOW, NOW.plusSeconds(60), 3);
+        when(outboxRepository.findOwnedPublishingForUpdate(33, token))
+                .thenReturn(Optional.of(outbox));
+        when(nodeDeleteCommandRepository.findByCommandId(commandId.toString()))
+                .thenReturn(Optional.of(nodeDeleteCommand));
+
+        assertThat(handler.handle(
+                claimed(outbox, token, 3),
+                new IllegalStateException("failed")
+        )).isEqualTo(CommandPublishFailureOutcome.FINAL_FAILED);
+
+        assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.FAILED);
+        assertThat(nodeDeleteCommand.getStatus())
+                .isEqualTo(NodeDeleteCommandStatus.FAILED);
+        assertThat(nodeDeleteCommand.getReasonCode())
+                .isEqualTo("COMMAND_PUBLISH_FAILED");
+        assertThat(nodeDeleteCommand.getCompletedAt()).isEqualTo(NOW);
+        verify(graphOperationGuard).release(
+                1,
+                commandId.toString(),
+                "COMMAND_PUBLISH_FAILED"
+        );
         verifyNoInteractions(meetingRepository, notificationRepository);
     }
 
@@ -165,7 +245,9 @@ class CommandPublishFailureHandlerRetryTest {
                 mock(MeetingAnalysisNotificationOutboxRepository.class),
                 properties(),
                 mock(ObjectMapper.class),
-                Clock.fixed(now, ZoneOffset.UTC)
+                Clock.fixed(now, ZoneOffset.UTC),
+                mock(NodeDeleteCommandRepository.class),
+                mock(ProjectGraphOperationGuard.class)
         );
     }
 }

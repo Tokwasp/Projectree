@@ -78,6 +78,7 @@ class AnalysisGraphProjectionApplierIntegrationTest extends IntegrationTestSuppo
         ProjectGraphSync sync = graphSyncRepository.findById(fixture.projectId()).orElseThrow();
         assertThat(sync.getCurrentGraphVersion()).isEqualTo(3);
         assertThat(sync.getLastCommandId()).isEqualTo(fixture.commandId());
+        assertThat(sync.hasActiveCommand()).isFalse();
         MeetingAnalysisNotificationOutbox notification = notificationRepository.findAll().getFirst();
         assertThat(notification.getRecipientMemberId()).isEqualTo(17);
         assertThat(notification.getNotificationType()).isEqualTo(NotificationType.MEETING_NODE_ANALYSIS_SUCCEEDED);
@@ -90,7 +91,8 @@ class AnalysisGraphProjectionApplierIntegrationTest extends IntegrationTestSuppo
     @Test
     void staleGraphStillCompletesProcessingNodeButDoesNotReplaceProjection() {
         Fixture fixture = fixture();
-        ProjectGraphSync sync = ProjectGraphSync.initial(fixture.projectId(), Instant.parse("2026-08-05T00:00:00Z"));
+        ProjectGraphSync sync = graphSyncRepository.findById(fixture.projectId())
+                .orElseThrow();
         sync.advanceTo(5, UUID.randomUUID().toString(), Instant.parse("2026-08-05T00:00:01Z"));
         graphSyncRepository.saveAndFlush(sync);
         ProjectGraphChangedPayload payload = payload(4);
@@ -141,6 +143,16 @@ class AnalysisGraphProjectionApplierIntegrationTest extends IntegrationTestSuppo
                         "{\"command\":true}", 17, LocalDateTime.now()
                 )
         );
+        ProjectGraphSync sync = ProjectGraphSync.initial(
+                project.getId(),
+                Instant.parse("2026-08-05T00:00:00Z")
+        );
+        sync.acquireGraphOperation(
+                command.getCommandId(),
+                MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
+                Instant.parse("2026-08-05T00:00:01Z")
+        );
+        graphSyncRepository.saveAndFlush(sync);
         return new Fixture(project.getId(), meeting.getId(), command.getCommandId());
     }
 

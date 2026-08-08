@@ -15,6 +15,8 @@ import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventType;
 import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContractException;
 import com.ssafy.projectree.domain.meeting.result.exception.InvalidAnalysisTaskStateException;
 import com.ssafy.projectree.domain.meeting.result.inbox.repository.MeetingAnalysisResultInboxRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.processor.AnalysisResultEventProcessor;
 import com.ssafy.projectree.domain.meeting.result.processor.AnalysisResultProcessingOutcome;
 import com.ssafy.projectree.domain.meeting.result.summary.entity.MeetingSummaryProjection;
@@ -54,6 +56,7 @@ class AnalysisSummaryEventHandlerIntegrationTest {
     @Autowired private MeetingSummaryProjectionRepository projectionRepository;
     @Autowired private ProjectRepository projectRepository;
     @Autowired private ObjectMapper objectMapper;
+    @Autowired private ProjectGraphSyncRepository graphSyncRepository;
 
     @AfterEach
     void cleanUp() {
@@ -62,6 +65,7 @@ class AnalysisSummaryEventHandlerIntegrationTest {
         projectionRepository.deleteAll();
         commandRepository.deleteAll();
         meetingRepository.deleteAll();
+        graphSyncRepository.deleteAll();
         projectRepository.deleteAll();
     }
 
@@ -78,6 +82,8 @@ class AnalysisSummaryEventHandlerIntegrationTest {
         assertThat(AopUtils.isAopProxy(handler)).isTrue();
         assertThat(meeting.getSummaryStatus()).isEqualTo(AnalysisTaskStatus.SUCCEEDED);
         assertThat(meeting.getNodeStatus()).isEqualTo(AnalysisTaskStatus.PROCESSING);
+        assertThat(graphSyncRepository.findById(fixture.projectId()).orElseThrow()
+                .hasActiveCommand()).isTrue();
         assertThat(inboxRepository.count()).isEqualTo(1);
         assertThat(projection.getSummaryVersion()).isEqualTo(1);
         assertThat(notifications).hasSize(1);
@@ -110,6 +116,8 @@ class AnalysisSummaryEventHandlerIntegrationTest {
         assertThat(notificationRepository.count()).isEqualTo(1);
         assertThat(projectionRepository.findByMeetingId(fixture.meetingId()).orElseThrow()
                 .getSummaryVersion()).isEqualTo(2);
+        assertThat(graphSyncRepository.findById(fixture.projectId()).orElseThrow()
+                .hasActiveCommand()).isFalse();
     }
 
     @Test
@@ -174,6 +182,15 @@ class AnalysisSummaryEventHandlerIntegrationTest {
                         "{\"command\":true}", 17, LocalDateTime.now()
                 )
         );
+        ProjectGraphSync sync = ProjectGraphSync.initial(project.getId(), Instant.EPOCH);
+        if (generateNodes) {
+            sync.acquireGraphOperation(
+                    command.getCommandId(),
+                    MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
+                    Instant.EPOCH.plusSeconds(1)
+            );
+        }
+        graphSyncRepository.saveAndFlush(sync);
         return new Fixture(project.getId(), meeting.getId(), command.getCommandId());
     }
 

@@ -14,12 +14,17 @@ import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisComm
 import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.entity.NodeDeleteCommand;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.entity.NodeDeleteCommandItem;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandItemRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.NodeEvidenceProjection;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectNodeProjection;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.NodeEvidenceProjectionRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectNodeProjectionRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationErrorCode;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.GraphLinkSource;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.GraphNodeCategory;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.GraphNodeState;
@@ -56,10 +61,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.List;
-import java.util.UUID;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -81,6 +86,9 @@ class ProjectServiceTest extends IntegrationTestSupport {
     private MeetingRepository meetingRepository;
 
     @Autowired
+    private ProjectGraphSyncRepository projectGraphSyncRepository;
+
+    @Autowired
     private MeetingRecordRepository meetingRecordRepository;
 
     @Autowired
@@ -96,9 +104,6 @@ class ProjectServiceTest extends IntegrationTestSupport {
     private NodeEvidenceProjectionRepository nodeEvidenceProjectionRepository;
 
     @Autowired
-    private ProjectGraphSyncRepository projectGraphSyncRepository;
-
-    @Autowired
     private MeetingAnalysisCommandOutboxRepository commandOutboxRepository;
 
     @Autowired
@@ -106,6 +111,12 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
     @Autowired
     private MeetingAnalysisResultInboxRepository resultInboxRepository;
+
+    @Autowired
+    private NodeDeleteCommandRepository nodeDeleteCommandRepository;
+
+    @Autowired
+    private NodeDeleteCommandItemRepository nodeDeleteCommandItemRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -125,6 +136,12 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // then
         assertThat(projectId).isPositive();
+        assertThat(projectGraphSyncRepository.findById(projectId))
+                .get()
+                .satisfies(sync -> {
+                    assertThat(sync.getCurrentGraphVersion()).isZero();
+                    assertThat(sync.hasActiveCommand()).isFalse();
+                });
     }
 
     @DisplayName("프로젝트를 생성하면 제목/설명/이미지 URL이 그대로 저장된다.")
@@ -377,6 +394,48 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // then
         assertThat(projectRepository.findById(projectId)).isEmpty();
+        assertThat(projectGraphSyncRepository.findById(projectId)).isEmpty();
+    }
+
+    @Test
+    void deleteProjectWithActiveGraphOperationIsRejectedWithoutDeletingAggregate() {
+        Member owner = memberRepository.save(createMember("owner-guard@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        ProjectGraphSync sync = projectGraphSyncRepository.findById(projectId)
+                .orElseThrow();
+        sync.acquireGraphOperation(
+                UUID.randomUUID().toString(),
+                MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                Instant.now()
+        );
+        projectGraphSyncRepository.saveAndFlush(sync);
+
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(ProjectErrorCode.PROJECT_DELETE_GRAPH_OPERATION_IN_PROGRESS);
+        flushAndClear();
+
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(projectGraphSyncRepository.findById(projectId)).isPresent();
+        assertThat(countProjectMembers()).isEqualTo(1);
+    }
+
+    @Test
+    void deleteProjectWithMissingGraphSyncFailsWithoutDeletingAggregate() {
+        Member owner = memberRepository.save(createMember("owner-missing-sync@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        projectGraphSyncRepository.deleteById(projectId);
+        projectGraphSyncRepository.flush();
+
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(ProjectGraphOperationErrorCode.PROJECT_GRAPH_SYNC_NOT_FOUND);
+        flushAndClear();
+
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(countProjectMembers()).isEqualTo(1);
     }
 
     @DisplayName("프로젝트를 삭제하면 참여 멤버도 함께 삭제된다.")
@@ -465,7 +524,6 @@ class ProjectServiceTest extends IntegrationTestSupport {
                 ),
                 Instant.now()
         ));
-        projectGraphSyncRepository.saveAndFlush(ProjectGraphSync.initial(projectId, Instant.now()));
         commandOutboxRepository.saveAndFlush(MeetingAnalysisCommandOutbox.pending(
                 UUID.randomUUID(),
                 meeting,
@@ -497,6 +555,40 @@ class ProjectServiceTest extends IntegrationTestSupport {
         assertThat(projectGraphSyncRepository.findById(projectId)).isEmpty();
         assertThat(commandOutboxRepository.countByMeetingId(meeting.getId())).isZero();
         assertThat(notificationOutboxRepository.count()).isZero();
+    }
+
+    @Test
+    void deleteProject_removesNodeDeleteCommandHistory() {
+        Member owner = memberRepository.save(createMember("owner-node-delete-history@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        UUID commandId = UUID.randomUUID();
+        LocalDateTime requestedAt = LocalDateTime.now();
+        NodeDeleteCommand command = nodeDeleteCommandRepository.saveAndFlush(
+                NodeDeleteCommand.pending(
+                        commandId,
+                        projectId,
+                        0L,
+                        owner.getId(),
+                        1,
+                        0,
+                        requestedAt
+                )
+        );
+        NodeDeleteCommandItem item = nodeDeleteCommandItemRepository.saveAndFlush(
+                NodeDeleteCommandItem.requested(
+                        command,
+                        UUID.randomUUID().toString(),
+                        1L,
+                        requestedAt
+                )
+        );
+        flushAndClear();
+
+        projectService.deleteProject(projectId, owner.getId());
+        flushAndClear();
+
+        assertThat(nodeDeleteCommandItemRepository.findById(item.getId())).isEmpty();
+        assertThat(nodeDeleteCommandRepository.findById(command.getId())).isEmpty();
     }
 
     @DisplayName("PROCESSING summary 분석이 있으면 프로젝트 삭제를 막고 데이터를 유지한다.")
@@ -807,7 +899,34 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // then
         assertThat(projectRepository.findById(projectId)).isEmpty();
+        assertThat(projectGraphSyncRepository.findById(projectId)).isEmpty();
         assertThat(countProjectMembers()).isZero();
+    }
+
+    @Test
+    void ownerLeaveWithActiveGraphOperationIsRejectedWithoutRemovingMembers() {
+        Member owner = memberRepository.save(createMember("leave-owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("leave-member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+        ProjectGraphSync sync = projectGraphSyncRepository.findById(projectId)
+                .orElseThrow();
+        sync.acquireGraphOperation(
+                UUID.randomUUID().toString(),
+                MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
+                Instant.now()
+        );
+        projectGraphSyncRepository.saveAndFlush(sync);
+
+        assertThatThrownBy(() -> projectService.leaveProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(ProjectErrorCode.PROJECT_DELETE_GRAPH_OPERATION_IN_PROGRESS);
+        flushAndClear();
+
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(projectGraphSyncRepository.findById(projectId)).isPresent();
+        assertThat(countProjectMembers()).isEqualTo(2);
     }
 
     @DisplayName("프로젝트 참여자가 팀원 목록을 조회하면 참여자 전원이 회원 정보와 함께 반환된다.")
@@ -1087,8 +1206,8 @@ class ProjectServiceTest extends IntegrationTestSupport {
         String content = "React로 만든 개인 포트폴리오입니다.";
         int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
 
-        saveMeetingRecord(projectId, "1회차 회의록");
-        saveMeetingRecord(projectId, "2회차 회의록");
+        int firstMeetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        int secondMeetingId = saveMeetingRecord(projectId, "2회차 회의록");
         flushAndClear();
 
         // when
@@ -1101,11 +1220,35 @@ class ProjectServiceTest extends IntegrationTestSupport {
                 .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 1);
 
         assertThat(response.getMeetingRecordList()).hasSize(2)
-                .extracting("name")
-                .containsExactly("2회차 회의록", "1회차 회의록");
+                .extracting("meetingId", "name")
+                .containsExactly(
+                        tuple(secondMeetingId, "2회차 회의록"),
+                        tuple(firstMeetingId, "1회차 회의록")
+                );
 
         assertThat(response.getPersonalSpeakingList()).isEmpty();
         assertThat(response.getMyReview()).isNull();
+    }
+
+    @DisplayName("프로젝트 홈을 조회하면 회의록이 없는 회의는 회의록 목록에서 제외된다.")
+    @Test
+    void getProjectHome_excludesMeetingWithoutRecord() {
+        // given
+        Member owner = memberRepository.save(createMember("owner@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+
+        int meetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        saveMeetingWithoutRecord(projectId);
+        flushAndClear();
+
+        // when
+        ProjectHomeResponse response =
+                projectService.getProjectHome(projectId, owner.getId());
+
+        // then
+        assertThat(response.getMeetingRecordList()).hasSize(1)
+                .extracting("meetingId", "name")
+                .containsExactly(tuple(meetingId, "1회차 회의록"));
     }
 
     @DisplayName("프로젝트 홈을 조회하면 회의 리뷰가 있는 경우 프로젝트 내용, 회의록, 발화 비율, 내 리뷰가 모두 조회되고 회의록은 최근순으로 정렬된다.")
@@ -1120,9 +1263,9 @@ class ProjectServiceTest extends IntegrationTestSupport {
         int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
         joinAsMember(projectId, member);
 
-        saveMeetingRecord(projectId, "1회차 회의록");
-        saveMeetingRecord(projectId, "2회차 회의록");
-        saveMeetingRecord(projectId, "3회차 회의록");
+        int firstMeetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        int secondMeetingId = saveMeetingRecord(projectId, "2회차 회의록");
+        int thirdMeetingId = saveMeetingRecord(projectId, "3회차 회의록");
 
         String roomName = "room-" + projectId;
         saveMeetingReview(roomName, projectId, owner.getId(), 70,
@@ -1140,8 +1283,12 @@ class ProjectServiceTest extends IntegrationTestSupport {
                 .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 2);
 
         assertThat(response.getMeetingRecordList()).hasSize(3)
-                .extracting("name")
-                .containsExactly("3회차 회의록", "2회차 회의록", "1회차 회의록");
+                .extracting("meetingId", "name")
+                .containsExactly(
+                        tuple(thirdMeetingId, "3회차 회의록"),
+                        tuple(secondMeetingId, "2회차 회의록"),
+                        tuple(firstMeetingId, "1회차 회의록")
+                );
 
         assertThat(response.getMyReview())
                 .extracting("speedFeedback", "personalFeedback", "overallFeedback")
@@ -1201,13 +1348,20 @@ class ProjectServiceTest extends IntegrationTestSupport {
         entityManager.clear();
     }
 
-    private void saveMeetingRecord(int projectId, String title) {
+    private int saveMeetingRecord(int projectId, String title) {
         Project project = projectRepository.findById(projectId).orElseThrow();
         Meeting meeting = meetingRepository.save(
                 Meeting.create(project, project.getProjectMembers().get(0), UUID.randomUUID().toString()));
 
         meetingRecordRepository.save(
                 MeetingRecord.create(meeting, UUID.randomUUID(), title, null, null, null, null));
+        return meeting.getId();
+    }
+
+    private void saveMeetingWithoutRecord(int projectId) {
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        meetingRepository.save(
+                Meeting.create(project, project.getProjectMembers().get(0), UUID.randomUUID().toString()));
     }
 
     private MeetingAnalysisCommandOutbox saveNodeContentUpdateOutbox(

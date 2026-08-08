@@ -9,6 +9,10 @@ import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisComm
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisOutboxStatus;
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandItemRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationErrorCode;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.NodeEvidenceProjectionRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectNodeProjectionRepository;
@@ -37,6 +41,8 @@ public class ProjectDeletionService {
     private final ProjectInvitationRepository projectInvitationRepository;
     private final NodeEvidenceProjectionRepository nodeEvidenceProjectionRepository;
     private final ProjectNodeProjectionRepository projectNodeProjectionRepository;
+    private final NodeDeleteCommandItemRepository nodeDeleteCommandItemRepository;
+    private final NodeDeleteCommandRepository nodeDeleteCommandRepository;
     private final MeetingRecordRepository meetingRecordRepository;
     private final MeetingAnalysisCommandOutboxRepository commandOutboxRepository;
     private final MeetingSummaryProjectionRepository summaryProjectionRepository;
@@ -44,6 +50,7 @@ public class ProjectDeletionService {
     private final MeetingAnalysisNotificationOutboxRepository notificationOutboxRepository;
     private final MeetingReviewRepository meetingReviewRepository;
     private final ProjectGraphSyncRepository projectGraphSyncRepository;
+    private final ProjectGraphOperationGuard projectGraphOperationGuard;
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectRepository projectRepository;
 
@@ -58,6 +65,8 @@ public class ProjectDeletionService {
         projectNodeProjectionRepository.deleteAllByProjectId(projectId);
 
         meetingRecordRepository.deleteAllByProjectId(projectId);
+        nodeDeleteCommandItemRepository.deleteAllByProjectId(projectId);
+        nodeDeleteCommandRepository.deleteAllByProjectId(projectId);
         commandOutboxRepository.deleteAllByProjectId(projectId);
 
         summaryProjectionRepository.deleteAllByProjectId(projectId);
@@ -79,6 +88,7 @@ public class ProjectDeletionService {
         )) {
             throw new CustomException(ProjectErrorCode.PROJECT_DELETE_ANALYSIS_IN_PROGRESS);
         }
+        assertNoActiveGraphOperation(projectId);
         if (commandOutboxRepository.existsInFlightGraphMutationByProjectId(
                 projectId,
                 MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
@@ -99,6 +109,18 @@ public class ProjectDeletionService {
         } catch (RuntimeException exception) {
             log.error("[Project] PROJECT_DELETE_STATE_CHECK_FAILED. projectId={}", projectId, exception);
             throw new CustomException(ProjectErrorCode.PROJECT_DELETE_STATE_CHECK_FAILED);
+        }
+    }
+
+    private void assertNoActiveGraphOperation(int projectId) {
+        try {
+            projectGraphOperationGuard.assertNoActiveOperation(projectId);
+        } catch (CustomException exception) {
+            if (exception.getErrorCode()
+                    == ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS) {
+                throw new CustomException(ProjectErrorCode.PROJECT_DELETE_GRAPH_OPERATION_IN_PROGRESS);
+            }
+            throw exception;
         }
     }
 }

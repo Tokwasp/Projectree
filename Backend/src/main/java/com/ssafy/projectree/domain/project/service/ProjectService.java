@@ -1,14 +1,17 @@
 package com.ssafy.projectree.domain.project.service;
 
-import com.ssafy.projectree.domain.meeting.entity.Meeting;
-import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
-import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
 import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
-import com.ssafy.projectree.domain.project.controller.dto.response.home.*;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.MeetingRecordResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.MyMeetingReviewResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.PersonalSpeakingResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectDetailResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectHomeResponse;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
@@ -27,7 +30,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,8 +43,8 @@ public class ProjectService {
     private final MemberRepository memberRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
-    private final MeetingRepository meetingRepository;
     private final MeetingReviewRepository meetingReviewRepository;
+    private final ProjectGraphSyncRepository projectGraphSyncRepository;
     private final MeetingRecordRepository meetingRecordRepository;
     private final ProjectDeletionService projectDeletionService;
 
@@ -54,7 +57,11 @@ public class ProjectService {
 
         project.addMember(pm);
 
-        return projectRepository.save(project).getId();
+        Project savedProject = projectRepository.saveAndFlush(project);
+        projectGraphSyncRepository.save(
+                ProjectGraphSync.initial(savedProject.getId(), Instant.now())
+        );
+        return savedProject.getId();
     }
 
     @Transactional
@@ -208,13 +215,7 @@ public class ProjectService {
     }
 
     private List<MeetingRecordResponse> getRecentFiveMeetingRecord(int projectId) {
-        List<Meeting> recentMeetings = meetingRepository.findRecentFiveBy(projectId);
-        List<Integer> meetingIdList = recentMeetings.stream()
-                .map(Meeting::getId)
-                .toList();
-
-        return meetingRecordRepository.findByMeetingIdIn(meetingIdList).stream()
-                .sorted(Comparator.comparingLong((MeetingRecord record) -> record.getId()).reversed())
+        return meetingRecordRepository.findRecentFiveByProjectId(projectId).stream()
                 .map(MeetingRecordResponse::of)
                 .toList();
     }

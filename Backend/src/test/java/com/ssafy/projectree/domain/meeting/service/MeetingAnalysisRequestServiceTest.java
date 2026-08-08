@@ -9,6 +9,8 @@ import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandO
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisOutboxStatus;
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationErrorCode;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
@@ -45,6 +47,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 class MeetingAnalysisRequestServiceTest {
@@ -69,6 +72,9 @@ class MeetingAnalysisRequestServiceTest {
     @Mock
     private ObjectMapper objectMapper;
 
+    @Mock
+    private ProjectGraphOperationGuard graphOperationGuard;
+
     private MeetingAnalysisRequestService service;
 
     @BeforeEach
@@ -82,7 +88,8 @@ class MeetingAnalysisRequestServiceTest {
                 Clock.fixed(
                         Instant.parse("2026-08-04T01:00:00Z"),
                         ZoneId.of("Asia/Seoul")
-                )
+                ),
+                graphOperationGuard
         );
         lenient().when(projectRepository.findByIdForUpdate(PROJECT_ID))
                 .thenReturn(Optional.of(mock(Project.class)));
@@ -93,8 +100,7 @@ class MeetingAnalysisRequestServiceTest {
     @CsvSource({
             "true, true, PROCESSING, PROCESSING",
             "true, false, PROCESSING, SKIPPED",
-            "false, true, SKIPPED, PROCESSING",
-            "false, false, SKIPPED, SKIPPED"
+            "false, true, SKIPPED, PROCESSING"
     })
     void confirmsOptionsAndSavesOutbox(
             boolean generateSummary,
@@ -127,6 +133,23 @@ class MeetingAnalysisRequestServiceTest {
         ArgumentCaptor<MeetingAnalysisCommandOutbox> captor =
                 ArgumentCaptor.forClass(MeetingAnalysisCommandOutbox.class);
         verify(outboxRepository).saveAndFlush(captor.capture());
+        if (generateNodes) {
+            verify(graphOperationGuard).acquire(
+                    org.mockito.ArgumentMatchers.eq(PROJECT_ID),
+                    any(),
+                    org.mockito.ArgumentMatchers.eq(
+                            com.ssafy.projectree.domain.meeting.command.MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED
+                    ),
+                    any()
+            );
+        } else {
+            verify(graphOperationGuard, never()).acquire(
+                    any(Integer.class),
+                    any(),
+                    any(),
+                    any()
+            );
+        }
         MeetingAnalysisCommandOutbox outbox = captor.getValue();
         assertThat(outbox.getMeeting()).isSameAs(meeting);
         assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.PENDING);
@@ -139,6 +162,59 @@ class MeetingAnalysisRequestServiceTest {
         lockOrder.verify(projectRepository).findByIdForUpdate(PROJECT_ID);
         lockOrder.verify(meetingRepository)
                 .findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME);
+    }
+
+    @Test
+    void rejectsRequestWithNoSelectedTaskBeforeRepositoriesAndGuard() {
+        assertThatThrownBy(() -> service.requestAnalysis(
+                PROJECT_ID,
+                ROOM_NAME,
+                MEMBER_ID,
+                new MeetingAnalysisRequest(false, false)
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(MeetingErrorCode.ANALYSIS_TASK_NOT_SELECTED);
+
+        verify(meetingRepository, never())
+                .findByProjectIdAndRoomNameForUpdate(any(Integer.class), any());
+        verify(graphOperationGuard, never()).acquire(
+                any(Integer.class),
+                any(),
+                any(),
+                any()
+        );
+        verify(outboxRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void activeGraphOperationRejectsRequestBeforeMeetingStateAndOutboxChange() {
+        Meeting meeting = meeting();
+        when(meetingRepository.findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME))
+                .thenReturn(Optional.of(meeting));
+        when(projectMemberRepository.findByProjectIdAndMemberId(PROJECT_ID, MEMBER_ID))
+                .thenReturn(Optional.of(creatorOf(meeting)));
+        doThrow(new CustomException(
+                ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS
+        )).when(graphOperationGuard).acquire(
+                org.mockito.ArgumentMatchers.eq(PROJECT_ID),
+                any(),
+                any(),
+                any()
+        );
+
+        assertThatThrownBy(() -> service.requestAnalysis(
+                PROJECT_ID,
+                ROOM_NAME,
+                MEMBER_ID,
+                new MeetingAnalysisRequest(true, true)
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS);
+
+        assertThat(meeting.isAnalysisRequestConfirmed()).isFalse();
+        verify(outboxRepository, never()).saveAndFlush(any());
     }
 
     @DisplayName("Meeting???놁쑝硫?404 ?ㅻ쪟瑜?諛쒖깮?쒗궎怨?Outbox瑜???ν븯吏 ?딅뒗??")

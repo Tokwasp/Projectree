@@ -9,6 +9,10 @@ import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisComm
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisOutboxStatus;
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandItemRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationErrorCode;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.NodeEvidenceProjectionRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectNodeProjectionRepository;
@@ -30,6 +34,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -45,6 +50,8 @@ class ProjectDeletionServiceTest {
     @Mock private ProjectInvitationRepository projectInvitationRepository;
     @Mock private NodeEvidenceProjectionRepository nodeEvidenceProjectionRepository;
     @Mock private ProjectNodeProjectionRepository projectNodeProjectionRepository;
+    @Mock private NodeDeleteCommandItemRepository nodeDeleteCommandItemRepository;
+    @Mock private NodeDeleteCommandRepository nodeDeleteCommandRepository;
     @Mock private MeetingRecordRepository meetingRecordRepository;
     @Mock private MeetingAnalysisCommandOutboxRepository commandOutboxRepository;
     @Mock private MeetingSummaryProjectionRepository summaryProjectionRepository;
@@ -52,6 +59,7 @@ class ProjectDeletionServiceTest {
     @Mock private MeetingAnalysisNotificationOutboxRepository notificationOutboxRepository;
     @Mock private MeetingReviewRepository meetingReviewRepository;
     @Mock private ProjectGraphSyncRepository projectGraphSyncRepository;
+    @Mock private ProjectGraphOperationGuard projectGraphOperationGuard;
     @Mock private ProjectMemberRepository projectMemberRepository;
     @Mock private ProjectRepository projectRepository;
 
@@ -70,6 +78,8 @@ class ProjectDeletionServiceTest {
                 nodeEvidenceProjectionRepository,
                 projectNodeProjectionRepository,
                 meetingRecordRepository,
+                nodeDeleteCommandItemRepository,
+                nodeDeleteCommandRepository,
                 commandOutboxRepository,
                 summaryProjectionRepository,
                 resultInboxRepository,
@@ -85,6 +95,8 @@ class ProjectDeletionServiceTest {
         order.verify(nodeEvidenceProjectionRepository).deleteAllByProjectId(PROJECT_ID);
         order.verify(projectNodeProjectionRepository).deleteAllByProjectId(PROJECT_ID);
         order.verify(meetingRecordRepository).deleteAllByProjectId(PROJECT_ID);
+        order.verify(nodeDeleteCommandItemRepository).deleteAllByProjectId(PROJECT_ID);
+        order.verify(nodeDeleteCommandRepository).deleteAllByProjectId(PROJECT_ID);
         order.verify(commandOutboxRepository).deleteAllByProjectId(PROJECT_ID);
         order.verify(summaryProjectionRepository).deleteAllByProjectId(PROJECT_ID);
         order.verify(resultInboxRepository).deleteAllByProjectId(PROJECT_ID);
@@ -155,5 +167,41 @@ class ProjectDeletionServiceTest {
                 .isEqualTo(ProjectErrorCode.PROJECT_DELETE_GRAPH_OPERATION_IN_PROGRESS);
 
         verifyNoInteractions(projectRepository);
+    }
+
+    @Test
+    void translatesActiveGraphGuardErrorToProjectDeletionError() {
+        given(meetingRepository.existsProcessingAnalysisByProjectId(
+                PROJECT_ID,
+                AnalysisTaskStatus.PROCESSING
+        )).willReturn(false);
+        doThrow(new CustomException(
+                ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS
+        )).when(projectGraphOperationGuard).assertNoActiveOperation(PROJECT_ID);
+
+        assertThatThrownBy(() -> projectDeletionService.deleteProjectAggregate(PROJECT_ID))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_DELETE_GRAPH_OPERATION_IN_PROGRESS);
+
+        verifyNoInteractions(projectRepository, commandOutboxRepository);
+    }
+
+    @Test
+    void propagatesNonConflictGraphGuardError() {
+        given(meetingRepository.existsProcessingAnalysisByProjectId(
+                PROJECT_ID,
+                AnalysisTaskStatus.PROCESSING
+        )).willReturn(false);
+        doThrow(new CustomException(
+                ProjectGraphOperationErrorCode.PROJECT_GRAPH_SYNC_NOT_FOUND
+        )).when(projectGraphOperationGuard).assertNoActiveOperation(PROJECT_ID);
+
+        assertThatThrownBy(() -> projectDeletionService.deleteProjectAggregate(PROJECT_ID))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectGraphOperationErrorCode.PROJECT_GRAPH_SYNC_NOT_FOUND);
+
+        verifyNoInteractions(projectRepository, commandOutboxRepository);
     }
 }
