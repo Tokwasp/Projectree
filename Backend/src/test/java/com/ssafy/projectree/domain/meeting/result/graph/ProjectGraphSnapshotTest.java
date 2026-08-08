@@ -109,6 +109,39 @@ class ProjectGraphSnapshotTest extends IntegrationTestSupport {
     }
 
     @Test
+    void acceptsNullMeetingForNodeDeleteSnapshot() {
+        Fixture fixture = fixture();
+        AnalysisResultEventEnvelope event = new AnalysisResultEventEnvelope(
+                3,
+                fixture.event().eventId(),
+                AnalysisResultEventType.PROJECT_GRAPH_CHANGED,
+                fixture.event().occurredAt(),
+                fixture.event().projectId(),
+                null,
+                fixture.commandId(),
+                fixture.event().payload()
+        );
+        ProjectGraphChangedPayload payload = new ProjectGraphChangedPayload(
+                GraphResultSourceType.NODE_DELETE,
+                fixture.payload().graphVersion(),
+                fixture.payload().snapshotRef()
+        );
+        ProjectGraphSnapshot snapshot = new ProjectGraphSnapshot(
+                fixture.snapshot().snapshotSchemaVersion(),
+                fixture.snapshot().projectId(),
+                null,
+                fixture.snapshot().commandId(),
+                fixture.snapshot().graphVersion(),
+                fixture.snapshot().generatedAt(),
+                fixture.snapshot().nodes(),
+                fixture.snapshot().evidences(),
+                fixture.snapshot().mergeRecords()
+        );
+
+        assertThat(validator.validate(event, payload, snapshot).meetingId()).isNull();
+    }
+
+    @Test
     void acceptsLongKoreanContentWithoutApplyingMysqlByteLimitInJavaValidation() {
         Fixture fixture = fixture();
         String longKoreanContent = "가".repeat(65_535);

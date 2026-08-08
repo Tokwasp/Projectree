@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -78,6 +79,8 @@ class AnalysisEventReferenceValidatorTest {
 
         Meeting commandMeeting = meeting(20, 11);
         MeetingAnalysisCommandOutbox command = command(commandMeeting);
+        given(command.getCommandType())
+                .willReturn(MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED);
         given(commandRepository.findByCommandId(event.commandId()))
                 .willReturn(Optional.of(command));
         given(meetingRepository.findByIdWithProject(20)).willReturn(Optional.of(meeting));
@@ -102,10 +105,106 @@ class AnalysisEventReferenceValidatorTest {
                 .isInstanceOf(AnalysisResultContractException.class);
 
         MeetingAnalysisCommandOutbox invalidType = mock(MeetingAnalysisCommandOutbox.class);
-        given(invalidType.getMeeting()).willReturn(meeting);
         given(invalidType.getCommandType()).willReturn(null);
         given(commandRepository.findByCommandId(event.commandId()))
                 .willReturn(Optional.of(invalidType));
+
+        assertThatThrownBy(() -> validator.validateReferences(event))
+                .isInstanceOf(AnalysisResultContractException.class);
+    }
+
+    @Test
+    void acceptsNodeDeleteRejectedAndGraphChangedReferences() {
+        MeetingAnalysisCommandOutbox rejectedCommand = nodeDeleteCommand(10);
+        AnalysisResultEventEnvelope rejected = nodeDeleteEvent(
+                rejectedCommand,
+                AnalysisResultEventType.NODE_DELETE_REJECTED,
+                10,
+                null
+        );
+        given(commandRepository.findByCommandId(rejected.commandId()))
+                .willReturn(Optional.of(rejectedCommand));
+
+        assertThatCode(() -> validator.validateReferences(rejected)).doesNotThrowAnyException();
+
+        MeetingAnalysisCommandOutbox succeededCommand = nodeDeleteCommand(10);
+        AnalysisResultEventEnvelope succeeded = nodeDeleteEvent(
+                succeededCommand,
+                AnalysisResultEventType.PROJECT_GRAPH_CHANGED,
+                10,
+                null
+        );
+        given(commandRepository.findByCommandId(succeeded.commandId()))
+                .willReturn(Optional.of(succeededCommand));
+
+        assertThatCode(() -> validator.validateReferences(succeeded)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void rejectsNodeDeleteResultForAnotherProject() {
+        MeetingAnalysisCommandOutbox command = nodeDeleteCommand(10);
+        AnalysisResultEventEnvelope event = nodeDeleteEvent(
+                command,
+                AnalysisResultEventType.NODE_DELETE_REJECTED,
+                11,
+                null
+        );
+        given(commandRepository.findByCommandId(event.commandId()))
+                .willReturn(Optional.of(command));
+
+        assertThatThrownBy(() -> validator.validateReferences(event))
+                .isInstanceOf(AnalysisResultContractException.class);
+    }
+
+    @Test
+    void rejectsNodeDeleteResultWithMeetingId() {
+        MeetingAnalysisCommandOutbox command = nodeDeleteCommand(10);
+        AnalysisResultEventEnvelope event = nodeDeleteEvent(
+                command,
+                AnalysisResultEventType.NODE_DELETE_REJECTED,
+                10,
+                20
+        );
+        given(commandRepository.findByCommandId(event.commandId()))
+                .willReturn(Optional.of(command));
+
+        assertThatThrownBy(() -> validator.validateReferences(event))
+                .isInstanceOf(AnalysisResultContractException.class);
+    }
+
+    @Test
+    void rejectsNodeDeleteCommandWithMeetingReference() {
+        MeetingAnalysisCommandOutbox command = mock(MeetingAnalysisCommandOutbox.class);
+        given(command.getCommandType()).willReturn(MeetingAnalysisCommandType.NODE_DELETE_REQUESTED);
+        given(command.getMeeting()).willReturn(mock(Meeting.class));
+        AnalysisResultEventEnvelope event = new AnalysisResultEventEnvelope(
+                3,
+                UUID.randomUUID().toString(),
+                AnalysisResultEventType.NODE_DELETE_REJECTED,
+                Instant.now(),
+                10,
+                null,
+                UUID.randomUUID().toString(),
+                JsonMapper.builder().build().createObjectNode()
+        );
+        given(commandRepository.findByCommandId(event.commandId()))
+                .willReturn(Optional.of(command));
+
+        assertThatThrownBy(() -> validator.validateReferences(event))
+                .isInstanceOf(AnalysisResultContractException.class);
+    }
+
+    @Test
+    void rejectsUnsupportedEventTypeForNodeDeleteCommand() {
+        MeetingAnalysisCommandOutbox command = nodeDeleteCommand(10);
+        AnalysisResultEventEnvelope event = nodeDeleteEvent(
+                command,
+                AnalysisResultEventType.MEETING_SUMMARY_READY,
+                10,
+                null
+        );
+        given(commandRepository.findByCommandId(event.commandId()))
+                .willReturn(Optional.of(command));
 
         assertThatThrownBy(() -> validator.validateReferences(event))
                 .isInstanceOf(AnalysisResultContractException.class);
@@ -124,6 +223,34 @@ class AnalysisEventReferenceValidatorTest {
         MeetingAnalysisCommandOutbox command = mock(MeetingAnalysisCommandOutbox.class);
         given(command.getMeeting()).willReturn(meeting);
         return command;
+    }
+
+    private MeetingAnalysisCommandOutbox nodeDeleteCommand(int projectId) {
+        return MeetingAnalysisCommandOutbox.pendingNodeDelete(
+                UUID.randomUUID(),
+                projectId,
+                "{\"commandType\":\"NODE_DELETE_REQUESTED\"}",
+                15,
+                LocalDateTime.now()
+        );
+    }
+
+    private AnalysisResultEventEnvelope nodeDeleteEvent(
+            MeetingAnalysisCommandOutbox command,
+            AnalysisResultEventType eventType,
+            int projectId,
+            Integer meetingId
+    ) {
+        return new AnalysisResultEventEnvelope(
+                3,
+                UUID.randomUUID().toString(),
+                eventType,
+                Instant.now(),
+                projectId,
+                meetingId,
+                command.getCommandId(),
+                JsonMapper.builder().build().createObjectNode()
+        );
     }
 
     private AnalysisResultEventEnvelope event(int projectId, int meetingId, int ignoredCommandId) {

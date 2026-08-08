@@ -1,11 +1,18 @@
 package com.ssafy.projectree.domain.project.service;
 
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
 import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
-import com.ssafy.projectree.domain.project.controller.dto.response.home.*;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.MeetingRecordResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.MyMeetingReviewResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.PersonalSpeakingResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectDetailResponse;
+import com.ssafy.projectree.domain.project.controller.dto.response.home.ProjectHomeResponse;
 import com.ssafy.projectree.domain.project.dto.request.ProjectCreateRequest;
 import com.ssafy.projectree.domain.project.dto.response.ProjectItemResponse;
 import com.ssafy.projectree.domain.project.dto.response.ProjectListResponse;
@@ -24,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,6 +45,8 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final MeetingReviewRepository meetingReviewRepository;
+    private final ProjectGraphSyncRepository projectGraphSyncRepository;
+    private final ProjectGraphOperationGuard projectGraphOperationGuard;
     private final MeetingRecordRepository meetingRecordRepository;
 
     @Transactional
@@ -48,7 +58,11 @@ public class ProjectService {
 
         project.addMember(pm);
 
-        return projectRepository.save(project).getId();
+        Project savedProject = projectRepository.saveAndFlush(project);
+        projectGraphSyncRepository.save(
+                ProjectGraphSync.initial(savedProject.getId(), Instant.now())
+        );
+        return savedProject.getId();
     }
 
     @Transactional
@@ -93,8 +107,7 @@ public class ProjectService {
             throw new CustomException(ProjectErrorCode.PROJECT_DELETE_FORBIDDEN);
         }
 
-        projectMemberRepository.deleteByProjectId(projectId);
-        projectRepository.deleteById(projectId);
+        deleteProjectAggregate(projectId);
     }
 
     @Transactional
@@ -106,12 +119,18 @@ public class ProjectService {
         }
 
         if (project.isOwner(memberId)) {
-            projectMemberRepository.deleteByProjectId(projectId);
-            projectRepository.deleteById(projectId);
+            deleteProjectAggregate(projectId);
             return;
         }
 
         project.removeMember(memberId);
+    }
+
+    private void deleteProjectAggregate(int projectId) {
+        projectGraphOperationGuard.assertNoActiveOperation(projectId);
+        projectMemberRepository.deleteByProjectId(projectId);
+        projectGraphSyncRepository.deleteById(projectId);
+        projectRepository.deleteById(projectId);
     }
 
     public List<ProjectMemberResponse> getProjectMembers(int projectId, int memberId) {

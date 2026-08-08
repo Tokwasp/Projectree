@@ -8,6 +8,7 @@ import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventEnvel
 import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContractException;
 import com.ssafy.projectree.domain.meeting.result.graph.event.GraphResultSourceType;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayload;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.ProjectGraphSnapshot;
@@ -37,6 +38,7 @@ public class NodeContentUpdateGraphProjectionApplier {
     private final EntityManager entityManager;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final ProjectGraphOperationGuard graphOperationGuard;
 
     @Transactional
     public GraphProjectionApplyResult apply(
@@ -60,8 +62,8 @@ public class NodeContentUpdateGraphProjectionApplier {
         validateCommandPayload(event, command, commandPayload);
 
         ProjectGraphSync sync = graphSyncRepository.findByProjectIdForUpdate(event.projectId())
-                .orElseGet(() -> graphSyncRepository.saveAndFlush(
-                        ProjectGraphSync.initial(event.projectId(), Instant.now(clock))
+                .orElseThrow(() -> new IllegalStateException(
+                        "Project graph sync does not exist"
                 ));
         resultInboxService.registerProcessed(event);
 
@@ -77,6 +79,19 @@ public class NodeContentUpdateGraphProjectionApplier {
                             "Project graph sync disappeared during replacement"
                     ));
             sync.advanceTo(payload.graphVersion(), command.getCommandId(), syncedAt);
+        }
+        boolean released = graphOperationGuard.release(
+                sync,
+                event.commandId(),
+                "GRAPH_PROJECTION_APPLIED"
+        );
+        boolean alreadyApplied = !projectionUpdated
+                && !sync.hasActiveCommand()
+                && event.commandId().equals(sync.getLastCommandId());
+        if (!released && !alreadyApplied) {
+            throw contract(
+                    "Node content update result does not own the active graph operation"
+            );
         }
         return new GraphProjectionApplyResult(
                 null,

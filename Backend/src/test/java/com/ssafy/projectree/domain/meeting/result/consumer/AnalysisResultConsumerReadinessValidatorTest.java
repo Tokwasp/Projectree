@@ -46,9 +46,11 @@ class AnalysisResultConsumerReadinessValidatorTest {
     }
 
     @Test
-    void acceptsEnabledConsumerWhenAllResultHandlersAndGraphS3AreAvailable() {
+    void acceptsEnabledConsumerWhenAllImplementedResultHandlersAndGraphS3AreAvailable() {
         AnalysisResultConsumerReadinessValidator validator = new AnalysisResultConsumerReadinessValidator(
-                enabledConsumerProperties(), enabledGraphSnapshotProperties(), dispatcherWithAllHandlers()
+                enabledConsumerProperties(),
+                enabledGraphSnapshotProperties(),
+                dispatcherWithImplementedHandlers()
         );
 
         assertThatCode(validator::validate).doesNotThrowAnyException();
@@ -67,6 +69,18 @@ class AnalysisResultConsumerReadinessValidatorTest {
         List<AnalysisResultEventHandler> handlers = Arrays.stream(AnalysisResultEventType.values())
                 .<AnalysisResultEventHandler>map(RecordingHandler::new)
                 .toList();
+        AnalysisResultEventDispatcher dispatcher = new AnalysisResultEventDispatcher(handlers);
+        dispatcher.initializeHandlers();
+        return dispatcher;
+    }
+
+    private AnalysisResultEventDispatcher dispatcherWithImplementedHandlers() {
+        List<AnalysisResultEventHandler> handlers = List.of(
+                new RecordingHandler(AnalysisResultEventType.MEETING_SUMMARY_READY),
+                new RecordingHandler(AnalysisResultEventType.PROJECT_GRAPH_CHANGED),
+                new RecordingHandler(AnalysisResultEventType.ANALYSIS_TASK_STATUS_CHANGED),
+                new RecordingHandler(AnalysisResultEventType.NODE_DELETE_REJECTED)
+        );
         AnalysisResultEventDispatcher dispatcher = new AnalysisResultEventDispatcher(handlers);
         dispatcher.initializeHandlers();
         return dispatcher;

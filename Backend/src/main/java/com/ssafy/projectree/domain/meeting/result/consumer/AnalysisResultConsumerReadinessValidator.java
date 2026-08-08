@@ -9,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import java.util.EnumSet;
+import java.util.Set;
+
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(
@@ -17,6 +20,13 @@ import org.springframework.stereotype.Component;
         havingValue = "true"
 )
 public class AnalysisResultConsumerReadinessValidator {
+
+    private static final Set<AnalysisResultEventType> REQUIRED_HANDLER_TYPES = EnumSet.of(
+            AnalysisResultEventType.MEETING_SUMMARY_READY,
+            AnalysisResultEventType.PROJECT_GRAPH_CHANGED,
+            AnalysisResultEventType.ANALYSIS_TASK_STATUS_CHANGED,
+            AnalysisResultEventType.NODE_DELETE_REJECTED
+    );
 
     private final AnalysisResultConsumerProperties consumerProperties;
     private final GraphSnapshotProperties graphSnapshotProperties;
@@ -32,7 +42,7 @@ public class AnalysisResultConsumerReadinessValidator {
                     "Analysis result consumer requires graph snapshot S3 to be enabled"
             );
         }
-        for (AnalysisResultEventType eventType : AnalysisResultEventType.values()) {
+        for (AnalysisResultEventType eventType : REQUIRED_HANDLER_TYPES) {
             if (!dispatcher.supports(eventType)) {
                 throw new IllegalStateException(
                         "Analysis result consumer requires handler for " + eventType

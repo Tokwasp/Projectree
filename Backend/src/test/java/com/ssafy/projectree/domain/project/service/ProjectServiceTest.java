@@ -5,6 +5,10 @@ import com.ssafy.projectree.domain.meeting.entity.Meeting;
 import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
+import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationErrorCode;
+import com.ssafy.projectree.domain.meeting.command.MeetingAnalysisCommandType;
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
 import com.ssafy.projectree.domain.meetingreview.exception.MeetingReviewErrorCode;
 import com.ssafy.projectree.domain.meetingreview.repository.MeetingReviewRepository;
@@ -26,6 +30,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,6 +54,9 @@ class ProjectServiceTest extends IntegrationTestSupport {
     private MeetingRepository meetingRepository;
 
     @Autowired
+    private ProjectGraphSyncRepository projectGraphSyncRepository;
+
+    @Autowired
     private MeetingRecordRepository meetingRecordRepository;
 
     @PersistenceContext
@@ -66,6 +74,12 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // then
         assertThat(projectId).isPositive();
+        assertThat(projectGraphSyncRepository.findById(projectId))
+                .get()
+                .satisfies(sync -> {
+                    assertThat(sync.getCurrentGraphVersion()).isZero();
+                    assertThat(sync.hasActiveCommand()).isFalse();
+                });
     }
 
     @DisplayName("프로젝트를 생성하면 제목/설명/이미지 URL이 그대로 저장된다.")
@@ -318,6 +332,48 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // then
         assertThat(projectRepository.findById(projectId)).isEmpty();
+        assertThat(projectGraphSyncRepository.findById(projectId)).isEmpty();
+    }
+
+    @Test
+    void deleteProjectWithActiveGraphOperationIsRejectedWithoutDeletingAggregate() {
+        Member owner = memberRepository.save(createMember("owner-guard@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        ProjectGraphSync sync = projectGraphSyncRepository.findById(projectId)
+                .orElseThrow();
+        sync.acquireGraphOperation(
+                UUID.randomUUID().toString(),
+                MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                Instant.now()
+        );
+        projectGraphSyncRepository.saveAndFlush(sync);
+
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS);
+        flushAndClear();
+
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(projectGraphSyncRepository.findById(projectId)).isPresent();
+        assertThat(countProjectMembers()).isEqualTo(1);
+    }
+
+    @Test
+    void deleteProjectWithMissingGraphSyncFailsWithoutDeletingAggregate() {
+        Member owner = memberRepository.save(createMember("owner-missing-sync@gmail.com", "김오너"));
+        int projectId = createProjectOwnedBy(owner);
+        projectGraphSyncRepository.deleteById(projectId);
+        projectGraphSyncRepository.flush();
+
+        assertThatThrownBy(() -> projectService.deleteProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(ProjectGraphOperationErrorCode.PROJECT_GRAPH_SYNC_NOT_FOUND);
+        flushAndClear();
+
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(countProjectMembers()).isEqualTo(1);
     }
 
     @DisplayName("프로젝트를 삭제하면 참여 멤버도 함께 삭제된다.")
@@ -500,7 +556,34 @@ class ProjectServiceTest extends IntegrationTestSupport {
 
         // then
         assertThat(projectRepository.findById(projectId)).isEmpty();
+        assertThat(projectGraphSyncRepository.findById(projectId)).isEmpty();
         assertThat(countProjectMembers()).isZero();
+    }
+
+    @Test
+    void ownerLeaveWithActiveGraphOperationIsRejectedWithoutRemovingMembers() {
+        Member owner = memberRepository.save(createMember("leave-owner@gmail.com", "김오너"));
+        Member member = memberRepository.save(createMember("leave-member@gmail.com", "이멤버"));
+        int projectId = createProjectOwnedBy(owner);
+        joinAsMember(projectId, member);
+        ProjectGraphSync sync = projectGraphSyncRepository.findById(projectId)
+                .orElseThrow();
+        sync.acquireGraphOperation(
+                UUID.randomUUID().toString(),
+                MeetingAnalysisCommandType.MEETING_ANALYSIS_REQUESTED,
+                Instant.now()
+        );
+        projectGraphSyncRepository.saveAndFlush(sync);
+
+        assertThatThrownBy(() -> projectService.leaveProject(projectId, owner.getId()))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS);
+        flushAndClear();
+
+        assertThat(projectRepository.findById(projectId)).isPresent();
+        assertThat(projectGraphSyncRepository.findById(projectId)).isPresent();
+        assertThat(countProjectMembers()).isEqualTo(2);
     }
 
     @DisplayName("프로젝트 참여자가 팀원 목록을 조회하면 참여자 전원이 회원 정보와 함께 반환된다.")

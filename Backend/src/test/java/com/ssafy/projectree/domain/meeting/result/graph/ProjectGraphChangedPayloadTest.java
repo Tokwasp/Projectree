@@ -25,7 +25,7 @@ class ProjectGraphChangedPayloadTest extends IntegrationTestSupport {
     private ObjectMapper objectMapper;
 
     @Test
-    void acceptsMeetingAnalysisAndNodeContentUpdateSources() {
+    void acceptsEveryImplementedGraphResultSource() {
         ProjectGraphChangedPayload payload = parser.parse(validPayload());
         validator.validate(payload);
 
@@ -36,6 +36,11 @@ class ProjectGraphChangedPayloadTest extends IntegrationTestSupport {
                 (tools.jackson.databind.node.ObjectNode) validPayload();
         nodeUpdate.put("sourceType", "NODE_CONTENT_UPDATE");
         validator.validate(parser.parse(nodeUpdate));
+
+        tools.jackson.databind.node.ObjectNode nodeDelete =
+                (tools.jackson.databind.node.ObjectNode) validPayload();
+        nodeDelete.put("sourceType", "NODE_DELETE");
+        validator.validate(parser.parse(nodeDelete));
     }
 
     @Test

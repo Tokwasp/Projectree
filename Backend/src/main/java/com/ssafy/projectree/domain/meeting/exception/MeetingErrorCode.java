@@ -21,6 +21,10 @@ public enum MeetingErrorCode implements ErrorCode {
             "회의 분석은 해당 방을 만든 사용자만 요청할 수 있습니다."
     ),
     MEETING_ANALYSIS_ALREADY_REQUESTED(HttpStatus.CONFLICT, "회의 분석 요청이 이미 확정되었습니다."),
+    ANALYSIS_TASK_NOT_SELECTED(
+            HttpStatus.BAD_REQUEST,
+            "요약 생성 또는 노드 생성 중 하나 이상을 선택해야 합니다."
+    ),
     OUTBOX_SERIALIZATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "분석 요청 메시지 생성에 실패했습니다."),
     MEETING_PROJECT_MISMATCH(HttpStatus.BAD_REQUEST, "회의가 요청한 프로젝트에 속하지 않습니다.");
 

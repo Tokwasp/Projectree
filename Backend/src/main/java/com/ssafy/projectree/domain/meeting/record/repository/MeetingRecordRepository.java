@@ -1,6 +1,8 @@
 package com.ssafy.projectree.domain.meeting.record.repository;
 
 import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,6 +16,25 @@ public interface MeetingRecordRepository extends JpaRepository<MeetingRecord, Lo
 
     Optional<MeetingRecord> findByCommandId(String commandId);
 
+    @Query(
+            value = """
+                    select record
+                    from MeetingRecord record
+                    join fetch record.meeting meeting
+                    where meeting.project.id = :projectId
+                    """,
+            countQuery = """
+                    select count(record)
+                    from MeetingRecord record
+                    join record.meeting meeting
+                    where meeting.project.id = :projectId
+                    """
+    )
+    Page<MeetingRecord> findPageByProjectId(
+            @Param("projectId") int projectId,
+            Pageable pageable
+    );
+
     boolean existsByMeetingId(int meetingId);
 
     boolean existsByCommandId(String commandId);
@@ -23,7 +44,7 @@ public interface MeetingRecordRepository extends JpaRepository<MeetingRecord, Lo
         from MeetingRecord r
         join fetch r.meeting m
         where m.project.id = :projectId
-        order by r.createdAt desc
+        order by r.createdAt desc, r.id desc
         limit 5
         """)
     List<MeetingRecord> findRecentFiveByProjectId(@Param("projectId") int projectId);

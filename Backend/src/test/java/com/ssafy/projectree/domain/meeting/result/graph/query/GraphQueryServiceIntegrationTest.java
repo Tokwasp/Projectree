@@ -3,6 +3,11 @@ package com.ssafy.projectree.domain.meeting.result.graph.query;
 import com.ssafy.projectree.IntegrationTestSupport;
 import com.ssafy.projectree.domain.meeting.entity.Meeting;
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.NodeDeleteCommandStatus;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.entity.NodeDeleteCommand;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.entity.NodeDeleteCommandItem;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandItemRepository;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.repository.NodeDeleteCommandRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.NodeEvidenceProjection;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectNodeProjection;
@@ -12,6 +17,7 @@ import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.Pr
 import com.ssafy.projectree.domain.meeting.result.graph.query.dto.GraphMergedSourcesResponse;
 import com.ssafy.projectree.domain.meeting.result.graph.query.dto.GraphNodeDetailResponse;
 import com.ssafy.projectree.domain.meeting.result.graph.query.dto.GraphNodePageResponse;
+import com.ssafy.projectree.domain.meeting.result.graph.query.dto.GraphTreeNodeResponse;
 import com.ssafy.projectree.domain.meeting.result.graph.query.dto.GraphTreeResponse;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.GraphLinkSource;
 import com.ssafy.projectree.domain.meeting.result.graph.snapshot.GraphNodeCategory;
@@ -26,6 +32,8 @@ import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.exception.CustomException;
 import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -35,6 +43,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.sql.Connection;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -61,6 +70,8 @@ class GraphQueryServiceIntegrationTest extends IntegrationTestSupport {
     @Autowired private ProjectGraphSyncRepository graphSyncRepository;
     @Autowired private ProjectNodeProjectionRepository nodeRepository;
     @Autowired private NodeEvidenceProjectionRepository evidenceRepository;
+    @Autowired private NodeDeleteCommandRepository nodeDeleteCommandRepository;
+    @Autowired private NodeDeleteCommandItemRepository nodeDeleteCommandItemRepository;
     @MockitoSpyBean private NodeEvidenceProjectionRepository evidenceRepositorySpy;
     @MockitoSpyBean private ProjectRepository projectRepositorySpy;
 
@@ -79,7 +90,7 @@ class GraphQueryServiceIntegrationTest extends IntegrationTestSupport {
         assertThat(ownerTree.root().title()).isEqualTo("query-project");
         assertThat(ownerTree.root().children().getFirst().children()).extracting(node -> node.id())
                 .containsExactly(active.getNodeId());
-        assertThat(memberTree.root().children()).hasSize(6);
+        assertCategoryRoots(memberTree.root().children());
         assertProjectParticipantError(() -> graphQueryService.getTree(fixture.projectId(), OUTSIDER_ID));
     }
 
@@ -91,7 +102,7 @@ class GraphQueryServiceIntegrationTest extends IntegrationTestSupport {
 
         assertThat(response.graphVersion()).isZero();
         assertThat(response.graphSyncedAt()).isNull();
-        assertThat(response.root().children()).hasSize(6);
+        assertCategoryRoots(response.root().children());
         assertThat(response.root().children()).allSatisfy(category -> assertThat(category.children()).isEmpty());
     }
 
@@ -281,6 +292,303 @@ class GraphQueryServiceIntegrationTest extends IntegrationTestSupport {
                 .isEqualTo(com.ssafy.projectree.domain.meeting.exception.MeetingErrorCode.MEETING_PROJECT_MISMATCH);
     }
 
+    @Test
+    void pendingRequestedAndMergedSourceAreHiddenFromTreeAndMeetingNodes() {
+        Fixture fixture = fixture(true);
+        ProjectNodeProjection visible = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "10000000-0000-0000-0000-000000000000",
+                null,
+                null,
+                GraphNodeType.DECISION,
+                GraphNodeCategory.BACKEND,
+                GraphNodeState.ACTIVE,
+                1
+        );
+        ProjectNodeProjection requested = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "20000000-0000-0000-0000-000000000000",
+                null,
+                null,
+                GraphNodeType.DECISION,
+                GraphNodeCategory.DESIGN,
+                GraphNodeState.ACTIVE,
+                2
+        );
+        ProjectNodeProjection mergedSource = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "30000000-0000-0000-0000-000000000000",
+                null,
+                requested.getNodeId(),
+                GraphNodeType.DECISION,
+                GraphNodeCategory.DESIGN,
+                GraphNodeState.MERGED,
+                3
+        );
+        saveDeleteCommand(
+                fixture.projectId(),
+                NodeDeleteCommandStatus.PENDING,
+                requested.getNodeId(),
+                mergedSource.getNodeId()
+        );
+
+        GraphTreeResponse tree = graphQueryService.getTree(
+                fixture.projectId(),
+                OWNER_ID
+        );
+        GraphNodePageResponse meetingNodes = graphQueryService.getMeetingNodes(
+                fixture.projectId(),
+                fixture.meetingId(),
+                MEMBER_ID,
+                0,
+                20
+        );
+
+        assertThat(tree.graphVersion()).isEqualTo(5);
+        assertThat(tree.root().children().stream()
+                .flatMap(category -> category.children().stream())
+                .map(GraphTreeNodeResponse::id)
+                .toList())
+                .containsExactly(visible.getNodeId());
+        assertThat(meetingNodes.graphVersion()).isEqualTo(5);
+        assertThat(meetingNodes.totalElements()).isEqualTo(1);
+        assertThat(meetingNodes.items())
+                .extracting(item -> item.nodeId())
+                .containsExactly(visible.getNodeId());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = NodeDeleteCommandStatus.class,
+            names = {"REJECTED", "FAILED"}
+    )
+    void completedDeleteCommandMakesProjectionVisibleAgain(
+            NodeDeleteCommandStatus status
+    ) {
+        Fixture fixture = fixture(true);
+        ProjectNodeProjection node = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "10000000-0000-0000-0000-000000000000",
+                null,
+                null,
+                GraphNodeType.DECISION,
+                GraphNodeCategory.BACKEND,
+                GraphNodeState.ACTIVE,
+                1
+        );
+        saveDeleteCommand(fixture.projectId(), status, node.getNodeId(), null);
+
+        GraphNodeDetailResponse detail = graphQueryService.getNodeDetail(
+                fixture.projectId(),
+                node.getNodeId(),
+                OWNER_ID
+        );
+        GraphNodePageResponse meetingNodes = graphQueryService.getMeetingNodes(
+                fixture.projectId(),
+                fixture.meetingId(),
+                OWNER_ID,
+                0,
+                20
+        );
+
+        assertThat(detail.node().nodeId()).isEqualTo(node.getNodeId());
+        assertThat(meetingNodes.items())
+                .extracting(item -> item.nodeId())
+                .containsExactly(node.getNodeId());
+    }
+
+    @Test
+    void pendingNodeDetailIsNotFoundBeforeEvidenceLookup() {
+        Fixture fixture = fixture(true);
+        ProjectNodeProjection node = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "10000000-0000-0000-0000-000000000000",
+                null,
+                null,
+                GraphNodeType.DECISION,
+                GraphNodeCategory.BACKEND,
+                GraphNodeState.ACTIVE,
+                1
+        );
+        saveEvidence(
+                "20000000-0000-0000-0000-000000000000",
+                node.getNodeId(),
+                1,
+                "hidden evidence"
+        );
+        saveDeleteCommand(
+                fixture.projectId(),
+                NodeDeleteCommandStatus.PENDING,
+                node.getNodeId(),
+                null
+        );
+        clearInvocations(evidenceRepositorySpy);
+
+        assertThatThrownBy(() -> graphQueryService.getNodeDetail(
+                fixture.projectId(),
+                node.getNodeId(),
+                OWNER_ID
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting(error -> ((CustomException) error).getErrorCode())
+                .isEqualTo(GraphQueryErrorCode.NODE_NOT_FOUND);
+        verify(evidenceRepositorySpy, never())
+                .findAllByNodeIdOrderByEvidenceOrderAscEvidenceIdAsc(node.getNodeId());
+    }
+
+    @Test
+    void mergedSourcesRejectPendingTargetAndExcludePendingSource() {
+        Fixture fixture = fixture(true);
+        ProjectNodeProjection pendingTarget = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "10000000-0000-0000-0000-000000000000",
+                null,
+                null,
+                GraphNodeType.DECISION,
+                GraphNodeCategory.BACKEND,
+                GraphNodeState.ACTIVE,
+                1
+        );
+        ProjectNodeProjection visibleTarget = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "20000000-0000-0000-0000-000000000000",
+                null,
+                null,
+                GraphNodeType.DECISION,
+                GraphNodeCategory.DESIGN,
+                GraphNodeState.ACTIVE,
+                2
+        );
+        ProjectNodeProjection hiddenSource = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "30000000-0000-0000-0000-000000000000",
+                null,
+                visibleTarget.getNodeId(),
+                GraphNodeType.DECISION,
+                GraphNodeCategory.DESIGN,
+                GraphNodeState.MERGED,
+                3
+        );
+        ProjectNodeProjection visibleSource = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "40000000-0000-0000-0000-000000000000",
+                null,
+                visibleTarget.getNodeId(),
+                GraphNodeType.DECISION,
+                GraphNodeCategory.DESIGN,
+                GraphNodeState.MERGED,
+                4
+        );
+        saveDeleteCommand(
+                fixture.projectId(),
+                NodeDeleteCommandStatus.PENDING,
+                pendingTarget.getNodeId(),
+                hiddenSource.getNodeId()
+        );
+
+        assertThatThrownBy(() -> graphQueryService.getMergedSources(
+                fixture.projectId(),
+                pendingTarget.getNodeId(),
+                OWNER_ID
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting(error -> ((CustomException) error).getErrorCode())
+                .isEqualTo(GraphQueryErrorCode.NODE_NOT_FOUND);
+
+        GraphMergedSourcesResponse response = graphQueryService.getMergedSources(
+                fixture.projectId(),
+                visibleTarget.getNodeId(),
+                OWNER_ID
+        );
+        assertThat(response.items())
+                .extracting(item -> item.nodeId())
+                .containsExactly(visibleSource.getNodeId())
+                .doesNotContain(hiddenSource.getNodeId());
+    }
+
+    @Test
+    void pendingUnattachedNodeIsExcludedFromPageAndVisibleCount() {
+        Fixture fixture = fixture(true);
+        ProjectNodeProjection visible = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "10000000-0000-0000-0000-000000000000",
+                null,
+                null,
+                GraphNodeType.DECISION,
+                GraphNodeCategory.BACKEND,
+                GraphNodeState.UNATTACHED,
+                1
+        );
+        ProjectNodeProjection hidden = saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "20000000-0000-0000-0000-000000000000",
+                null,
+                null,
+                GraphNodeType.DECISION,
+                GraphNodeCategory.BACKEND,
+                GraphNodeState.UNATTACHED,
+                2
+        );
+        saveDeleteCommand(
+                fixture.projectId(),
+                NodeDeleteCommandStatus.PENDING,
+                hidden.getNodeId(),
+                null
+        );
+
+        GraphNodePageResponse response = graphQueryService.getUnattachedNodes(
+                fixture.projectId(),
+                OWNER_ID,
+                "UNATTACHED",
+                0,
+                20
+        );
+
+        assertThat(response.totalElements()).isEqualTo(1);
+        assertThat(response.totalPages()).isEqualTo(1);
+        assertThat(response.items())
+                .extracting(item -> item.nodeId())
+                .containsExactly(visible.getNodeId());
+    }
+
+    @Test
+    void veryLargeUnattachedPageReturnsEmptyContentWithoutOffsetOverflow() {
+        Fixture fixture = fixture(true);
+        saveNode(
+                fixture.projectId(),
+                fixture.meetingId(),
+                "10000000-0000-0000-0000-000000000000",
+                null,
+                null,
+                GraphNodeType.DECISION,
+                GraphNodeCategory.BACKEND,
+                GraphNodeState.UNATTACHED,
+                1
+        );
+
+        GraphNodePageResponse response = graphQueryService.getUnattachedNodes(
+                fixture.projectId(),
+                OWNER_ID,
+                "UNATTACHED",
+                Integer.MAX_VALUE,
+                20
+        );
+
+        assertThat(response.items()).isEmpty();
+        assertThat(response.totalElements()).isEqualTo(1);
+    }
+
     private Fixture fixture(boolean withGraphSync) {
         Project project = Project.builder().title("query-project").content("content").build();
         ProjectMember owner = ProjectMember.createMember(OWNER_ID, ProjectRole.OWNER);
@@ -319,6 +627,74 @@ class GraphQueryServiceIntegrationTest extends IntegrationTestSupport {
         evidenceRepository.saveAndFlush(NodeEvidenceProjection.from(new ProjectGraphSnapshotEvidence(
                 evidenceId, nodeId, 1, quote, null, null, null, order
         ), now));
+    }
+
+    private void saveDeleteCommand(
+            int projectId,
+            NodeDeleteCommandStatus status,
+            String requestedNodeId,
+            String mergedSourceNodeId
+    ) {
+        LocalDateTime requestedAt = LocalDateTime.of(2026, 8, 7, 10, 0);
+        NodeDeleteCommand command = NodeDeleteCommand.pending(
+                UUID.randomUUID(),
+                projectId,
+                5,
+                OWNER_ID,
+                1,
+                mergedSourceNodeId == null ? 0 : 1,
+                requestedAt
+        );
+        if (status == NodeDeleteCommandStatus.REJECTED) {
+            command.markRejected(
+                    UUID.randomUUID(),
+                    "NODE_NOT_FOUND",
+                    requestedAt.plusSeconds(1)
+            );
+        } else if (status == NodeDeleteCommandStatus.FAILED) {
+            command.markFailed(
+                    "COMMAND_PUBLISH_FAILED",
+                    requestedAt.plusSeconds(1)
+            );
+        }
+        command = nodeDeleteCommandRepository.saveAndFlush(command);
+        List<NodeDeleteCommandItem> items = new java.util.ArrayList<>();
+        items.add(NodeDeleteCommandItem.requested(
+                command,
+                requestedNodeId,
+                1,
+                requestedAt
+        ));
+        if (mergedSourceNodeId != null) {
+            items.add(NodeDeleteCommandItem.mergedSource(
+                    command,
+                    mergedSourceNodeId,
+                    1,
+                    requestedAt
+            ));
+        }
+        nodeDeleteCommandItemRepository.saveAllAndFlush(items);
+    }
+
+    /**
+     * Category Root는 GraphNodeCategory 전체를 enum 선언 순서대로 하나씩 노출한다.
+     * ETC처럼 제거된 Category가 되살아나거나 개수가 어긋나면 실패한다.
+     */
+    private void assertCategoryRoots(List<GraphTreeNodeResponse> categoryRoots) {
+        assertThat(categoryRoots)
+                .hasSize(GraphNodeCategory.values().length)
+                .extracting(GraphTreeNodeResponse::category)
+                .containsExactly(
+                        GraphNodeCategory.BACKEND,
+                        GraphNodeCategory.FRONTEND,
+                        GraphNodeCategory.DESIGN,
+                        GraphNodeCategory.INFRA,
+                        GraphNodeCategory.PLANNING,
+                        GraphNodeCategory.AI
+                );
+        assertThat(categoryRoots)
+                .extracting(GraphTreeNodeResponse::kind)
+                .containsOnly(GraphTreeNodeKind.CATEGORY_ROOT);
     }
 
     private void assertProjectParticipantError(Runnable action) {

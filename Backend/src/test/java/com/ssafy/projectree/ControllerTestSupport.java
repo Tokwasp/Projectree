@@ -12,6 +12,8 @@ import com.ssafy.projectree.domain.meeting.result.graph.query.GraphQueryControll
 import com.ssafy.projectree.domain.meeting.result.graph.query.GraphQueryService;
 import com.ssafy.projectree.domain.meeting.result.graph.command.GraphNodeCommandController;
 import com.ssafy.projectree.domain.meeting.result.graph.command.GraphNodeUpdateService;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.GraphNodeDeleteService;
+import com.ssafy.projectree.domain.meeting.result.graph.delete.GraphNodeDeleteStatusService;
 import com.ssafy.projectree.domain.meeting.service.MeetingAnalysisRequestService;
 import com.ssafy.projectree.domain.nodeCategory.controller.NodeCategoryController;
 import com.ssafy.projectree.domain.nodeCategory.service.NodeCategoryService;
@@ -81,6 +83,12 @@ public abstract class ControllerTestSupport {
 
     @MockitoBean
     protected GraphNodeUpdateService graphNodeUpdateService;
+
+    @MockitoBean
+    protected GraphNodeDeleteService graphNodeDeleteService;
+
+    @MockitoBean
+    protected GraphNodeDeleteStatusService graphNodeDeleteStatusService;
 
     @MockitoBean
     protected NotificationService notificationService;
