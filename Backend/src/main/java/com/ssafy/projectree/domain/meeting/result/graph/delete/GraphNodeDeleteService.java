@@ -64,7 +64,9 @@ public class GraphNodeDeleteService {
             GraphNodeDeleteRequest request
     ) {
         validateBasic(projectId, memberId, request);
-        validateProjectAccess(projectId, memberId);
+        projectRepository.findByIdForUpdate(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
+        validateProjectMember(projectId, memberId);
 
         LinkedHashSet<String> requestedIds = new LinkedHashSet<>(request.nodeIds());
         if (requestedIds.size() != request.nodeIds().size()) {
@@ -171,10 +173,7 @@ public class GraphNodeDeleteService {
         }
     }
 
-    private void validateProjectAccess(int projectId, int memberId) {
-        if (!projectRepository.existsById(projectId)) {
-            throw new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND);
-        }
+    private void validateProjectMember(int projectId, int memberId) {
         if (!projectMemberRepository.existsByProjectIdAndMemberId(projectId, memberId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND);
         }

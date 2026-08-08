@@ -19,6 +19,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 // 테스트 컨벤션의 기준인 Mockito 목 기반 서비스 테스트.
 // ProjectServiceTest 는 아직 @SpringBootTest 기반이라 한 클래스에 두 방식을 섞을 수 없어 분리했다.
@@ -39,12 +40,15 @@ class ProjectServiceUnitTest {
     @Mock
     private MemberRepository memberRepository;
 
+    @Mock
+    private ProjectDeletionService projectDeletionService;
+
     @DisplayName("MEMBER가 탈퇴하면 참여 멤버 목록에서 자신만 제거된다.")
     @Test
     void leaveProject() {
         // given
         Project project = createProjectWithOwnerAndMember();
-        given(projectRepository.findById(PROJECT_ID)).willReturn(Optional.of(project));
+        given(projectRepository.findByIdForUpdate(PROJECT_ID)).willReturn(Optional.of(project));
 
         // when
         projectService.leaveProject(PROJECT_ID, MEMBER_ID);
@@ -60,7 +64,7 @@ class ProjectServiceUnitTest {
     void leaveProject_notParticipating() {
         // given
         Project project = createProjectWithOwnerAndMember();
-        given(projectRepository.findById(PROJECT_ID)).willReturn(Optional.of(project));
+        given(projectRepository.findByIdForUpdate(PROJECT_ID)).willReturn(Optional.of(project));
 
         // when // then
         assertThatThrownBy(() -> projectService.leaveProject(PROJECT_ID, 999))
@@ -73,13 +77,24 @@ class ProjectServiceUnitTest {
     @Test
     void leaveProject_projectNotFound() {
         // given
-        given(projectRepository.findById(999)).willReturn(Optional.empty());
+        given(projectRepository.findByIdForUpdate(999)).willReturn(Optional.empty());
 
         // when // then
         assertThatThrownBy(() -> projectService.leaveProject(999, MEMBER_ID))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    @DisplayName("OWNER 탈퇴는 공통 프로젝트 aggregate 삭제 서비스를 사용한다.")
+    @Test
+    void leaveProject_byOwner_delegatesAggregateDeletion() {
+        Project project = createProjectWithOwnerAndMember();
+        given(projectRepository.findByIdForUpdate(PROJECT_ID)).willReturn(Optional.of(project));
+
+        projectService.leaveProject(PROJECT_ID, OWNER_ID);
+
+        verify(projectDeletionService).deleteProjectAggregate(PROJECT_ID);
     }
 
     private Project createProjectWithOwnerAndMember() {

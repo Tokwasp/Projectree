@@ -11,14 +11,17 @@ import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOp
 import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationErrorCode;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectNodeProjection;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectNodeProjectionRepository;
+import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.exception.CustomException;
+import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
@@ -36,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
@@ -82,7 +86,7 @@ class GraphNodeUpdateServiceTest {
         String nodeId = UUID.randomUUID().toString();
         ProjectNodeProjection projection = mock(ProjectNodeProjection.class);
         when(projection.getSourceNodeVersion()).thenReturn(3L);
-        when(projectRepository.existsById(1)).thenReturn(true);
+        when(projectRepository.findByIdForUpdate(1)).thenReturn(Optional.of(mock(Project.class)));
         when(memberRepository.existsByProjectIdAndMemberId(1, 15)).thenReturn(true);
         when(nodeRepository.findByNodeIdAndProjectId(nodeId, 1)).thenReturn(Optional.of(projection));
         when(objectMapper.writeValueAsString(any(NodeContentUpdateRequestedCommand.class)))
@@ -123,6 +127,10 @@ class GraphNodeUpdateServiceTest {
         assertThat(commandCaptor.getValue().payload().title()).isEqualTo("SENSITIVE_NODE_TITLE");
         assertThat(commandCaptor.getValue().payload().content()).isNull();
 
+        InOrder lockOrder = inOrder(projectRepository, nodeRepository);
+        lockOrder.verify(projectRepository).findByIdForUpdate(1);
+        lockOrder.verify(nodeRepository).findByNodeIdAndProjectId(nodeId, 1);
+
         assertThat(stagedLogs()).singleElement().satisfies(message -> {
             assertThat(message)
                     .contains("commandId=" + response.commandId())
@@ -143,7 +151,7 @@ class GraphNodeUpdateServiceTest {
         String nodeId = UUID.randomUUID().toString();
         ProjectNodeProjection projection = mock(ProjectNodeProjection.class);
         when(projection.getSourceNodeVersion()).thenReturn(3L);
-        when(projectRepository.existsById(1)).thenReturn(true);
+        when(projectRepository.findByIdForUpdate(1)).thenReturn(Optional.of(mock(Project.class)));
         when(memberRepository.existsByProjectIdAndMemberId(1, 15)).thenReturn(true);
         when(nodeRepository.findByNodeIdAndProjectId(nodeId, 1))
                 .thenReturn(Optional.of(projection));
@@ -174,7 +182,7 @@ class GraphNodeUpdateServiceTest {
         String nodeId = UUID.randomUUID().toString();
         ProjectNodeProjection projection = mock(ProjectNodeProjection.class);
         when(projection.getSourceNodeVersion()).thenReturn(3L);
-        when(projectRepository.existsById(1)).thenReturn(true);
+        when(projectRepository.findByIdForUpdate(1)).thenReturn(Optional.of(mock(Project.class)));
         when(memberRepository.existsByProjectIdAndMemberId(1, 15)).thenReturn(true);
         when(nodeRepository.findByNodeIdAndProjectId(nodeId, 1)).thenReturn(Optional.of(projection));
         when(objectMapper.writeValueAsString(any(NodeContentUpdateRequestedCommand.class)))
@@ -208,7 +216,7 @@ class GraphNodeUpdateServiceTest {
         String nodeId = UUID.randomUUID().toString();
         ProjectNodeProjection projection = mock(ProjectNodeProjection.class);
         when(projection.getSourceNodeVersion()).thenReturn(4L);
-        when(projectRepository.existsById(1)).thenReturn(true);
+        when(projectRepository.findByIdForUpdate(1)).thenReturn(Optional.of(mock(Project.class)));
         when(memberRepository.existsByProjectIdAndMemberId(1, 15)).thenReturn(true);
         when(nodeRepository.findByNodeIdAndProjectId(nodeId, 1)).thenReturn(Optional.of(projection));
 
@@ -226,7 +234,7 @@ class GraphNodeUpdateServiceTest {
         String nodeId = UUID.randomUUID().toString();
         ProjectNodeProjection projection = mock(ProjectNodeProjection.class);
         when(projection.getSourceNodeVersion()).thenReturn(3L);
-        when(projectRepository.existsById(1)).thenReturn(true);
+        when(projectRepository.findByIdForUpdate(1)).thenReturn(Optional.of(mock(Project.class)));
         when(memberRepository.existsByProjectIdAndMemberId(1, 15)).thenReturn(true);
         when(nodeRepository.findByNodeIdAndProjectId(nodeId, 1)).thenReturn(Optional.of(projection));
         when(objectMapper.writeValueAsString(any(NodeContentUpdateRequestedCommand.class)))
@@ -239,6 +247,24 @@ class GraphNodeUpdateServiceTest {
         )).isInstanceOf(IllegalStateException.class);
 
         assertThat(stagedLogs()).isEmpty();
+    }
+
+    @Test
+    void rejectsMissingProjectBeforeNodeLookup() {
+        when(projectRepository.findByIdForUpdate(1)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.update(
+                1,
+                UUID.randomUUID().toString(),
+                15,
+                new NodeContentUpdateRequest("title", null, 3L)
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
+
+        verify(nodeRepository, never()).findByNodeIdAndProjectId(any(), any(Integer.class));
+        verify(outboxRepository, never()).saveAndFlush(any());
     }
 
     private java.util.List<String> stagedLogs() {

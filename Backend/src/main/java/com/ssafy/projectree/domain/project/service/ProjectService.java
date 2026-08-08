@@ -1,7 +1,6 @@
 package com.ssafy.projectree.domain.project.service;
 
 import com.ssafy.projectree.domain.meeting.record.repository.MeetingRecordRepository;
-import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meetingreview.MeetingReview;
@@ -46,8 +45,8 @@ public class ProjectService {
     private final ProjectMemberRepository projectMemberRepository;
     private final MeetingReviewRepository meetingReviewRepository;
     private final ProjectGraphSyncRepository projectGraphSyncRepository;
-    private final ProjectGraphOperationGuard projectGraphOperationGuard;
     private final MeetingRecordRepository meetingRecordRepository;
+    private final ProjectDeletionService projectDeletionService;
 
     @Transactional
     public int createProject(ProjectCreateRequest request, int memberId) {
@@ -100,37 +99,31 @@ public class ProjectService {
 
     @Transactional
     public void deleteProject(int projectId, int memberId) {
-        Project project = projectRepository.findById(projectId)
+        Project project = projectRepository.findByIdForUpdate(projectId)
                 .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
 
         if (project.isNotOwner(memberId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_DELETE_FORBIDDEN);
         }
 
-        deleteProjectAggregate(projectId);
+        projectDeletionService.deleteProjectAggregate(projectId);
     }
 
     @Transactional
     public void leaveProject(int projectId, int memberId) {
-        Project project = findProject(projectId);
+        Project project = projectRepository.findByIdForUpdate(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
 
         if (project.isNotParticipant(memberId)) {
             throw new CustomException(ProjectErrorCode.PROJECT_PARTICIPANT_NOT_FOUND);
         }
 
         if (project.isOwner(memberId)) {
-            deleteProjectAggregate(projectId);
+            projectDeletionService.deleteProjectAggregate(projectId);
             return;
         }
 
         project.removeMember(memberId);
-    }
-
-    private void deleteProjectAggregate(int projectId) {
-        projectGraphOperationGuard.assertNoActiveOperation(projectId);
-        projectMemberRepository.deleteByProjectId(projectId);
-        projectGraphSyncRepository.deleteById(projectId);
-        projectRepository.deleteById(projectId);
     }
 
     public List<ProjectMemberResponse> getProjectMembers(int projectId, int memberId) {

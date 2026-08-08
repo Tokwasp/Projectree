@@ -5,6 +5,7 @@ import com.ssafy.projectree.domain.meeting.result.graph.delete.entity.NodeDelete
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -29,4 +30,8 @@ public interface NodeDeleteCommandRepository extends JpaRepository<NodeDeleteCom
     );
 
     boolean existsByProjectIdAndStatus(int projectId, NodeDeleteCommandStatus status);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from NodeDeleteCommand command where command.projectId = :projectId")
+    void deleteAllByProjectId(@Param("projectId") int projectId);
 }

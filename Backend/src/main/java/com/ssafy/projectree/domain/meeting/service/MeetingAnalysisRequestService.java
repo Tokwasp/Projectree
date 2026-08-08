@@ -11,9 +11,11 @@ import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisComm
 import com.ssafy.projectree.domain.meeting.repository.MeetingRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
+import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.global.exception.CommonErrorCode;
 import com.ssafy.projectree.global.exception.CustomException;
+import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ import java.util.UUID;
 public class MeetingAnalysisRequestService {
 
     private final MeetingRepository meetingRepository;
+    private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final MeetingAnalysisCommandOutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
@@ -47,6 +50,9 @@ public class MeetingAnalysisRequestService {
     ) {
         validateRequest(projectId, request);
         String canonicalRoomName = canonicalizeRoomName(roomName);
+
+        projectRepository.findByIdForUpdate(projectId)
+                .orElseThrow(() -> new CustomException(ProjectErrorCode.PROJECT_NOT_FOUND));
 
         Meeting meeting = meetingRepository
                 .findByProjectIdAndRoomNameForUpdate(projectId, canonicalRoomName)

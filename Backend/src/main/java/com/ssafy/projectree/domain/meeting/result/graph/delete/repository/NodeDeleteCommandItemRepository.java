@@ -3,6 +3,7 @@ package com.ssafy.projectree.domain.meeting.result.graph.delete.repository;
 import com.ssafy.projectree.domain.meeting.result.graph.delete.NodeDeleteItemType;
 import com.ssafy.projectree.domain.meeting.result.graph.delete.entity.NodeDeleteCommandItem;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -55,4 +56,11 @@ public interface NodeDeleteCommandItemRepository
             String commandId,
             NodeDeleteItemType itemType
     );
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            delete from NodeDeleteCommandItem item
+            where item.command.projectId = :projectId
+            """)
+    void deleteAllByProjectId(@Param("projectId") int projectId);
 }

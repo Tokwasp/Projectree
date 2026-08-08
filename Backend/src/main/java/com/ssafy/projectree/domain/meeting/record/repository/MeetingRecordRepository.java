@@ -4,6 +4,7 @@ import com.ssafy.projectree.domain.meeting.record.entity.MeetingRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -38,6 +39,12 @@ public interface MeetingRecordRepository extends JpaRepository<MeetingRecord, Lo
     boolean existsByMeetingId(int meetingId);
 
     boolean existsByCommandId(String commandId);
+
+    List<MeetingRecord> findByMeetingIdIn(List<Integer> meetingIdList);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from MeetingRecord record where record.meeting.project.id = :projectId")
+    void deleteAllByProjectId(@Param("projectId") int projectId);
 
     @Query("""
         select r

@@ -145,6 +145,15 @@ class MeetingRoomRedisReaderTest {
         assertThatThrownBy(reader::findAll).isSameAs(failure);
     }
 
+    @Test
+    void checksOnlyTheRequestedProjectRoomKey() {
+        when(redisTemplate.hasKey(PREFIX + "5")).thenReturn(true);
+
+        assertThat(reader.existsByProjectId(5)).isTrue();
+
+        verify(redisTemplate).hasKey(PREFIX + "5");
+    }
+
     @SuppressWarnings("unchecked")
     private void stubScan() {
         when(redisTemplate.execute(any(RedisCallback.class))).thenAnswer(invocation -> {

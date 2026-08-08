@@ -15,8 +15,10 @@ import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
+import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.exception.CommonErrorCode;
 import com.ssafy.projectree.global.exception.CustomException;
+import com.ssafy.projectree.global.exception.ProjectErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -40,6 +43,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
@@ -54,6 +59,9 @@ class MeetingAnalysisRequestServiceTest {
 
     @Mock
     private MeetingRepository meetingRepository;
+
+    @Mock
+    private ProjectRepository projectRepository;
 
     @Mock
     private ProjectMemberRepository projectMemberRepository;
@@ -73,6 +81,7 @@ class MeetingAnalysisRequestServiceTest {
     void setUp() {
         service = new MeetingAnalysisRequestService(
                 meetingRepository,
+                projectRepository,
                 projectMemberRepository,
                 outboxRepository,
                 objectMapper,
@@ -82,6 +91,8 @@ class MeetingAnalysisRequestServiceTest {
                 ),
                 graphOperationGuard
         );
+        lenient().when(projectRepository.findByIdForUpdate(PROJECT_ID))
+                .thenReturn(Optional.of(mock(Project.class)));
     }
 
     @DisplayName("??媛吏 ?듭뀡 議고빀???뺤젙?섍퀬 PENDING Outbox瑜???ν븳??")
@@ -146,6 +157,11 @@ class MeetingAnalysisRequestServiceTest {
         assertThat(outbox.getPublishedAt()).isNull();
         assertThat(outbox.getLastError()).isNull();
         assertThat(outbox.getCommandId()).isEqualTo(response.commandId().toString());
+
+        InOrder lockOrder = inOrder(projectRepository, meetingRepository);
+        lockOrder.verify(projectRepository).findByIdForUpdate(PROJECT_ID);
+        lockOrder.verify(meetingRepository)
+                .findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME);
     }
 
     @Test
@@ -295,6 +311,7 @@ class MeetingAnalysisRequestServiceTest {
         );
         verify(meetingRepository, never())
                 .findByProjectIdAndRoomNameForUpdate(any(Integer.class), any());
+        verify(projectRepository, never()).findByIdForUpdate(any(Integer.class));
     }
 
     @Test
@@ -331,6 +348,22 @@ class MeetingAnalysisRequestServiceTest {
                 ),
                 MeetingErrorCode.OUTBOX_SERIALIZATION_FAILED
         );
+        verify(outboxRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void projectNotFoundBeforeMeetingLock() {
+        when(projectRepository.findByIdForUpdate(PROJECT_ID)).thenReturn(Optional.empty());
+
+        assertError(
+                () -> service.requestAnalysis(
+                        PROJECT_ID, ROOM_NAME, MEMBER_ID, new MeetingAnalysisRequest(true, false)
+                ),
+                ProjectErrorCode.PROJECT_NOT_FOUND
+        );
+
+        verify(meetingRepository, never())
+                .findByProjectIdAndRoomNameForUpdate(any(Integer.class), any());
         verify(outboxRepository, never()).saveAndFlush(any());
     }
 
