@@ -10,6 +10,9 @@ import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.global.config.JpaAuditingConfig;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.hibernate.Hibernate;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +27,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 @ActiveProfiles("test")
 @Import(JpaAuditingConfig.class)
@@ -135,6 +139,42 @@ class MeetingRecordRepositoryTest {
         assertThat(found).hasSize(2)
                 .extracting(MeetingRecord::getTitle)
                 .containsExactlyInAnyOrder("첫 번째 회의록", "두 번째 회의록");
+    }
+
+    @DisplayName("meetingId 목록으로 회의록을 조회하면 Meeting을 fetch join 해 쿼리 한 번으로 회의 정보까지 읽는다.")
+    @Test
+    void findByMeetingIdInFetchesMeeting() {
+        // given
+        Project project = saveProject();
+        Meeting first = saveMeeting(project, ROOM_NAME);
+        Meeting second = saveMeeting(project, OTHER_ROOM_NAME);
+        saveMeetingRecord(first, "첫 번째 회의록");
+        saveMeetingRecord(second, "두 번째 회의록");
+        entityManager.clear();
+
+        Statistics statistics = entityManager.getEntityManagerFactory()
+                .unwrap(SessionFactory.class)
+                .getStatistics();
+        statistics.setStatisticsEnabled(true);
+        statistics.clear();
+
+        // when
+        List<MeetingRecord> found =
+                meetingRecordRepository.findByMeetingIdIn(List.of(first.getId(), second.getId()));
+
+        // then
+        assertThat(found).hasSize(2)
+                .allSatisfy(record -> assertThat(Hibernate.isInitialized(record.getMeeting())).isTrue())
+                .extracting(
+                        MeetingRecord::getTitle,
+                        record -> record.getMeeting().getId(),
+                        record -> record.getMeeting().getRoomName()
+                )
+                .containsExactlyInAnyOrder(
+                        tuple("첫 번째 회의록", first.getId(), ROOM_NAME),
+                        tuple("두 번째 회의록", second.getId(), OTHER_ROOM_NAME)
+                );
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(1);
     }
 
     @DisplayName("commandId로 회의록 존재 여부와 엔티티를 조회한다.")

@@ -780,8 +780,8 @@ class ProjectServiceTest extends IntegrationTestSupport {
         String content = "React로 만든 개인 포트폴리오입니다.";
         int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
 
-        saveMeetingRecord(projectId, "1회차 회의록");
-        saveMeetingRecord(projectId, "2회차 회의록");
+        int firstMeetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        int secondMeetingId = saveMeetingRecord(projectId, "2회차 회의록");
         flushAndClear();
 
         // when
@@ -794,8 +794,11 @@ class ProjectServiceTest extends IntegrationTestSupport {
                 .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 1);
 
         assertThat(response.getMeetingRecordList()).hasSize(2)
-                .extracting("name")
-                .containsExactly("2회차 회의록", "1회차 회의록");
+                .extracting("meetingId", "name")
+                .containsExactly(
+                        tuple(secondMeetingId, "2회차 회의록"),
+                        tuple(firstMeetingId, "1회차 회의록")
+                );
 
         assertThat(response.getPersonalSpeakingList()).isEmpty();
         assertThat(response.getMyReview()).isNull();
@@ -813,9 +816,9 @@ class ProjectServiceTest extends IntegrationTestSupport {
         int projectId = createProjectOwnedBy(owner, projectTitle, content, 1);
         joinAsMember(projectId, member);
 
-        saveMeetingRecord(projectId, "1회차 회의록");
-        saveMeetingRecord(projectId, "2회차 회의록");
-        saveMeetingRecord(projectId, "3회차 회의록");
+        int firstMeetingId = saveMeetingRecord(projectId, "1회차 회의록");
+        int secondMeetingId = saveMeetingRecord(projectId, "2회차 회의록");
+        int thirdMeetingId = saveMeetingRecord(projectId, "3회차 회의록");
 
         String roomName = "room-" + projectId;
         saveMeetingReview(roomName, projectId, owner.getId(), 70,
@@ -833,8 +836,12 @@ class ProjectServiceTest extends IntegrationTestSupport {
                 .containsExactly("포트폴리오 사이트", "React로 만든 개인 포트폴리오입니다.", 2);
 
         assertThat(response.getMeetingRecordList()).hasSize(3)
-                .extracting("name")
-                .containsExactly("3회차 회의록", "2회차 회의록", "1회차 회의록");
+                .extracting("meetingId", "name")
+                .containsExactly(
+                        tuple(thirdMeetingId, "3회차 회의록"),
+                        tuple(secondMeetingId, "2회차 회의록"),
+                        tuple(firstMeetingId, "1회차 회의록")
+                );
 
         assertThat(response.getMyReview())
                 .extracting("speedFeedback", "personalFeedback", "overallFeedback")
@@ -894,13 +901,14 @@ class ProjectServiceTest extends IntegrationTestSupport {
         entityManager.clear();
     }
 
-    private void saveMeetingRecord(int projectId, String title) {
+    private int saveMeetingRecord(int projectId, String title) {
         Project project = projectRepository.findById(projectId).orElseThrow();
         Meeting meeting = meetingRepository.save(
                 Meeting.create(project, project.getProjectMembers().get(0), UUID.randomUUID().toString()));
 
         meetingRecordRepository.save(
                 MeetingRecord.create(meeting, UUID.randomUUID(), title, null, null, null, null));
+        return meeting.getId();
     }
 
     private void saveMeetingReview(String roomName, int projectId, int memberId, int speakingSeconds,
