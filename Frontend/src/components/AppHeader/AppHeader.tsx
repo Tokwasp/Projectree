@@ -21,15 +21,6 @@ export default function AppHeader({ startContent }: AppHeaderProps) {
         <div className={style.startContent}>{startContent}</div>
       )}
 
-      <div className={style.searchArea}>
-        <input
-          className={style.searchInput}
-          type="search"
-          placeholder="프로젝트 검색..."
-          aria-label="프로젝트 검색"
-        />
-      </div>
-
       <div className={style.actions}>
         <NotificationMenu />
 
