@@ -16,6 +16,7 @@ import PrivateLayout from "./layout/PrivateLayout";
 import ProjectMeeting from "./page/Project/Meeting/ui/ProjectMeeting";
 import ProjectTree from "./page/Project/Tree/ui/ProjectTree";
 import MeetingRecordList from "./page/Project/MeetingRecord/ui/MeetingRecordList";
+import MeetingRecordDetail from "./page/Project/MeetingRecord/ui/MeetingRecordDetail";
 import MeetingOverlay from "./page/Project/Meeting/components/MeetingOverlay/MeetingOverlay";
 import ToastViewport from "./components/Toast/ToastViewport";
 
@@ -43,6 +44,10 @@ function App() {
             <Route path="members" element={<ProjectMember />} />
             <Route path="meeting" element={<ProjectMeeting />} />
             <Route path="meetings/records" element={<MeetingRecordList />} />
+            <Route
+              path="meetings/:meetingId/record"
+              element={<MeetingRecordDetail />}
+            />
             <Route path="tree" element={<ProjectTree />} />
           </Route>
         </Route>

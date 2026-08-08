@@ -26,3 +26,29 @@ export const getMeetingRecords = (
   apiRequest<MeetingRecordPageResponse>(
     `/projects/${projectId}/meetings/records?page=${page}&size=${size}`,
   );
+
+export interface MeetingRecordDetailResponse {
+  meetingRecordId: number;
+  projectId: number;
+  meetingId: number;
+  title: string;
+  meetingDate: string;
+  startedAt: string;
+  endedAt: string;
+  durationMinutes: number;
+  summary: string[];
+  decisions: string[];
+  nextTodos: string[];
+  issues: string[];
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const getMeetingRecordDetail = (
+  projectId: number,
+  meetingId: number,
+): Promise<MeetingRecordDetailResponse> =>
+  apiRequest<MeetingRecordDetailResponse>(
+    `/projects/${projectId}/meetings/${meetingId}/record`,
+  );
