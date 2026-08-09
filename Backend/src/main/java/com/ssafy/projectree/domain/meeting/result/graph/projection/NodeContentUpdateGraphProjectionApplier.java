@@ -1,13 +1,16 @@
 package com.ssafy.projectree.domain.meeting.result.graph.projection;
 
 import com.ssafy.projectree.domain.meeting.command.MeetingAnalysisCommandType;
-import com.ssafy.projectree.domain.meeting.command.NodeContentUpdateRequestedCommand;
+import com.ssafy.projectree.domain.meeting.command.NodeContentBatchUpdateRequestedCommand;
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandOutbox;
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventEnvelope;
 import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContractException;
 import com.ssafy.projectree.domain.meeting.result.graph.event.GraphResultSourceType;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayload;
+import com.ssafy.projectree.domain.meeting.result.graph.command.NodeContentUpdateCommandPayloadParser;
+import com.ssafy.projectree.domain.meeting.result.graph.command.NodeContentUpdateCommandPayloadParser.ParsedCommand;
+import com.ssafy.projectree.domain.meeting.result.graph.command.NodeContentUpdateCommandPayloadParser.RequestedNodeUpdate;
 import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
@@ -19,11 +22,12 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -57,9 +61,8 @@ public class NodeContentUpdateGraphProjectionApplier {
                 .orElseThrow(() -> contract("Analysis result project does not exist"));
         MeetingAnalysisCommandOutbox command = commandRepository.findByCommandId(event.commandId())
                 .orElseThrow(() -> contract("Analysis result command does not exist"));
-        validateCommand(event, command);
-        NodeContentUpdateRequestedCommand commandPayload = parseCommandPayload(command);
-        validateCommandPayload(event, command, commandPayload);
+        ParsedCommand commandPayload = new NodeContentUpdateCommandPayloadParser(objectMapper)
+                .parse(event, command);
 
         ProjectGraphSync sync = graphSyncRepository.findByProjectIdForUpdate(event.projectId())
                 .orElseThrow(() -> new IllegalStateException(
@@ -67,9 +70,25 @@ public class NodeContentUpdateGraphProjectionApplier {
                 ));
         resultInboxService.registerProcessed(event);
 
-        boolean projectionUpdated = payload.graphVersion() > sync.getCurrentGraphVersion();
+        boolean projectionUpdated;
+        boolean alreadyApplied;
+        if (commandPayload.schemaVersion()
+                == NodeContentBatchUpdateRequestedCommand.CURRENT_SCHEMA_VERSION) {
+            alreadyApplied = isV2AlreadyApplied(event, payload, sync);
+            if (alreadyApplied) {
+                projectionUpdated = false;
+            } else {
+                validateFreshV2Result(event, payload, sync);
+                projectionUpdated = true;
+            }
+        } else {
+            projectionUpdated = payload.graphVersion() > sync.getCurrentGraphVersion();
+            alreadyApplied = !projectionUpdated
+                    && !sync.hasActiveCommand()
+                    && event.commandId().equals(sync.getLastCommandId());
+        }
         if (projectionUpdated) {
-            validateUpdatedNode(command, commandPayload, snapshot);
+            validateUpdatedNodes(commandPayload, snapshot);
             Instant syncedAt = Instant.now(clock);
             entityManager.flush();
             entityManager.clear();
@@ -85,9 +104,6 @@ public class NodeContentUpdateGraphProjectionApplier {
                 event.commandId(),
                 "GRAPH_PROJECTION_APPLIED"
         );
-        boolean alreadyApplied = !projectionUpdated
-                && !sync.hasActiveCommand()
-                && event.commandId().equals(sync.getLastCommandId());
         if (!released && !alreadyApplied) {
             throw contract(
                     "Node content update result does not own the active graph operation"
@@ -101,88 +117,79 @@ public class NodeContentUpdateGraphProjectionApplier {
         );
     }
 
-    private void validateCommand(
+    private void validateFreshV2Result(
             AnalysisResultEventEnvelope event,
-            MeetingAnalysisCommandOutbox command
+            ProjectGraphChangedPayload payload,
+            ProjectGraphSync sync
     ) {
-        if (command.getCommandType() != MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED) {
-            throw contract("Graph result sourceType and command type do not match");
-        }
-        if (command.getMeeting() != null) {
-            throw contract("Node content update command meeting must be null");
-        }
-        if (command.getTargetProjectId() == null
-                || !command.getTargetProjectId().equals(event.projectId())) {
-            throw contract("Node content update command project does not match");
-        }
-        if (command.getTargetNodeId() == null || command.getTargetNodeId().isBlank()) {
-            throw contract("Node content update command target node is missing");
-        }
-    }
-
-    private NodeContentUpdateRequestedCommand parseCommandPayload(
-            MeetingAnalysisCommandOutbox command
-    ) {
-        try {
-            return objectMapper.readValue(
-                    command.getPayload(),
-                    NodeContentUpdateRequestedCommand.class
+        if (!sync.hasActiveCommand()
+                || !event.commandId().equals(sync.getActiveCommandId())
+                || sync.getActiveCommandType()
+                != MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED) {
+            throw contract(
+                    "Node content update V2 result does not own the active graph operation"
             );
-        } catch (JacksonException exception) {
-            throw contract("Node content update command payload is invalid");
+        }
+
+        long expectedGraphVersion;
+        try {
+            expectedGraphVersion = Math.addExact(sync.getCurrentGraphVersion(), 1L);
+        } catch (ArithmeticException exception) {
+            throw contract("Node content update graph version cannot advance");
+        }
+        if (payload.graphVersion() != expectedGraphVersion) {
+            throw contract(
+                    "Node content update V2 result graphVersion must advance exactly once"
+            );
         }
     }
 
-    private void validateCommandPayload(
+    private boolean isV2AlreadyApplied(
             AnalysisResultEventEnvelope event,
-            MeetingAnalysisCommandOutbox command,
-            NodeContentUpdateRequestedCommand commandPayload
+            ProjectGraphChangedPayload payload,
+            ProjectGraphSync sync
     ) {
-        if (commandPayload == null
-                || commandPayload.commandSchemaVersion()
-                != NodeContentUpdateRequestedCommand.CURRENT_SCHEMA_VERSION
-                || commandPayload.commandId() == null
-                || !command.getCommandId().equals(commandPayload.commandId().toString())
-                || commandPayload.commandType()
-                != MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED
-                || commandPayload.projectId() != event.projectId()
-                || commandPayload.requestedAt() == null
-                || commandPayload.payload() == null) {
-            throw contract("Node content update command envelope does not match");
-        }
+        return !sync.hasActiveCommand()
+                && event.commandId().equals(sync.getLastCommandId())
+                && payload.graphVersion() == sync.getCurrentGraphVersion();
+    }
 
-        NodeContentUpdateRequestedCommand.Payload requested = commandPayload.payload();
-        if (!command.getTargetNodeId().equals(requested.nodeId())) {
-            throw contract("Node content update command target node does not match");
+    private void validateUpdatedNodes(
+            ParsedCommand commandPayload,
+            ProjectGraphSnapshot snapshot
+    ) {
+        Map<String, ProjectGraphSnapshotNode> snapshotNodesById = new HashMap<>();
+        for (ProjectGraphSnapshotNode snapshotNode : snapshot.nodes()) {
+            snapshotNodesById.put(snapshotNode.nodeId(), snapshotNode);
         }
-        if (requested.expectedNodeVersion() <= 0
-                || requested.requestedByMemberId() <= 0
-                || (requested.title() == null && requested.content() == null)) {
-            throw contract("Node content update command payload fields are invalid");
+        for (RequestedNodeUpdate requestedNode : commandPayload.requestedNodes()) {
+            ProjectGraphSnapshotNode updatedNode = snapshotNodesById.get(
+                    requestedNode.nodeId()
+            );
+            if (updatedNode == null) {
+                throw contract("Node update snapshot does not contain a requested node");
+            }
+            validateUpdatedNode(commandPayload.schemaVersion(), requestedNode, updatedNode);
         }
     }
 
     private void validateUpdatedNode(
-            MeetingAnalysisCommandOutbox command,
-            NodeContentUpdateRequestedCommand commandPayload,
-            ProjectGraphSnapshot snapshot
+            int schemaVersion,
+            RequestedNodeUpdate requestedNode,
+            ProjectGraphSnapshotNode updatedNode
     ) {
-        ProjectGraphSnapshotNode updatedNode = snapshot.nodes().stream()
-                .filter(node -> command.getTargetNodeId().equals(node.nodeId()))
-                .findFirst()
-                .orElseThrow(() -> contract(
-                        "Node update snapshot does not contain the target node"
-                ));
-        NodeContentUpdateRequestedCommand.Payload requested = commandPayload.payload();
-        if (updatedNode.nodeVersion() <= requested.expectedNodeVersion()) {
-            throw contract("Updated node version did not advance");
+        boolean invalidVersion = schemaVersion == 1
+                ? updatedNode.nodeVersion() <= requestedNode.expectedNodeVersion()
+                : updatedNode.nodeVersion() != requestedNode.expectedNodeVersion() + 1;
+        if (invalidVersion) {
+            throw contract("Updated node version does not match the command");
         }
-        if (requested.title() != null
-                && !requested.title().equals(updatedNode.title())) {
+        if (requestedNode.title() != null
+                && !requestedNode.title().equals(updatedNode.title())) {
             throw contract("Updated node title does not match the command");
         }
-        if (requested.content() != null
-                && !requested.content().equals(updatedNode.content())) {
+        if (requestedNode.content() != null
+                && !requestedNode.content().equals(updatedNode.content())) {
             throw contract("Updated node content does not match the command");
         }
     }

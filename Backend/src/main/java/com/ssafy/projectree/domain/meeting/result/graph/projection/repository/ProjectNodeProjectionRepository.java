@@ -26,6 +26,11 @@ public interface ProjectNodeProjectionRepository extends JpaRepository<ProjectNo
 
     Optional<ProjectNodeProjection> findByNodeIdAndProjectId(String nodeId, int projectId);
 
+    List<ProjectNodeProjection> findAllByProjectIdAndNodeIdIn(
+            int projectId,
+            List<String> nodeIds
+    );
+
     List<ProjectNodeProjection> findAllByProjectIdAndGraphState(
             int projectId,
             GraphNodeState graphState

@@ -57,7 +57,8 @@ public class AnalysisEventValidator {
     private static boolean requiresMeetingId(AnalysisResultEventType eventType) {
         return switch (eventType) {
             case MEETING_SUMMARY_READY, ANALYSIS_TASK_STATUS_CHANGED -> true;
-            case PROJECT_GRAPH_CHANGED, NODE_DELETE_REJECTED -> false;
+            case PROJECT_GRAPH_CHANGED, NODE_DELETE_REJECTED,
+                    NODE_CONTENT_UPDATE_REJECTED -> false;
         };
     }
 

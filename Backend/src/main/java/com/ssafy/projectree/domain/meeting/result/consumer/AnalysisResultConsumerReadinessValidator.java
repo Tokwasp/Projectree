@@ -25,7 +25,8 @@ public class AnalysisResultConsumerReadinessValidator {
             AnalysisResultEventType.MEETING_SUMMARY_READY,
             AnalysisResultEventType.PROJECT_GRAPH_CHANGED,
             AnalysisResultEventType.ANALYSIS_TASK_STATUS_CHANGED,
-            AnalysisResultEventType.NODE_DELETE_REJECTED
+            AnalysisResultEventType.NODE_DELETE_REJECTED,
+            AnalysisResultEventType.NODE_CONTENT_UPDATE_REJECTED
     );
 
     private final AnalysisResultConsumerProperties consumerProperties;

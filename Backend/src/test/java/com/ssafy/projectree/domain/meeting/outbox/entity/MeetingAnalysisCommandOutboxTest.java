@@ -55,6 +55,26 @@ class MeetingAnalysisCommandOutboxTest {
     }
 
     @Test
+    void batchNodeContentUpdateHasProjectTargetWithoutNodeTarget() {
+        MeetingAnalysisCommandOutbox outbox =
+                MeetingAnalysisCommandOutbox.pendingNodeContentBatchUpdate(
+                        UUID.randomUUID(),
+                        9,
+                        MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                        "{\"commandSchemaVersion\":2}",
+                        17,
+                        NOW
+                );
+
+        assertThat(outbox.getMeeting()).isNull();
+        assertThat(outbox.getTargetProjectId()).isEqualTo(9);
+        assertThat(outbox.getTargetNodeId()).isNull();
+        assertThat(outbox.getCommandType())
+                .isEqualTo(MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED);
+        assertThat(outbox.getStatus()).isEqualTo(MeetingAnalysisOutboxStatus.PENDING);
+    }
+
+    @Test
     void meetingFactoryRejectsNodeContentUpdateCommandType() {
         Project project = Project.builder().title("project").content("content").build();
         ProjectMember creator = ProjectMember.createMember(17, ProjectRole.OWNER);

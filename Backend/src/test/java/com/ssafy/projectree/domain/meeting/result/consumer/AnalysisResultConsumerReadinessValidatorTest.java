@@ -79,7 +79,8 @@ class AnalysisResultConsumerReadinessValidatorTest {
                 new RecordingHandler(AnalysisResultEventType.MEETING_SUMMARY_READY),
                 new RecordingHandler(AnalysisResultEventType.PROJECT_GRAPH_CHANGED),
                 new RecordingHandler(AnalysisResultEventType.ANALYSIS_TASK_STATUS_CHANGED),
-                new RecordingHandler(AnalysisResultEventType.NODE_DELETE_REJECTED)
+                new RecordingHandler(AnalysisResultEventType.NODE_DELETE_REJECTED),
+                new RecordingHandler(AnalysisResultEventType.NODE_CONTENT_UPDATE_REJECTED)
         );
         AnalysisResultEventDispatcher dispatcher = new AnalysisResultEventDispatcher(handlers);
         dispatcher.initializeHandlers();

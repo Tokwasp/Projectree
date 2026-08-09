@@ -207,6 +207,41 @@ public class MeetingAnalysisCommandOutbox extends BaseEntity {
         return outbox;
     }
 
+    public static MeetingAnalysisCommandOutbox pendingNodeContentBatchUpdate(
+            UUID commandId,
+            int projectId,
+            MeetingAnalysisCommandType commandType,
+            String payload,
+            int requestedByMemberId,
+            LocalDateTime now
+    ) {
+        if (projectId <= 0) {
+            throw new IllegalArgumentException("projectId must be positive");
+        }
+        if (commandType != MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED) {
+            throw new IllegalArgumentException("commandType must be NODE_CONTENT_UPDATE_REQUESTED");
+        }
+        if (payload == null || payload.isBlank()) {
+            throw new IllegalArgumentException("payload must not be null or blank");
+        }
+        if (requestedByMemberId <= 0) {
+            throw new IllegalArgumentException("requestedByMemberId must be positive");
+        }
+
+        MeetingAnalysisCommandOutbox outbox = new MeetingAnalysisCommandOutbox();
+        outbox.commandId = Objects.requireNonNull(commandId, "commandId must not be null").toString();
+        outbox.meeting = null;
+        outbox.targetProjectId = projectId;
+        outbox.targetNodeId = null;
+        outbox.commandType = commandType;
+        outbox.payload = payload;
+        outbox.status = MeetingAnalysisOutboxStatus.PENDING;
+        outbox.attemptCount = 0;
+        outbox.requestedByMemberId = requestedByMemberId;
+        outbox.nextAttemptAt = Objects.requireNonNull(now, "now must not be null");
+        return outbox;
+    }
+
     public String claim(LocalDateTime now, LocalDateTime leaseUntil, int maxAttempts) {
         Objects.requireNonNull(now, "now must not be null");
         Objects.requireNonNull(leaseUntil, "leaseUntil must not be null");
