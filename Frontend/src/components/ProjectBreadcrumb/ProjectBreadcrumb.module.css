@@ -1,0 +1,64 @@
+.container {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+  overflow: hidden;
+}
+
+.brand {
+  display: flex;
+  width: var(--space-8);
+  height: var(--space-8);
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.logo {
+  width: var(--space-5);
+  height: var(--space-5);
+  object-fit: contain;
+}
+
+.path,
+.pathCurrent {
+  min-width: 0;
+  color: var(--color-gray-500);
+  font-size: var(--text-xs);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.path {
+  flex-shrink: 0;
+}
+
+.path:hover,
+.pathCurrent:hover {
+  color: var(--color-primary);
+}
+
+.pathCurrent {
+  max-width: 220px;
+  overflow: hidden;
+  color: var(--color-text);
+  font-weight: var(--font-semibold);
+  text-overflow: ellipsis;
+}
+
+.divider {
+  color: var(--color-gray-300);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 900px) {
+  .path,
+  .pathCurrent,
+  .divider {
+    display: none;
+  }
+}

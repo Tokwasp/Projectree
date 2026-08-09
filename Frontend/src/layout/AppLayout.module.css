@@ -1,0 +1,105 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-white);
+}
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--app-sidebar-width);
+  height: 100vh;
+  background: var(--color-background);
+  color: var(--color-white);
+  transition: width var(--transition-normal);
+}
+
+.sidebarCollapsed {
+  width: 72px;
+}
+
+.projectSidebar {
+  width: var(--app-sidebar-width);
+}
+
+.mainArea {
+  display: flex;
+  width: calc(100% - var(--app-sidebar-width));
+  height: 100vh;
+  margin-left: var(--app-sidebar-width);
+  flex-direction: column;
+  overflow: hidden;
+  transition:
+    width var(--transition-normal),
+    margin-left var(--transition-normal);
+}
+
+.mainAreaExpanded {
+  width: calc(100% - 72px);
+  margin-left: 72px;
+}
+
+.projectMainArea {
+  width: calc(100% - var(--app-sidebar-width));
+  margin-left: var(--app-sidebar-width);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: var(--app-header-height);
+  background: var(--color-white);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--transition-fast);
+}
+
+.headerScrolled {
+  border-bottom-color: var(--color-border);
+}
+
+.contentArea {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) transparent;
+}
+
+.contentArea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.contentArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.contentArea::-webkit-scrollbar-thumb {
+  border: 2px solid var(--color-white);
+  border-radius: var(--radius-full);
+  background: var(--color-gray-300);
+}
+
+.contentArea::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-400);
+}
+
+.content {
+  position: static;
+  top: auto;
+  left: auto;
+  display: block;
+  width: 100%;
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: var(--space-8)
+    calc(var(--space-8) + var(--space-12));
+  color: var(--color-text);
+  transform: none;
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: var(--space-6);
+  }
+}

@@ -1,0 +1,146 @@
+.about {
+  display: flex;
+  min-height: 100%;
+  padding: 120px max(200px, calc((100% - var(--container-width)) / 2));
+  align-items: center;
+  background-color: var(--color-landing-section);
+}
+
+.inner {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+  gap: var(--space-16);
+  align-items: center;
+}
+
+.copy {
+  max-width: 540px;
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-6);
+  color: var(--color-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.3em;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-white);
+  font-size: clamp(24px, 2.5vw, 36px);
+  line-height: var(--leading-tight);
+}
+
+.description {
+  margin: var(--space-8) 0 0;
+  color: var(--color-gray-400);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.featureCard {
+  min-height: 220px;
+  padding: var(--space-8);
+  border: 1px solid var(--color-landing-primary-border);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(
+    145deg,
+    var(--color-landing-primary-soft),
+    var(--color-landing-primary-faint)
+  );
+  transition:
+    border-color var(--transition-normal),
+    box-shadow var(--transition-normal),
+    transform var(--transition-normal);
+}
+
+.featureCard:hover {
+  border-color: var(--color-landing-primary-strong);
+  box-shadow:
+    inset 0 0 110px var(--color-landing-primary-strong),
+    0 16px 40px var(--color-landing-primary-soft);
+}
+
+.featureCard:nth-child(even) {
+  transform: translateY(32px);
+}
+
+.featureCard:nth-child(odd):hover {
+  transform: translateY(-4px);
+}
+
+.featureCard:nth-child(even):hover {
+  transform: translateY(28px);
+}
+
+.featureNumber {
+  display: block;
+  margin-bottom: var(--space-12);
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.featureTitle {
+  margin: 0 0 var(--space-3);
+  color: var(--color-white);
+  font-size: var(--text-xl);
+}
+
+.featureDescription {
+  margin: 0;
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+@media (max-width: 1200px) {
+  .about {
+    padding: 96px 32px;
+  }
+
+  .inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-16);
+  }
+
+  .featureCard:nth-child(even) {
+    transform: none;
+  }
+
+  .featureCard:nth-child(even):hover {
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 600px) {
+  .about {
+    padding: 80px 24px;
+  }
+
+  .description br {
+    display: none;
+  }
+
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .featureCard {
+    min-height: 190px;
+  }
+
+  .featureCard:nth-child(even),
+  .featureCard:nth-child(odd):hover,
+  .featureCard:nth-child(even):hover {
+    transform: none;
+  }
+}

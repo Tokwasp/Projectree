@@ -75,6 +75,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+### Deploy - Vercel ###
+.vercel
+
 ### AI tooling ###
 .claude/
 CLAUDE.md
