@@ -18,6 +18,9 @@ import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.Projec
 import com.ssafy.projectree.domain.meeting.result.graph.command.GraphNodeCommandController;
 import com.ssafy.projectree.domain.meeting.result.graph.command.dto.NodeContentUpdateAcceptedResponse;
 import com.ssafy.projectree.domain.meeting.result.graph.command.dto.NodeContentUpdateRequest;
+import com.ssafy.projectree.domain.meeting.result.graph.command.dto.BatchNodeContentUpdateItem;
+import com.ssafy.projectree.domain.meeting.result.graph.command.dto.BatchNodeContentUpdateRequest;
+import com.ssafy.projectree.domain.meeting.result.graph.command.dto.BatchNodeContentUpdateResponse;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.NodeEvidenceProjectionRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectNodeProjectionRepository;
@@ -30,6 +33,8 @@ import com.ssafy.projectree.domain.meeting.result.graph.storage.GraphSnapshotLoa
 import com.ssafy.projectree.domain.meeting.result.inbox.repository.MeetingAnalysisResultInboxRepository;
 import com.ssafy.projectree.domain.meeting.result.processor.AnalysisResultEventProcessor;
 import com.ssafy.projectree.domain.meeting.result.processor.AnalysisResultProcessingOutcome;
+import com.ssafy.projectree.domain.meeting.result.graph.command.GraphNodeUpdateErrorCode;
+import com.ssafy.projectree.global.exception.CustomException;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectMember;
 import com.ssafy.projectree.domain.project.entity.ProjectRole;
@@ -197,6 +202,172 @@ class NodeContentUpdateFlowIntegrationTest {
         assertThat(inboxRepository.existsByEventId(invalidEvent.eventId())).isFalse();
     }
 
+    @Test
+    void batchConflictRollsBackGuardAndNoChangeRequestCanRunNext() {
+        Fixture fixture = fixture();
+        BatchNodeContentUpdateRequest conflictRequest =
+                new BatchNodeContentUpdateRequest(List.of(
+                        new BatchNodeContentUpdateItem(
+                                fixture.nodeId(), "new title", 2L
+                        )
+                ));
+
+        assertThatThrownBy(() -> commandController.updateBatch(
+                fixture.projectId(),
+                conflictRequest,
+                loginMember()
+        )).isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(GraphNodeUpdateErrorCode.NODE_VERSION_CONFLICT);
+
+        assertThat(commandRepository.count()).isZero();
+        ProjectGraphSync syncAfterConflict = syncRepository
+                .findById(fixture.projectId())
+                .orElseThrow();
+        assertThat(syncAfterConflict.hasActiveCommand()).isFalse();
+
+        ResponseEntity<com.ssafy.projectree.global.response.ApiResponse<
+                BatchNodeContentUpdateResponse>> noChangeResponse =
+                commandController.updateBatch(
+                        fixture.projectId(),
+                        new BatchNodeContentUpdateRequest(List.of(
+                                new BatchNodeContentUpdateItem(
+                                        fixture.nodeId(), "기존 제목", 3L
+                                )
+                        )),
+                        loginMember()
+                );
+
+        assertThat(noChangeResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(noChangeResponse.getBody()).isNotNull();
+        assertThat(noChangeResponse.getBody().getData().status()).isEqualTo("NO_CHANGE");
+        assertThat(commandRepository.count()).isZero();
+        assertThat(syncRepository.findById(fixture.projectId()).orElseThrow()
+                .hasActiveCommand()).isFalse();
+    }
+
+    @Test
+    void rejectedNodeContentUpdateKeepsProjectionAndGraphVersionAndIsIdempotent() {
+        Fixture fixture = fixture();
+        ResponseEntity<com.ssafy.projectree.global.response.ApiResponse<
+                BatchNodeContentUpdateResponse>> response = commandController.updateBatch(
+                fixture.projectId(),
+                new BatchNodeContentUpdateRequest(List.of(
+                        new BatchNodeContentUpdateItem(
+                                fixture.nodeId(), "수정 제목", 3L
+                        )
+                )),
+                loginMember()
+        );
+        String commandId = response.getBody().getData().commandId().toString();
+        String eventId = UUID.randomUUID().toString();
+        AnalysisResultEventEnvelope rejectedEvent = new AnalysisResultEventEnvelope(
+                3,
+                eventId,
+                AnalysisResultEventType.NODE_CONTENT_UPDATE_REJECTED,
+                NOW,
+                fixture.projectId(),
+                null,
+                commandId,
+                objectMapper.createObjectNode()
+                        .put("sourceType", "NODE_CONTENT_UPDATE")
+                        .put("reasonCode", "NODE_VERSION_CONFLICT")
+                        .put("failedNodeId", fixture.nodeId())
+        );
+
+        assertThat(resultProcessor.process(rejectedEvent))
+                .isEqualTo(AnalysisResultProcessingOutcome.PROCESSED);
+        assertProjection(fixture.nodeId(), "기존 제목", "기존 내용", 3);
+        ProjectGraphSync rejectedSync = syncRepository
+                .findById(fixture.projectId())
+                .orElseThrow();
+        assertThat(rejectedSync.getCurrentGraphVersion()).isEqualTo(10);
+        assertThat(rejectedSync.hasActiveCommand()).isFalse();
+
+        assertThat(resultProcessor.process(rejectedEvent))
+                .isEqualTo(AnalysisResultProcessingOutcome.DUPLICATE);
+        assertThat(inboxRepository.findAll())
+                .filteredOn(inbox -> inbox.getEventId().equals(eventId))
+                .hasSize(1);
+    }
+
+    @Test
+    void commandLevelNodeUpdateRejectionDoesNotRequireFailedNodeId() {
+        Fixture fixture = fixture();
+        ResponseEntity<com.ssafy.projectree.global.response.ApiResponse<
+                BatchNodeContentUpdateResponse>> response = commandController.updateBatch(
+                fixture.projectId(),
+                new BatchNodeContentUpdateRequest(List.of(
+                        new BatchNodeContentUpdateItem(
+                                fixture.nodeId(), "수정 제목", 3L
+                        )
+                )),
+                loginMember()
+        );
+        String commandId = response.getBody().getData().commandId().toString();
+        AnalysisResultEventEnvelope rejectedEvent = new AnalysisResultEventEnvelope(
+                3,
+                UUID.randomUUID().toString(),
+                AnalysisResultEventType.NODE_CONTENT_UPDATE_REJECTED,
+                NOW,
+                fixture.projectId(),
+                null,
+                commandId,
+                objectMapper.createObjectNode()
+                        .put("sourceType", "NODE_CONTENT_UPDATE")
+                        .put("reasonCode", "GRAPH_SNAPSHOT_TOO_LARGE")
+        );
+
+        assertThat(resultProcessor.process(rejectedEvent))
+                .isEqualTo(AnalysisResultProcessingOutcome.PROCESSED);
+
+        ProjectGraphSync sync = syncRepository
+                .findById(fixture.projectId())
+                .orElseThrow();
+        assertThat(sync.getCurrentGraphVersion()).isEqualTo(10);
+        assertThat(sync.hasActiveCommand()).isFalse();
+        assertProjection(fixture.nodeId(), "기존 제목", "기존 내용", 3);
+    }
+
+    @Test
+    void nodeSpecificUpdateRejectionRequiresFailedNodeId() {
+        Fixture fixture = fixture();
+        ResponseEntity<com.ssafy.projectree.global.response.ApiResponse<
+                BatchNodeContentUpdateResponse>> response = commandController.updateBatch(
+                fixture.projectId(),
+                new BatchNodeContentUpdateRequest(List.of(
+                        new BatchNodeContentUpdateItem(
+                                fixture.nodeId(), "수정 제목", 3L
+                        )
+                )),
+                loginMember()
+        );
+        String commandId = response.getBody().getData().commandId().toString();
+        AnalysisResultEventEnvelope invalidEvent = new AnalysisResultEventEnvelope(
+                3,
+                UUID.randomUUID().toString(),
+                AnalysisResultEventType.NODE_CONTENT_UPDATE_REJECTED,
+                NOW,
+                fixture.projectId(),
+                null,
+                commandId,
+                objectMapper.createObjectNode()
+                        .put("sourceType", "NODE_CONTENT_UPDATE")
+                        .put("reasonCode", "NODE_VERSION_CONFLICT")
+        );
+
+        assertThatThrownBy(() -> resultProcessor.process(invalidEvent))
+                .isInstanceOf(AnalysisResultContractException.class);
+
+        ProjectGraphSync sync = syncRepository
+                .findById(fixture.projectId())
+                .orElseThrow();
+        assertThat(sync.hasActiveCommand()).isTrue();
+        assertThat(sync.getActiveCommandId()).isEqualTo(commandId);
+        assertThat(inboxRepository.existsByEventId(invalidEvent.eventId())).isFalse();
+        assertProjection(fixture.nodeId(), "기존 제목", "기존 내용", 3);
+    }
+
     private Fixture fixture() {
         Project project = Project.builder().title("project").content("content").build();
         project.addMember(ProjectMember.createMember(MEMBER_ID, ProjectRole.OWNER));
@@ -214,6 +385,14 @@ class NodeContentUpdateFlowIntegrationTest {
         sync.advanceTo(10, UUID.randomUUID().toString(), NOW.minusSeconds(10));
         syncRepository.saveAndFlush(sync);
         return new Fixture(project.getId(), nodeId);
+    }
+
+    private com.ssafy.projectree.domain.member.LoginMember loginMember() {
+        return com.ssafy.projectree.domain.member.LoginMember.builder()
+                .id(MEMBER_ID)
+                .name("member")
+                .email("member@example.com")
+                .build();
     }
 
     private AnalysisResultEventEnvelope event(

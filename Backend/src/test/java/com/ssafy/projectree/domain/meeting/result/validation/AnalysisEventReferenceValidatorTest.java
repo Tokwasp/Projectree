@@ -141,6 +141,34 @@ class AnalysisEventReferenceValidatorTest {
     }
 
     @Test
+    void acceptsBatchNodeContentUpdateReferencesWithNullTargetNodeId() {
+        MeetingAnalysisCommandOutbox command =
+                MeetingAnalysisCommandOutbox.pendingNodeContentBatchUpdate(
+                        UUID.randomUUID(),
+                        10,
+                        MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                        "{\"commandSchemaVersion\":2}",
+                        15,
+                        LocalDateTime.now()
+                );
+        AnalysisResultEventEnvelope event = new AnalysisResultEventEnvelope(
+                3,
+                UUID.randomUUID().toString(),
+                AnalysisResultEventType.NODE_CONTENT_UPDATE_REJECTED,
+                Instant.now(),
+                10,
+                null,
+                command.getCommandId(),
+                JsonMapper.builder().build().createObjectNode()
+        );
+        given(commandRepository.findByCommandId(event.commandId()))
+                .willReturn(Optional.of(command));
+
+        assertThatCode(() -> validator.validateReferences(event))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     void rejectsNodeDeleteResultForAnotherProject() {
         MeetingAnalysisCommandOutbox command = nodeDeleteCommand(10);
         AnalysisResultEventEnvelope event = nodeDeleteEvent(

@@ -45,7 +45,11 @@ class GraphQueryControllerTest extends ControllerTestSupport {
                 .andExpect(jsonPath("$.data.projectId").value(PROJECT_ID))
                 .andExpect(jsonPath("$.data.graphVersion").value(5))
                 .andExpect(jsonPath("$.data.root.id").value("project:11"))
-                .andExpect(jsonPath("$.data.root.children.length()").value(7));
+                .andExpect(jsonPath("$.data.root.children.length()").value(7))
+                .andExpect(jsonPath("$.data.root.children[0].children[0].kind")
+                        .value("GRAPH_NODE"))
+                .andExpect(jsonPath("$.data.root.children[0].children[0].nodeVersion")
+                        .value(3));
 
         verify(graphQueryService).getTree(PROJECT_ID, MEMBER_ID);
     }
@@ -141,9 +145,20 @@ class GraphQueryControllerTest extends ControllerTestSupport {
     }
 
     private GraphTreeResponse tree() {
+        GraphTreeNodeResponse graphNode = new GraphTreeNodeResponse(
+                NODE_ID,
+                GraphTreeNodeKind.GRAPH_NODE,
+                "Backend API",
+                GraphNodeCategory.BACKEND,
+                GraphNodeType.DECISION,
+                33,
+                3L,
+                Instant.parse("2026-08-05T00:00:01Z"),
+                List.of()
+        );
         GraphTreeNodeResponse category = new GraphTreeNodeResponse(
                 "category:BACKEND", GraphTreeNodeKind.CATEGORY_ROOT, "Backend", GraphNodeCategory.BACKEND,
-                null, null, null, null, List.of()
+                null, null, null, null, List.of(graphNode)
         );
         return new GraphTreeResponse(
                 PROJECT_ID,

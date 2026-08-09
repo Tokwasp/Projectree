@@ -2,6 +2,8 @@ package com.ssafy.projectree.domain.meeting.result.graph.command;
 
 import com.ssafy.projectree.domain.meeting.result.graph.command.dto.NodeContentUpdateAcceptedResponse;
 import com.ssafy.projectree.domain.meeting.result.graph.command.dto.NodeContentUpdateRequest;
+import com.ssafy.projectree.domain.meeting.result.graph.command.dto.BatchNodeContentUpdateRequest;
+import com.ssafy.projectree.domain.meeting.result.graph.command.dto.BatchNodeContentUpdateResponse;
 import com.ssafy.projectree.domain.meeting.result.graph.delete.GraphNodeDeleteService;
 import com.ssafy.projectree.domain.meeting.result.graph.delete.GraphNodeDeleteStatusService;
 import com.ssafy.projectree.domain.meeting.result.graph.delete.dto.GraphNodeDeleteAcceptedResponse;
@@ -46,6 +48,24 @@ public class GraphNodeCommandController {
                 loginMember.getId(),
                 request
         );
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(ApiResponse.accepted(response));
+    }
+
+    @PatchMapping
+    public ResponseEntity<ApiResponse<BatchNodeContentUpdateResponse>> updateBatch(
+            @PathVariable int projectId,
+            @Valid @RequestBody BatchNodeContentUpdateRequest request,
+            @Login LoginMember loginMember
+    ) {
+        BatchNodeContentUpdateResponse response = updateService.updateBatch(
+                projectId,
+                loginMember.getId(),
+                request
+        );
+        if (!response.hasPendingCommand()) {
+            return ResponseEntity.ok(ApiResponse.success(response));
+        }
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.accepted(response));
     }

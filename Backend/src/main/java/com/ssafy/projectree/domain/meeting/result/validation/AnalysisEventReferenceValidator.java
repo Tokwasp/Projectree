@@ -66,6 +66,14 @@ public class AnalysisEventReferenceValidator {
             AnalysisResultEventEnvelope event,
             MeetingAnalysisCommandOutbox command
     ) {
+        if (event.eventType() != AnalysisResultEventType.PROJECT_GRAPH_CHANGED
+                && event.eventType()
+                != AnalysisResultEventType.NODE_CONTENT_UPDATE_REJECTED) {
+            throw new AnalysisResultContractException(
+                    "Node content update command does not support result eventType: "
+                            + event.eventType()
+            );
+        }
         if (event.projectId() == null || event.projectId() <= 0) {
             throw new AnalysisResultContractException("Node content update projectId must be positive");
         }
@@ -78,9 +86,6 @@ public class AnalysisEventReferenceValidator {
         if (command.getTargetProjectId() == null
                 || !command.getTargetProjectId().equals(event.projectId())) {
             throw new AnalysisResultContractException("Node content update command project does not match");
-        }
-        if (command.getTargetNodeId() == null || command.getTargetNodeId().isBlank()) {
-            throw new AnalysisResultContractException("Node content update command target node is missing");
         }
     }
 

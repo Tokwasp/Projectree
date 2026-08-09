@@ -58,6 +58,10 @@ class AnalysisEventValidatorTest {
                 AnalysisResultEventType.PROJECT_GRAPH_CHANGED,
                 null
         ))).doesNotThrowAnyException();
+        assertThatCode(() -> validator.validateEnvelope(event(
+                AnalysisResultEventType.NODE_CONTENT_UPDATE_REJECTED,
+                null
+        ))).doesNotThrowAnyException();
 
         assertThatThrownBy(() -> validator.validateEnvelope(event(
                 AnalysisResultEventType.MEETING_SUMMARY_READY,

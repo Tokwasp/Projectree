@@ -2,6 +2,7 @@ package com.ssafy.projectree.domain.meeting.result.graph.projection;
 
 import com.ssafy.projectree.domain.meeting.command.MeetingAnalysisCommandType;
 import com.ssafy.projectree.domain.meeting.command.NodeContentUpdateRequestedCommand;
+import com.ssafy.projectree.domain.meeting.command.NodeContentBatchUpdateRequestedCommand;
 import com.ssafy.projectree.domain.meeting.outbox.entity.MeetingAnalysisCommandOutbox;
 import com.ssafy.projectree.domain.meeting.outbox.repository.MeetingAnalysisCommandOutboxRepository;
 import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventEnvelope;
@@ -213,8 +214,206 @@ class NodeContentUpdateGraphProjectionApplierTest {
         assertThat(sync.getCurrentGraphVersion()).isZero();
     }
 
+    @Test
+    void appliesV2OnlyAfterEveryRequestedNodeMatchesExactly() throws Exception {
+        String firstNodeId = UUID.randomUUID().toString();
+        String secondNodeId = UUID.randomUUID().toString();
+        Fixture fixture = batchFixture(List.of(
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        firstNodeId, 3, "first title"
+                ),
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        secondNodeId, 7, "second title"
+                )
+        ));
+        ProjectGraphSync sync = activeV2Sync(fixture.commandId(), 10);
+        stubFresh(fixture, sync);
+        ProjectGraphSnapshot snapshot = snapshot(fixture, List.of(
+                node(firstNodeId, 4, "first title", "first content"),
+                node(secondNodeId, 8, "second title", "second content")
+        ), 11);
+
+        applier.apply(fixture.event(), fixture.graphPayload(), snapshot);
+
+        verify(projectionReplacer).replace(1, snapshot, NOW);
+        verify(graphOperationGuard).release(
+                sync,
+                fixture.commandId().toString(),
+                "GRAPH_PROJECTION_APPLIED"
+        );
+        assertThat(sync.getCurrentGraphVersion()).isEqualTo(11);
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {10, 12})
+    void rejectsV2WhenGraphVersionDoesNotAdvanceExactlyOnce(
+            long resultGraphVersion
+    ) throws Exception {
+        String nodeId = UUID.randomUUID().toString();
+        Fixture originalFixture = batchFixture(List.of(
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        nodeId, 3, "new title"
+                )
+        ));
+        Fixture fixture = new Fixture(
+                originalFixture.commandId(),
+                originalFixture.nodeId(),
+                originalFixture.outbox(),
+                originalFixture.event(),
+                new ProjectGraphChangedPayload(
+                        GraphResultSourceType.NODE_CONTENT_UPDATE,
+                        resultGraphVersion,
+                        null
+                )
+        );
+        ProjectGraphSync sync = activeV2Sync(fixture.commandId(), 10);
+        stubCommon(fixture, sync);
+        ProjectGraphSnapshot snapshot = snapshot(
+                fixture,
+                List.of(node(nodeId, 4, "new title", "content")),
+                resultGraphVersion
+        );
+
+        assertThatThrownBy(() -> applier.apply(
+                fixture.event(), fixture.graphPayload(), snapshot
+        )).isInstanceOf(AnalysisResultContractException.class);
+
+        verify(projectionReplacer, never()).replace(any(Integer.class), any(), any());
+        assertThat(sync.getCurrentGraphVersion()).isEqualTo(10);
+        assertThat(sync.hasActiveCommand()).isTrue();
+        assertThat(sync.getActiveCommandId())
+                .isEqualTo(fixture.commandId().toString());
+    }
+
+    @Test
+    void acceptsV2ReplayOnlyAtPreviouslyAppliedGraphVersion() throws Exception {
+        String nodeId = UUID.randomUUID().toString();
+        Fixture fixture = batchFixture(List.of(
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        nodeId, 3, "new title"
+                )
+        ));
+        ProjectGraphSync sync = ProjectGraphSync.initial(1, Instant.EPOCH);
+        sync.advanceTo(
+                11,
+                fixture.commandId().toString(),
+                Instant.EPOCH.plusSeconds(1)
+        );
+        stubCommon(fixture, sync);
+        when(graphOperationGuard.release(
+                sync,
+                fixture.commandId().toString(),
+                "GRAPH_PROJECTION_APPLIED"
+        )).thenReturn(false);
+        ProjectGraphSnapshot snapshot = snapshot(fixture, List.of(), 11);
+
+        GraphProjectionApplyResult result = applier.apply(
+                fixture.event(), fixture.graphPayload(), snapshot
+        );
+
+        assertThat(result.projectionUpdated()).isFalse();
+        assertThat(result.currentGraphVersion()).isEqualTo(11);
+        verify(projectionReplacer, never()).replace(any(Integer.class), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void rejectsV2ReplayWhenLastCommandOrGraphVersionDoesNotMatch(
+            boolean useMismatchedGraphVersion
+    ) throws Exception {
+        String nodeId = UUID.randomUUID().toString();
+        Fixture originalFixture = batchFixture(List.of(
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        nodeId, 3, "new title"
+                )
+        ));
+        long resultGraphVersion = useMismatchedGraphVersion ? 10 : 11;
+        String lastCommandId = useMismatchedGraphVersion
+                ? originalFixture.commandId().toString()
+                : UUID.randomUUID().toString();
+        Fixture fixture = new Fixture(
+                originalFixture.commandId(),
+                originalFixture.nodeId(),
+                originalFixture.outbox(),
+                originalFixture.event(),
+                new ProjectGraphChangedPayload(
+                        GraphResultSourceType.NODE_CONTENT_UPDATE,
+                        resultGraphVersion,
+                        null
+                )
+        );
+        ProjectGraphSync sync = ProjectGraphSync.initial(1, Instant.EPOCH);
+        sync.advanceTo(11, lastCommandId, Instant.EPOCH.plusSeconds(1));
+        stubCommon(fixture, sync);
+        ProjectGraphSnapshot snapshot = snapshot(
+                fixture,
+                List.of(node(nodeId, 4, "new title", "content")),
+                resultGraphVersion
+        );
+
+        assertThatThrownBy(() -> applier.apply(
+                fixture.event(), fixture.graphPayload(), snapshot
+        )).isInstanceOf(AnalysisResultContractException.class);
+
+        verify(projectionReplacer, never()).replace(any(Integer.class), any(), any());
+        assertThat(sync.getCurrentGraphVersion()).isEqualTo(11);
+        assertThat(sync.hasActiveCommand()).isFalse();
+    }
+
+    @Test
+    void rejectsV2WhenAnyRequestedNodeIsMissing() throws Exception {
+        String firstNodeId = UUID.randomUUID().toString();
+        String secondNodeId = UUID.randomUUID().toString();
+        Fixture fixture = batchFixture(List.of(
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        firstNodeId, 3, "first title"
+                ),
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        secondNodeId, 7, "second title"
+                )
+        ));
+
+        assertRejected(fixture, snapshot(fixture, List.of(
+                node(firstNodeId, 4, "first title", "content")
+        ), 11));
+    }
+
+    @Test
+    void rejectsV2WhenAnyTitleOrExactVersionDoesNotMatch() throws Exception {
+        String firstNodeId = UUID.randomUUID().toString();
+        String secondNodeId = UUID.randomUUID().toString();
+        Fixture titleMismatch = batchFixture(List.of(
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        firstNodeId, 3, "first title"
+                ),
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        secondNodeId, 7, "second title"
+                )
+        ));
+        assertRejected(titleMismatch, snapshot(titleMismatch, List.of(
+                node(firstNodeId, 4, "first title", "content"),
+                node(secondNodeId, 8, "wrong title", "content")
+        ), 11));
+
+        Fixture versionMismatch = batchFixture(List.of(
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        firstNodeId, 3, "first title"
+                ),
+                new NodeContentBatchUpdateRequestedCommand.NodeUpdate(
+                        secondNodeId, 7, "second title"
+                )
+        ));
+        assertRejected(versionMismatch, snapshot(versionMismatch, List.of(
+                node(firstNodeId, 5, "first title", "content"),
+                node(secondNodeId, 8, "second title", "content")
+        ), 11));
+    }
+
     private void assertRejected(Fixture fixture, ProjectGraphSnapshot providedSnapshot) {
-        ProjectGraphSync sync = freshSync();
+        boolean batchCommand = fixture.nodeId() == null;
+        ProjectGraphSync sync = batchCommand
+                ? activeV2Sync(fixture.commandId(), 10)
+                : freshSync();
         stubCommon(fixture, sync);
         ProjectGraphSnapshot snapshot = providedSnapshot == null
                 ? snapshot(fixture, fixture.nodeId(), 4, "title", "content")
@@ -225,7 +424,7 @@ class NodeContentUpdateGraphProjectionApplierTest {
         )).isInstanceOf(AnalysisResultContractException.class);
 
         verify(projectionReplacer, never()).replace(any(Integer.class), any(), any());
-        assertThat(sync.getCurrentGraphVersion()).isZero();
+        assertThat(sync.getCurrentGraphVersion()).isEqualTo(batchCommand ? 10 : 0);
     }
 
     private void stubFresh(Fixture fixture, ProjectGraphSync sync) {
@@ -309,6 +508,51 @@ class NodeContentUpdateGraphProjectionApplierTest {
         );
     }
 
+    private Fixture batchFixture(
+            List<NodeContentBatchUpdateRequestedCommand.NodeUpdate> nodes
+    ) throws Exception {
+        UUID commandId = UUID.randomUUID();
+        NodeContentBatchUpdateRequestedCommand command =
+                new NodeContentBatchUpdateRequestedCommand(
+                        2,
+                        commandId,
+                        MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                        NOW,
+                        1,
+                        new NodeContentBatchUpdateRequestedCommand.Payload(nodes, 15)
+                );
+        MeetingAnalysisCommandOutbox outbox =
+                MeetingAnalysisCommandOutbox.pendingNodeContentBatchUpdate(
+                        commandId,
+                        1,
+                        MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                        objectMapper.writeValueAsString(command),
+                        15,
+                        LocalDateTime.now()
+                );
+        AnalysisResultEventEnvelope event = new AnalysisResultEventEnvelope(
+                3,
+                UUID.randomUUID().toString(),
+                AnalysisResultEventType.PROJECT_GRAPH_CHANGED,
+                NOW,
+                1,
+                null,
+                commandId.toString(),
+                objectMapper.createObjectNode()
+        );
+        return new Fixture(
+                commandId,
+                null,
+                outbox,
+                event,
+                new ProjectGraphChangedPayload(
+                        GraphResultSourceType.NODE_CONTENT_UPDATE,
+                        11,
+                        null
+                )
+        );
+    }
+
     private NodeContentUpdateRequestedCommand command(
             UUID commandId,
             int projectId,
@@ -330,6 +574,26 @@ class NodeContentUpdateGraphProjectionApplierTest {
 
     private ProjectGraphSync freshSync() {
         return ProjectGraphSync.initial(1, Instant.EPOCH);
+    }
+
+    private ProjectGraphSync activeV2Sync(
+            UUID commandId,
+            long currentGraphVersion
+    ) {
+        ProjectGraphSync sync = ProjectGraphSync.initial(1, Instant.EPOCH);
+        if (currentGraphVersion > 0) {
+            sync.advanceTo(
+                    currentGraphVersion,
+                    UUID.randomUUID().toString(),
+                    Instant.EPOCH.plusSeconds(1)
+            );
+        }
+        sync.acquireGraphOperation(
+                commandId.toString(),
+                MeetingAnalysisCommandType.NODE_CONTENT_UPDATE_REQUESTED,
+                Instant.EPOCH.plusSeconds(2)
+        );
+        return sync;
     }
 
     private ProjectGraphSnapshot snapshot(
