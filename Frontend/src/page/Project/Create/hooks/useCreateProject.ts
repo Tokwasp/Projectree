@@ -3,7 +3,7 @@ import {
   createProject as requestCreateProject,
   type ProjectCreateRequest,
 } from "../api/projectApi";
-import { ApiError } from "../../../../api/apiClient";
+import { apiErrorMessage } from "../../../../api/apiClient";
 import { addProjectToListCache } from "../../List/api/projectListApi";
 import { toast } from "../../../../store/toastStore";
 
@@ -32,10 +32,10 @@ export default function useCreateProject() {
 
       return projectId;
     } catch (caughtError) {
-      const message =
-        caughtError instanceof ApiError
-          ? caughtError.message
-          : "프로젝트 생성에 실패했습니다.";
+      const message = apiErrorMessage(
+        caughtError,
+        "프로젝트 생성에 실패했습니다.",
+      );
 
       setError(message);
       // 이 error를 화면에 그리는 곳이 없다 — 토스트가 유일한 통보 수단이다

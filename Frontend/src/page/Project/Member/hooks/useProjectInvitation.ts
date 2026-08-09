@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ApiError } from "../../../../api/apiClient";
+import { apiErrorMessage } from "../../../../api/apiClient";
 import {
   findMemberByEmail,
   inviteProjectMembers,
@@ -21,12 +21,7 @@ export default function useProjectInvitation() {
     try {
       return await findMemberByEmail(email);
     } catch (caughtError) {
-      const message =
-        caughtError instanceof ApiError
-          ? caughtError.message
-          : "회원을 찾지 못했습니다.";
-
-      setError(message);
+      setError(apiErrorMessage(caughtError, "회원을 찾지 못했습니다."));
       return null;
     } finally {
       setIsSearching(false);
@@ -45,12 +40,7 @@ export default function useProjectInvitation() {
         inviteeMemberIds,
       });
     } catch (caughtError) {
-      const message =
-        caughtError instanceof ApiError
-          ? caughtError.message
-          : "팀원 초대에 실패했습니다.";
-
-      setError(message);
+      setError(apiErrorMessage(caughtError, "팀원 초대에 실패했습니다."));
       return null;
     } finally {
       setIsInviting(false);

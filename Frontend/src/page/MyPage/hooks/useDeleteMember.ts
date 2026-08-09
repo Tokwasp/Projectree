@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ApiError } from "../../../api/apiClient";
+import { apiErrorMessage } from "../../../api/apiClient";
 import { useAuthStore } from "../../../store/authStore";
 import { toast } from "../../../store/toastStore";
 import { deleteMember as requestDeleteMember } from "../api/memberProfileApi";
@@ -27,12 +27,7 @@ export default function useDeleteMember() {
       toast.success("회원 탈퇴가 완료되었습니다.");
       return true;
     } catch (caughtError) {
-      const message =
-        caughtError instanceof ApiError
-          ? caughtError.message
-          : "회원 탈퇴에 실패했습니다.";
-
-      setError(message);
+      setError(apiErrorMessage(caughtError, "회원 탈퇴에 실패했습니다."));
       return false;
     } finally {
       setIsDeleting(false);

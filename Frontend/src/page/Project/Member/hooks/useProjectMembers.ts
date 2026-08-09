@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError } from "../../../../api/apiClient";
+import { apiErrorMessage } from "../../../../api/apiClient";
 import {
   getProjectMembers,
   type ProjectMemberResponse,
@@ -29,12 +29,9 @@ export default function useProjectMembers(projectId: number | null) {
         }
       } catch (caughtError) {
         if (!isCancelled) {
-          const message =
-            caughtError instanceof ApiError
-              ? caughtError.message
-              : "팀원 목록을 불러오지 못했습니다.";
-
-          setError(message);
+          setError(
+            apiErrorMessage(caughtError, "팀원 목록을 불러오지 못했습니다."),
+          );
         }
       } finally {
         if (!isCancelled) {

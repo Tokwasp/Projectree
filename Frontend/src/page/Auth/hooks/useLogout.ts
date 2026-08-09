@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ApiError } from "../../../api/apiClient";
+import { ApiError, apiErrorMessage } from "../../../api/apiClient";
 import { useAuthStore } from "../../../store/authStore";
 import { toast } from "../../../store/toastStore";
 import { logout as requestLogout } from "../api/authApi";
@@ -35,12 +35,7 @@ export default function useLogout() {
         return;
       }
 
-      const message =
-        caughtError instanceof ApiError
-          ? caughtError.message
-          : "로그아웃에 실패했습니다.";
-
-      setError(message);
+      setError(apiErrorMessage(caughtError, "로그아웃에 실패했습니다."));
     } finally {
       setIsLoggingOut(false);
     }

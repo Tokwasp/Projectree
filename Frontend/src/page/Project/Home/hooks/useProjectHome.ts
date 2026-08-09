@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError } from "../../../../api/apiClient";
+import { apiErrorMessage } from "../../../../api/apiClient";
 import {
   getProjectHome,
   type ProjectHomeResponse,
@@ -28,14 +28,11 @@ export default function useProjectHome(projectId: number | null) {
           setData(response);
         }
       } catch (caughtError) {
-        const message =
-          caughtError instanceof ApiError
-            ? caughtError.message
-            : "프로젝트 홈을 불러오지 못했습니다.";
-
         if (!isCancelled) {
           setData(null);
-          setError(message);
+          setError(
+            apiErrorMessage(caughtError, "프로젝트 홈을 불러오지 못했습니다."),
+          );
         }
       } finally {
         if (!isCancelled) {

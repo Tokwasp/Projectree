@@ -7,6 +7,7 @@ import {
   requestMeetingAnalysis,
   type MeetingOutputOptions,
 } from "../api/meetingApi";
+import { apiErrorMessage } from "../../../../api/apiClient";
 import { useAuthStore } from "../../../../store/authStore";
 import { useMeetingStore } from "../../../../store/meetingStore";
 import { toast } from "../../../../store/toastStore";
@@ -176,7 +177,7 @@ export const useMeetingOverlay = () => {
         await endMeeting(roomName);
       } catch (caught) {
         console.error("회의 종료 요청 실패:", caught);
-        toast.error("회의를 종료하지 못했습니다. 다른 참가자는 아직 회의 중입니다.");
+        toast.error(apiErrorMessage(caught, "회의를 종료하지 못했습니다."));
         setEnding(false);
         return;
       }
