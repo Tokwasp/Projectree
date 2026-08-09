@@ -120,7 +120,7 @@ export default function ProjectMember() {
                           isOwner ? style.owner : style.memberRole
                         }`}
                       >
-                        {isOwner ? "오너" : "멤버"}
+                        {isOwner ? "Owner" : "Member"}
                       </span>
                     </td>
 
