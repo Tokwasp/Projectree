@@ -9,38 +9,12 @@
   padding: 0 calc(var(--space-8) + var(--space-12));
 }
 
-.searchArea {
-  width: min(30vw, 360px);
-  min-width: 0;
-  flex-shrink: 1;
-}
-
 .startContent {
   display: flex;
   overflow: hidden;
   flex: 1;
   min-width: 0;
   margin-right: auto;
-}
-
-.searchInput {
-  width: 100%;
-  max-width: 360px;
-  height: var(--space-8);
-  padding: 0 var(--space-3);
-  color: var(--color-text);
-  background: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-}
-
-.searchInput::placeholder {
-  color: var(--color-secondary);
-}
-
-.searchInput:focus {
-  border-color: var(--color-primary);
 }
 
 .actions {

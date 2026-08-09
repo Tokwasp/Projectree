@@ -33,7 +33,7 @@ export default function ProjectSidebar({
     { label: "회의", to: `/projects/${projectId}/meeting` },
     { label: "노드", to: `/projects/${projectId}/tree` },
     { label: "팀원", to: `/projects/${projectId}/members` },
-    { label: "설정" },
+    { label: "설정", to: `/projects/${projectId}/settings` },
   ];
 
   return (

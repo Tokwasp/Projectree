@@ -10,8 +10,8 @@ interface ProjectRoleFilterProps {
 
 const ROLE_OPTIONS: { value: RoleFilter; label: string }[] = [
   { value: "ALL", label: "전체 역할" },
-  { value: "OWNER", label: "오너" },
-  { value: "MEMBER", label: "멤버" },
+  { value: "OWNER", label: "Owner" },
+  { value: "MEMBER", label: "Member" },
 ];
 
 export default function ProjectRoleFilter({

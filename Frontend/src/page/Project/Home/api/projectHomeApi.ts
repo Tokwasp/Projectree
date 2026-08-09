@@ -8,9 +8,8 @@ export interface ProjectDetailResponse {
 }
 
 export interface MeetingRecordResponse {
+  meetingId: number;
   name: string;
-  currentPageNum: number;
-  totalElements: number;
 }
 
 export interface PersonalSpeakingResponse {
@@ -26,16 +25,14 @@ export interface MyMeetingReviewResponse {
 
 export interface ProjectHomeResponse {
   projectDetail: ProjectDetailResponse;
-  meetingRecordList: MeetingRecordResponse[] | null;
+  meetingRecordList: MeetingRecordResponse[];
   personalSpeakingList: PersonalSpeakingResponse[];
   myReview: MyMeetingReviewResponse | null;
 }
 
 export const getProjectHome = (
   projectId: number,
-  page = 0,
-  size = 10,
 ): Promise<ProjectHomeResponse> =>
   apiRequest<ProjectHomeResponse>(
-    `/projects/${projectId}/home?page=${page}&size=${size}`,
+    `/projects/${projectId}/home`,
   );
