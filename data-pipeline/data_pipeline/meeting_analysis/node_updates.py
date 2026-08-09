@@ -1045,19 +1045,19 @@ def process_node_content_batch_update(
                 materialized_graph_state=materialized,
             )
 
-        changed_plans = [plan for plan in plans if plan.changed]
-        if not changed_plans:
+        noop_plan = next((plan for plan in plans if not plan.changed), None)
+        if noop_plan is not None:
             return _reject_batch(
                 session,
                 row=row,
                 command=command,
                 reason_code="NO_CHANGE",
-                message="all requested Node titles already have the requested value",
-                failed_node_id=None,
+                message="requested Node title is already current",
+                failed_node_id=noop_plan.item.node_id,
                 materialized_graph_state=materialized,
             )
 
-        for plan in changed_plans:
+        for plan in plans:
             _apply_batch_node_mutation(session, command=command, plan=plan)
 
         event, artifact, graph_version = stage_project_graph_changed_v3(

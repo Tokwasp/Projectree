@@ -42,9 +42,10 @@ Command 기반 성공 경로는 다음과 같이 분리한다.
 동일 실패 event를 중복 생성하지 않는다.
 
 V2 Node 제목 Batch 수정의 결정적 실패는 `NODE_CONTENT_UPDATE_REJECTED`를 사용한다.
-특정 Node가 원인이면 `failedNodeId`에 canonical UUID를 넣고, `NO_CHANGE` 또는
-`GRAPH_SNAPSHOT_TOO_LARGE`처럼 Batch 전체 실패이면 `null`을 넣는다. V1 단건 수정에는
-호환성을 위해 이 rejection event를 소급 적용하지 않는다.
+특정 Node가 원인이면 `failedNodeId`에 canonical UUID를 넣는다. V2 `NO_CHANGE`는 첫
+no-op Node UUID를 넣고, `GRAPH_SNAPSHOT_TOO_LARGE`처럼 특정 Node가 없는 Batch 전체
+실패만 `null`을 넣는다. V1 단건 수정에는 호환성을 위해 이 rejection event를 소급
+적용하지 않는다.
 
 ## Graph claim-check
 

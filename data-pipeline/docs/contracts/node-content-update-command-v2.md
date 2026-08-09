@@ -39,10 +39,15 @@ Python은 Project graph state를 한 번 잠근 다음 대상 Node를 UUID 순�
 Node의 프로젝트·상태·병합 계보·expected version·현재 Revision/Evidence를 preflight한
 후에만 첫 변경을 시작한다. 하나라도 실패하면 어떤 Node도 수정하지 않는다.
 
-실제 제목이 바뀐 Node만 USER Revision과 GraphChangeEvent를 만들고 nodeVersion을 1
-증가시킨다. 일부 no-op은 유지한다. 변경 Node가 하나 이상이면 명령 전체에서
-graphVersion, Full Snapshot, `PROJECT_GRAPH_CHANGED`를 각각 한 번만 생성한다. 전체가
-no-op이면 `NO_CHANGE`로 거절하며 어떤 graph artifact도 만들지 않는다.
+Java가 V2 command에 넣은 모든 Node는 실제 변경 대상이어야 한다. Python authoritative
+graph에서 하나라도 요청 title과 현재 title이 같으면 Java Projection과 정본 상태의 차이로
+간주하고 Batch 전체를 `NO_CHANGE`로 거절한다. 이때 첫 no-op Node의 UUID를
+`failedNodeId`로 보내며 어떤 Node도 수정하지 않는다.
+
+모든 Node가 실제 변경 대상일 때만 각각 USER Revision과 GraphChangeEvent를 만들고
+nodeVersion을 1 증가시킨다. 명령 전체에서 graphVersion, Full Snapshot,
+`PROJECT_GRAPH_CHANGED`는 각각 한 번만 생성한다. V1 단건의 same-value no-op 완료 정책은
+호환성을 위해 그대로 유지하며, V2의 전체 거절 정책과 의도적으로 다르다.
 
 Embedding input hash가 바뀐 변경 Node만 READY Embedding과 Analysis를 기존 V1 정책으로
 무효화한다. no-op Node의 Revision, version, Embedding과 Analysis는 변경하지 않는다.
@@ -106,9 +111,10 @@ reasonCode는 다음 중 하나다.
 - `NO_CHANGE`
 - `GRAPH_SNAPSHOT_TOO_LARGE`
 
-`NO_CHANGE`와 `GRAPH_SNAPSHOT_TOO_LARGE`의 `failedNodeId`는 `null`이다. 예상하지 못한
-DB/AWS/직렬화 오류는 terminal rejection으로 위장하지 않고 rollback 후 예외를 다시
-발생시켜 SQS가 ACK되지 않게 한다.
+`NO_CHANGE`의 `failedNodeId`는 첫 no-op Node UUID이고,
+`GRAPH_SNAPSHOT_TOO_LARGE`의 `failedNodeId`는 `null`이다. 예상하지 못한 DB/AWS/직렬화
+오류는 terminal rejection으로 위장하지 않고 rollback 후 예외를 다시 발생시켜 SQS가
+ACK되지 않게 한다.
 
 ## 멱등성
 
