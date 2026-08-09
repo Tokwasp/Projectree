@@ -99,7 +99,8 @@ class MeetingAnalysisRequestIntegrationTest {
     @CsvSource({
             "true, true, PROCESSING, PROCESSING",
             "true, false, PROCESSING, SKIPPED",
-            "false, true, SKIPPED, PROCESSING"
+            "false, true, SKIPPED, PROCESSING",
+            "false, false, SKIPPED, SKIPPED"
     })
     void savesMeetingAndCommandAtomically(
             boolean generateSummary,
@@ -179,26 +180,6 @@ class MeetingAnalysisRequestIntegrationTest {
         assertThat(command.payload().roomName()).isEqualTo(ROOM_NAME);
         assertThat(command.payload().generateSummary()).isEqualTo(generateSummary);
         assertThat(command.payload().generateNodes()).isEqualTo(generateNodes);
-    }
-
-    @Test
-    void rejectsNoSelectedTaskWithoutChangingMeetingGuardOrOutbox() {
-        Fixture fixture = fixture(ProjectRole.OWNER, ROOM_NAME);
-
-        assertBusinessError(
-                () -> service.requestAnalysis(
-                        fixture.projectId(),
-                        ROOM_NAME,
-                        fixture.memberId(),
-                        new MeetingAnalysisRequest(false, false)
-                ),
-                MeetingErrorCode.ANALYSIS_TASK_NOT_SELECTED
-        );
-
-        assertNotRequested(fixture.meetingId());
-        assertThat(graphSyncRepository.findById(fixture.projectId()).orElseThrow()
-                .hasActiveCommand()).isFalse();
-        assertThat(outboxRepository.count()).isZero();
     }
 
     @Test
