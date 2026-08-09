@@ -13,6 +13,7 @@ import com.ssafy.projectree.domain.meeting.result.exception.AnalysisResultContra
 import com.ssafy.projectree.domain.meeting.result.exception.InvalidAnalysisTaskStateException;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayload;
 import com.ssafy.projectree.domain.meeting.result.graph.event.GraphResultSourceType;
+import com.ssafy.projectree.domain.meeting.result.graph.event.TreeCreatedNotificationEvent;
 import com.ssafy.projectree.domain.meeting.result.graph.operation.ProjectGraphOperationGuard;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
@@ -22,6 +23,7 @@ import com.ssafy.projectree.domain.meeting.result.validation.LockedAnalysisEvent
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -48,6 +50,7 @@ public class AnalysisGraphProjectionApplier {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final ProjectGraphOperationGuard graphOperationGuard;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public GraphProjectionApplyResult apply(
@@ -106,6 +109,9 @@ public class AnalysisGraphProjectionApplier {
         if (context.completionResult() == AnalysisTaskCompletionResult.APPLIED) {
             notificationOutboxRepository.saveAndFlush(
                     createSuccessNotification(context, event, sync.getCurrentGraphVersion(), projectionUpdated)
+            );
+            applicationEventPublisher.publishEvent(
+                    new TreeCreatedNotificationEvent(context.requestedByMemberId())
             );
         }
         boolean released = graphOperationGuard.release(
