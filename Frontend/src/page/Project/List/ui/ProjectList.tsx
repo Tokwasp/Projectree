@@ -28,6 +28,15 @@ export default function ProjectList() {
       </div>
 
       <div className={style.toolbar}>
+        <div className={style.searchArea}>
+          <input
+            className={style.searchInput}
+            type="search"
+            placeholder="프로젝트 검색..."
+            aria-label="프로젝트 검색"
+          />
+        </div>
+
         <button
           className={style.createButton}
           type="button"
