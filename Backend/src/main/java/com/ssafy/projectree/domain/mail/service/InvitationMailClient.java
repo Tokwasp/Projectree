@@ -3,6 +3,7 @@ package com.ssafy.projectree.domain.mail.service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -13,10 +14,14 @@ public class InvitationMailClient {
 
     private final JavaMailSender mailSender;
 
+    @Value("${spring.mail.username}")
+    private String senderEmail;
+
     public void send(InvitationMailContent content) {
         MimeMessage message = mailSender.createMimeMessage();
         try {
             MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(senderEmail);
             helper.setTo(content.recipientEmail());
             helper.setSubject("[Projectree] " + content.inviterName() + "님이 '"
                     + content.projectTitle() + "' 프로젝트에 초대했습니다");

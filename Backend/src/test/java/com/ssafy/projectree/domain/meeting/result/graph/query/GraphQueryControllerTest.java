@@ -142,7 +142,7 @@ class GraphQueryControllerTest extends ControllerTestSupport {
 
     private GraphTreeResponse tree() {
         GraphTreeNodeResponse category = new GraphTreeNodeResponse(
-                "category:BACKEND", GraphTreeNodeKind.CATEGORY_ROOT, "BACKEND", GraphNodeCategory.BACKEND,
+                "category:BACKEND", GraphTreeNodeKind.CATEGORY_ROOT, "Backend", GraphNodeCategory.BACKEND,
                 null, null, null, null, List.of()
         );
         return new GraphTreeResponse(

@@ -16,6 +16,7 @@ import com.ssafy.projectree.domain.meeting.result.event.AnalysisResultEventType;
 import com.ssafy.projectree.domain.meeting.result.graph.event.GraphResultSourceType;
 import com.ssafy.projectree.domain.meeting.result.graph.event.GraphSnapshotReference;
 import com.ssafy.projectree.domain.meeting.result.graph.event.ProjectGraphChangedPayload;
+import com.ssafy.projectree.domain.meeting.result.graph.event.TreeCreatedNotificationEvent;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.entity.ProjectGraphSync;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.NodeEvidenceProjectionRepository;
 import com.ssafy.projectree.domain.meeting.result.graph.projection.repository.ProjectGraphSyncRepository;
@@ -34,6 +35,8 @@ import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -44,6 +47,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@RecordApplicationEvents
 class AnalysisGraphProjectionApplierIntegrationTest extends IntegrationTestSupport {
 
     @Autowired private AnalysisGraphProjectionApplier applier;
@@ -56,6 +60,7 @@ class AnalysisGraphProjectionApplierIntegrationTest extends IntegrationTestSuppo
     @Autowired private NodeEvidenceProjectionRepository evidenceRepository;
     @Autowired private MeetingAnalysisNotificationOutboxRepository notificationRepository;
     @Autowired private ObjectMapper objectMapper;
+    @Autowired private ApplicationEvents applicationEvents;
 
     @Test
     void processingNodeResultAtomicallyCompletesAndReplacesProjection() throws Exception {
@@ -86,6 +91,10 @@ class AnalysisGraphProjectionApplierIntegrationTest extends IntegrationTestSuppo
         assertThat(notificationPayload.get("requestedGraphVersion").asLong()).isEqualTo(3);
         assertThat(notificationPayload.get("currentGraphVersion").asLong()).isEqualTo(3);
         assertThat(notificationPayload.get("projectionUpdated").asBoolean()).isTrue();
+        assertThat(publishedTreeEvents())
+                .singleElement()
+                .extracting(TreeCreatedNotificationEvent::receiverId)
+                .isEqualTo(17);
     }
 
     @Test
@@ -106,6 +115,27 @@ class AnalysisGraphProjectionApplierIntegrationTest extends IntegrationTestSuppo
         assertThat(graphSyncRepository.findById(fixture.projectId()).orElseThrow().getCurrentGraphVersion())
                 .isEqualTo(5);
         assertThat(nodeRepository.countByProjectId(fixture.projectId())).isZero();
+        assertThat(notificationRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void alreadySucceededNodeResultDoesNotPublishDuplicateTreeNotification() {
+        Fixture fixture = fixture();
+        ProjectGraphChangedPayload payload = payload(3);
+
+        GraphProjectionApplyResult first = applier.apply(
+                event(fixture, payload), payload, snapshot(fixture, payload.graphVersion())
+        );
+        GraphProjectionApplyResult retry = applier.apply(
+                event(fixture, payload), payload, snapshot(fixture, payload.graphVersion())
+        );
+
+        assertThat(first.completionResult()).isEqualTo(AnalysisTaskCompletionResult.APPLIED);
+        assertThat(retry.completionResult()).isEqualTo(AnalysisTaskCompletionResult.ALREADY_SUCCEEDED);
+        assertThat(publishedTreeEvents())
+                .singleElement()
+                .extracting(TreeCreatedNotificationEvent::receiverId)
+                .isEqualTo(17);
         assertThat(notificationRepository.count()).isEqualTo(1);
     }
 
@@ -185,6 +215,10 @@ class AnalysisGraphProjectionApplierIntegrationTest extends IntegrationTestSuppo
                         "quote", null, null, null, 1)),
                 List.of()
         );
+    }
+
+    private List<TreeCreatedNotificationEvent> publishedTreeEvents() {
+        return applicationEvents.stream(TreeCreatedNotificationEvent.class).toList();
     }
 
     private record Fixture(int projectId, int meetingId, String commandId) {

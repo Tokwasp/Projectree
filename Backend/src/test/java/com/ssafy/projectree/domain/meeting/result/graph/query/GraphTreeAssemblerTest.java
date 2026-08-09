@@ -34,6 +34,13 @@ class GraphTreeAssemblerTest {
                 "category:BACKEND", "category:FRONTEND", "category:DESIGN", "category:INFRA",
                 "category:PLANNING", "category:AI"
         );
+        assertThat(root.children()).extracting(GraphTreeNodeResponse::category).containsExactly(
+                GraphNodeCategory.BACKEND, GraphNodeCategory.FRONTEND, GraphNodeCategory.DESIGN,
+                GraphNodeCategory.INFRA, GraphNodeCategory.PLANNING, GraphNodeCategory.AI
+        );
+        assertThat(root.children()).extracting(GraphTreeNodeResponse::title).containsExactly(
+                "Backend", "Frontend", "Design", "Infra", "Planning", "AI"
+        );
         assertThat(root.children().getFirst().children()).extracting(GraphTreeNodeResponse::id)
                 .containsExactly(decision.getNodeId());
         assertThat(root.children().get(1).children()).isEmpty();

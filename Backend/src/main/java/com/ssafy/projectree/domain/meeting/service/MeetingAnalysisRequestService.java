@@ -135,9 +135,6 @@ public class MeetingAnalysisRequestService {
                 || request.generateNodes() == null) {
             throw new CustomException(CommonErrorCode.INVALID_REQUEST);
         }
-        if (!request.generateSummary() && !request.generateNodes()) {
-            throw new CustomException(MeetingErrorCode.ANALYSIS_TASK_NOT_SELECTED);
-        }
     }
 
     private String canonicalizeRoomName(String roomName) {

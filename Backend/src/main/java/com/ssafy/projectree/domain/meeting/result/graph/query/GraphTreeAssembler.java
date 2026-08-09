@@ -63,7 +63,7 @@ public class GraphTreeAssembler {
             categoryRoots.add(new GraphTreeNodeResponse(
                     "category:" + category.name(),
                     GraphTreeNodeKind.CATEGORY_ROOT,
-                    category.name(),
+                    categoryTitle(category),
                     category,
                     null,
                     null,
@@ -88,6 +88,17 @@ public class GraphTreeAssembler {
                 null,
                 categoryRoots
         );
+    }
+
+    private String categoryTitle(GraphNodeCategory category) {
+        return switch (category) {
+            case BACKEND -> "Backend";
+            case FRONTEND -> "Frontend";
+            case INFRA -> "Infra";
+            case PLANNING -> "Planning";
+            case DESIGN -> "Design";
+            case AI -> "AI";
+        };
     }
 
     private Map<String, ProjectNodeProjection> indexNodes(

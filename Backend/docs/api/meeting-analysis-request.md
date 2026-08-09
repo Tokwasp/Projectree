@@ -16,17 +16,19 @@
 | `true` | `true` | yes | acquired |
 | `true` | `false` | yes | not acquired |
 | `false` | `true` | yes | acquired |
-| `false` | `false` | no | not acquired |
+| `false` | `false` | yes | not acquired |
 
-Both fields are required. Selecting neither task returns:
+Both fields are required.
 
-```http
-400 Bad Request
-```
+`false / false` is a valid explicit selection. It means that the user
+confirmed that neither summary generation nor node generation is requested.
 
-```text
-ANALYSIS_TASK_NOT_SELECTED
-```
+The meeting stores both task statuses as `SKIPPED`, while a
+`MEETING_ANALYSIS_REQUESTED` command is still staged in the outbox with both
+flags set to `false`.
+
+Because node generation is not requested, this combination does not acquire
+the project graph operation guard.
 
 Summary-only analysis does not change Graph Projection or Graph Version. It is
 therefore allowed while another graph-changing command owns the project guard.

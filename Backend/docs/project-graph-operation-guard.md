@@ -12,8 +12,11 @@ Guarded command types:
 - `NODE_DELETE_REQUESTED`
 
 Summary-only meeting analysis and read-only graph queries do not acquire the
-guard. A meeting-analysis request with both task options set to `false` is
-rejected with `ANALYSIS_TASK_NOT_SELECTED`.
+guard.
+
+A meeting-analysis request with both task options set to `false` is valid and
+still stages a `MEETING_ANALYSIS_REQUESTED` command, but it does not acquire
+the project graph operation guard because node generation is not requested.
 
 ## Persistence and locking
 
