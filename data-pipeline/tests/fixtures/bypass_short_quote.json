@@ -1,0 +1,18 @@
+{
+  "requestId": "req-short-quote",
+  "projectId": "proj-01",
+  "externalMeetingId": "M-SHORT-QUOTE",
+  "runType": "NODE_GENERATION",
+  "segments": [
+    {"segmentId": "seg-1", "startMs": 1000, "speakerLabel": "SPK_1", "text": "네."}
+  ],
+  "items": [
+    {"id": "m1", "type": "DECISION", "predictedCategory": "PLANNING",
+     "title": "무언가를 결정함", "content": "근거가 빈약한 결정.",
+     "evidence": [{"segmentId": "seg-1", "quote": "네."}]}
+  ],
+  "judgments": [
+    {"itemId": "m1", "result": "NEW_DECISION", "category": "PLANNING"}
+  ],
+  "candidates": {"decisions": []}
+}

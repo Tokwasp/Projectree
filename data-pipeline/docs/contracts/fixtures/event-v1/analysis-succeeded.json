@@ -1,0 +1,8 @@
+{
+  "eventSchemaVersion": 1,
+  "eventId": "00000000-0000-0000-0000-000000000007",
+  "eventType": "ANALYSIS_STATUS_CHANGED",
+  "occurredAt": "2026-08-03T01:06:00.000000Z",
+  "projectId": 10,
+  "payload": {"projectId":10,"externalMeetingId":501,"status":"SUCCEEDED","requiredGraphVersion":23,"requiredSummaryVersion":2}
+}

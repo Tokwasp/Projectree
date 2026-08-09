@@ -1,0 +1,418 @@
+{
+  "meetingId": "V1",
+  "segments": [
+    {
+      "segmentId": "V1-seg-001",
+      "startMs": 0,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "자 시작할게요. 오늘은 노드 확정 방식이랑 저장 구조만 정하고, 나머지는 욕심내지 맙시다."
+    },
+    {
+      "segmentId": "V1-seg-002",
+      "startMs": 12000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "잠깐만요 저 커피 엎을 뻔했어요. 노트북 또 보내는 줄 알았네."
+    },
+    {
+      "segmentId": "V1-seg-003",
+      "startMs": 20000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그거 지난번에도 그러지 않았어요? 아무튼 시작하시죠."
+    },
+    {
+      "segmentId": "V1-seg-004",
+      "startMs": 27000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "지금 데이터베이스를 PostgreSQL이랑 벡터 DB 두 개로 나눌지 얘기가 있었잖아요."
+    },
+    {
+      "segmentId": "V1-seg-005",
+      "startMs": 39000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "저는 일단 PostgreSQL 하나에 pgvector 붙이는 게 낫다고 봐요. 지금 규모에서 DB 두 개 운영하면 더 복잡합니다."
+    },
+    {
+      "segmentId": "V1-seg-006",
+      "startMs": 52000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "동의해요. 노드가 만 개도 안 되는데 별도 벡터 DB는 과한 것 같아요."
+    },
+    {
+      "segmentId": "V1-seg-007",
+      "startMs": 62000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그럼 MVP에서는 PostgreSQL과 pgvector를 같이 쓰는 걸로 확정하죠. 별도 벡터 DB는 안 둡니다."
+    },
+    {
+      "segmentId": "V1-seg-008",
+      "startMs": 77000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "제가 내일까지 Top-5, Top-10 검색 결과 비교해서 간단하게 표로 올릴게요."
+    },
+    {
+      "segmentId": "V1-seg-009",
+      "startMs": 89000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "근데 데이터가 십만 개쯤 되면 느려질 수도 있잖아요. pgvector가 무조건 빠르다는 건 아니고."
+    },
+    {
+      "segmentId": "V1-seg-010",
+      "startMs": 100000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그건 지금은 추측이죠. 실제로 느린지는 아직 모르고."
+    },
+    {
+      "segmentId": "V1-seg-011",
+      "startMs": 108000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "맞아요. 노드 만 개 기준으로 검색 P95가 1초를 넘으면 Redis 캐시를 붙이고, 그전에는 넣지 않는 걸로 하죠."
+    },
+    {
+      "segmentId": "V1-seg-012",
+      "startMs": 124000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "네 조건은 그 정도면 명확하네요."
+    },
+    {
+      "segmentId": "V1-seg-013",
+      "startMs": 131000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "Redis 말고 Kafka도 나중에 merge 이벤트 처리할 때 쓸 수 있지 않을까요?"
+    },
+    {
+      "segmentId": "V1-seg-014",
+      "startMs": 142000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "Kafka는 지금 결정하지 맙시다. 트래픽 보고 다음 스프린트에서 다시 이야기해요."
+    },
+    {
+      "segmentId": "V1-seg-015",
+      "startMs": 153000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "저는 시간 남으면 검색 결과 카드에 애니메이션 좀 넣어볼게요. 없어도 되긴 합니다."
+    },
+    {
+      "segmentId": "V1-seg-016",
+      "startMs": 163000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그건 진짜 마지막에 하세요. 지금 예쁘게 할 때가 아니에요."
+    },
+    {
+      "segmentId": "V1-seg-017",
+      "startMs": 171000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "다음은 생성된 노드를 바로 그래프에 넣을지입니다. 지금은 잘못 붙은 ATTACH 때문에 apply가 실패한 적이 있죠."
+    },
+    {
+      "segmentId": "V1-seg-018",
+      "startMs": 184000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "네 어제 Action 하나가 최종 생성되지 않은 Decision을 부모로 잡아서 트랜잭션이 롤백됐어요."
+    },
+    {
+      "segmentId": "V1-seg-019",
+      "startMs": 197000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러면 모델이 만든 건 일단 전부 후보 상태로 두고, 사람이 확인한 것만 확정하면 되지 않아요?"
+    },
+    {
+      "segmentId": "V1-seg-020",
+      "startMs": 209000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "저도 그게 맞다고 봐요. 자동 확정보다 사용자가 수정할 수 있는 게 먼저예요."
+    },
+    {
+      "segmentId": "V1-seg-021",
+      "startMs": 219000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "좋습니다. 생성 결과는 전부 PROPOSED로 저장하고, 사용자가 승인한 노드만 CONFIRMED 그래프에 반영합니다."
+    },
+    {
+      "segmentId": "V1-seg-022",
+      "startMs": 236000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그럼 사용자가 제목, 타입, 부모 노드를 수정할 수 있어야겠네요."
+    },
+    {
+      "segmentId": "V1-seg-023",
+      "startMs": 246000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "네. 삭제도 가능해야 하고요."
+    },
+    {
+      "segmentId": "V1-seg-024",
+      "startMs": 253000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "리뷰 화면 초안은 제가 어제 PR로 올려놨어요. 아직 API는 목데이터예요."
+    },
+    {
+      "segmentId": "V1-seg-025",
+      "startMs": 265000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "좋아요. 경현 님은 금요일까지 승인, 수정, 삭제 API를 만들어 주세요."
+    },
+    {
+      "segmentId": "V1-seg-026",
+      "startMs": 277000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "네 금요일까지 하겠습니다."
+    },
+    {
+      "segmentId": "V1-seg-027",
+      "startMs": 283000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "모델은 gpt-5.2 계속 쓰나요? mini로 바꾸면 비용 줄 것 같은데."
+    },
+    {
+      "segmentId": "V1-seg-028",
+      "startMs": 293000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "품질 비교를 안 했으니까 지금 바꾸면 안 될 것 같아요."
+    },
+    {
+      "segmentId": "V1-seg-029",
+      "startMs": 300000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "모델 변경은 보류합니다. 크레딧 남은 걸로 한 번만 비교한 뒤에 결정해요."
+    },
+    {
+      "segmentId": "V1-seg-030",
+      "startMs": 313000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "점심 뭐 먹죠? 오늘 매운 거 먹으면 오후에 다 죽을 것 같은데."
+    },
+    {
+      "segmentId": "V1-seg-031",
+      "startMs": 321000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "저는 돈가스. 이건 회의록에 넣지 마세요."
+    },
+    {
+      "segmentId": "V1-seg-032",
+      "startMs": 328000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "AI가 돈가스를 Decision으로 뽑으면 레전드인데."
+    },
+    {
+      "segmentId": "V1-seg-033",
+      "startMs": 336000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "다음 저장 구조요. 녹음 원본을 DB에 바이너리로 넣자는 의견도 있었는데."
+    },
+    {
+      "segmentId": "V1-seg-034",
+      "startMs": 348000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그건 너무 커져요. 원본 WebM은 S3에 두고 DB에는 키, 길이, MIME 타입만 저장합시다."
+    },
+    {
+      "segmentId": "V1-seg-035",
+      "startMs": 362000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "동의합니다. 다운로드는 presigned URL로 하면 되고요."
+    },
+    {
+      "segmentId": "V1-seg-036",
+      "startMs": 372000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그럼 원본 음성은 S3, PostgreSQL에는 메타데이터만 저장하는 걸로 확정합니다."
+    },
+    {
+      "segmentId": "V1-seg-037",
+      "startMs": 387000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "제가 목요일까지 S3 업로드 어댑터 붙이겠습니다."
+    },
+    {
+      "segmentId": "V1-seg-038",
+      "startMs": 396000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "어제 콜백 테스트할 때 업로드가 두 번 타임아웃 났어요. 30초 지나면 실패하더라고요."
+    },
+    {
+      "segmentId": "V1-seg-039",
+      "startMs": 409000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그건 재현됐어요?"
+    },
+    {
+      "segmentId": "V1-seg-040",
+      "startMs": 414000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "네 같은 파일로 두 번 재현했고 로그도 있어요."
+    },
+    {
+      "segmentId": "V1-seg-041",
+      "startMs": 422000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그 이슈는 S3 저장 작업 아래에 붙이고, 어댑터 만들 때 timeout과 재시도도 같이 확인해 주세요."
+    },
+    {
+      "segmentId": "V1-seg-042",
+      "startMs": 436000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "네 같이 보겠습니다."
+    },
+    {
+      "segmentId": "V1-seg-043",
+      "startMs": 443000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "혹시 음성 파일을 MP3로 바꾸면 용량이 줄지 않나요?"
+    },
+    {
+      "segmentId": "V1-seg-044",
+      "startMs": 451000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그건 변환 비용도 있고 지금 클로바가 WebM을 받으니까 굳이 필요 없어요."
+    },
+    {
+      "segmentId": "V1-seg-045",
+      "startMs": 460000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "이번 범위에서는 포맷 변환은 하지 맙시다. WebM 그대로 저장합니다."
+    },
+    {
+      "segmentId": "V1-seg-046",
+      "startMs": 474000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "Slack 알림은요? 노드 승인 요청 오면 Slack으로 보내면 편할 것 같은데."
+    },
+    {
+      "segmentId": "V1-seg-047",
+      "startMs": 483000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "좋지만 MVP 범위에서는 뺍시다. 웹 안에서 알림 표시까지만 하고 Slack 연동은 다음으로 넘겨요."
+    },
+    {
+      "segmentId": "V1-seg-048",
+      "startMs": 498000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그럼 이번 스프린트에서 Slack은 안 하는 걸로."
+    },
+    {
+      "segmentId": "V1-seg-049",
+      "startMs": 504000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "네."
+    },
+    {
+      "segmentId": "V1-seg-050",
+      "startMs": 508000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아 맞다 오늘 축구 몇 시예요?"
+    },
+    {
+      "segmentId": "V1-seg-051",
+      "startMs": 513000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "열한 시요. 근데 저희 배포 못 끝내면 못 봅니다."
+    },
+    {
+      "segmentId": "V1-seg-052",
+      "startMs": 521000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "마지막으로 비용 알람은 누가 하죠? 이건 특정 Decision 밑에 붙일 건 아닌데 꼭 필요합니다."
+    },
+    {
+      "segmentId": "V1-seg-053",
+      "startMs": 532000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "제가 오늘 AWS Budget 10달러 알림 걸고 메일 수신 확인할게요."
+    },
+    {
+      "segmentId": "V1-seg-054",
+      "startMs": 542000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "좋습니다. 그건 독립 Action으로 남겨 주세요."
+    },
+    {
+      "segmentId": "V1-seg-055",
+      "startMs": 552000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "문서 정리는 제가 시간 되면 주말에 좀 할 수도 있어요. 약속은 아닙니다."
+    },
+    {
+      "segmentId": "V1-seg-056",
+      "startMs": 562000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그건 할 일로 잡지 말고요."
+    },
+    {
+      "segmentId": "V1-seg-057",
+      "startMs": 567000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "정리하면 PostgreSQL과 pgvector를 같이 쓰고, 모든 노드는 사용자 승인 전 PROPOSED, 음성은 S3에 저장합니다. Redis는 성능 기준 넘을 때만 추가하고 Slack은 MVP에서 제외합니다."
+    },
+    {
+      "segmentId": "V1-seg-058",
+      "startMs": 587000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네."
+    },
+    {
+      "segmentId": "V1-seg-059",
+      "startMs": 589000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "확인했습니다."
+    }
+  ]
+}

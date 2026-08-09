@@ -1,0 +1,443 @@
+"""스프링 대면 DTO · 이벤트 스키마 자리 (outbox payload).
+
+토폴로지 A: 스프링(Backend/)은 그래프 PG 에 직접 접근하지 않고, 파이프라인이 발행하는
+범용 outbox_event 를 통해 반영 결과를 받는다 (연동 자체는 M4). 여기서는 계약 자리만 고정.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from enum import Enum
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from .enums import (
+    AnalysisCandidateStatus,
+    AnalysisRunStatus,
+    AnalysisStatus,
+    BModelStatus,
+    GraphState,
+    NodeType,
+    RecommendationType,
+    RetrievalStageStatus,
+)
+
+
+# --- 스프링이 읽는 노드 투영 DTO ---------------------------------------------
+class SpringNodeRow(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    nodeId: str
+    projectId: str
+    nodeType: NodeType
+    category: str
+    title: str
+    content: str
+    parentId: str | None
+    graphState: GraphState
+    version: int
+    sourceMeetingId: str
+    sourceItemId: str
+
+
+# --- 그래프 변경 이벤트 (append-only, before/after) --------------------------
+class GraphChangeType(str, Enum):
+    CREATE = "CREATE"
+    UPDATE = "UPDATE"
+    ATTACH = "ATTACH"
+    EXCLUDE = "EXCLUDE"
+    DEMOTE = "DEMOTE"      # 서버 검증 실패로 MINUTES_ONLY 강등
+    MINUTES_ONLY = "MINUTES_ONLY"
+
+
+class ActorType(str, Enum):
+    AI = "AI"
+    USER = "USER"
+    SYSTEM = "SYSTEM"
+
+
+class GraphChangeEventPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    changeType: GraphChangeType
+    nodeId: str | None = None
+    itemId: str | None = None
+    actorType: ActorType = ActorType.AI
+    before: dict | None = None
+    after: dict | None = None
+    detail: dict = Field(default_factory=dict)
+
+
+# --- 범용 outbox 이벤트 (전용 outbox·command 테이블 금지) --------------------
+class OutboxEventType(str, Enum):
+    # v2.2 §5: 범용 outbox 1개 테이블의 이벤트 타입 3종.
+    EMBEDDING_REQUESTED = "EMBEDDING_REQUESTED"
+    MEETING_PROCESSING_COMPLETED = "MEETING_PROCESSING_COMPLETED"
+    GRAPH_CHANGED = "GRAPH_CHANGED"
+
+
+class OutboxEventPayload(BaseModel):
+    """outbox_event.payload(JSONB)에 담기는 범용 이벤트 본문."""
+
+    model_config = ConfigDict(extra="forbid")
+    eventType: OutboxEventType
+    aggregateType: str            # 예: "meeting_request", "node"
+    aggregateId: str
+    projectId: str
+    schemaVersion: str = "v2.2"
+    payload: dict = Field(default_factory=dict)
+
+
+# --- 반영 결과 (IF-6 요약) ---------------------------------------------------
+class CreatedNode(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    itemId: str
+    nodeId: str
+    nodeType: NodeType
+    parentId: str | None = None
+
+
+class UpdatedNode(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    itemId: str
+    nodeId: str
+    changes: dict[str, str]
+    fromVersion: int
+    toVersion: int
+
+
+class MinutesOnlyEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    itemId: str
+    reason: str
+
+
+class DemotedEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    itemId: str
+    fromResult: str | None = None
+    rule: str
+
+
+class ApplyResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    requestId: str
+    externalMeetingId: str
+    status: str  # COMPLETED / STALE / REJECTED / DUPLICATE
+    createdNodes: list[CreatedNode] = Field(default_factory=list)
+    updatedNodes: list[UpdatedNode] = Field(default_factory=list)
+    minutesOnly: list[MinutesOnlyEntry] = Field(default_factory=list)
+    demoted: list[DemotedEntry] = Field(default_factory=list)
+    detail: dict = Field(default_factory=dict)
+
+
+class ProposalPersistResult(BaseModel):
+    """Generation 결과를 사용자 검토 대기 후보로 저장한 결과."""
+
+    model_config = ConfigDict(extra="forbid")
+    requestId: str
+    externalMeetingId: str
+    status: str  # PROCESSING / REVIEW_PENDING / FAILED
+    outcome: str
+    candidateIds: list[str] = Field(default_factory=list)
+    candidateCount: int = 0
+    suggestedDispositionCounts: dict[str, int] = Field(default_factory=dict)
+    filled: list[str] = Field(default_factory=list)
+    dropped: list[dict] = Field(default_factory=list)
+    demoted: list[dict] = Field(default_factory=list)
+    invalidEvidence: list[dict] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    detail: dict = Field(default_factory=dict)
+
+
+class CandidateEvidenceView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    segment_id: str
+    quote: str
+    quote_start: int | None = None
+    quote_end: int | None = None
+    evidence_type: str | None = None
+    source_meeting_id: str | None = None
+
+
+class CandidateView(BaseModel):
+    """Review projection including suggested, reviewed, and effective values."""
+
+    model_config = ConfigDict(extra="forbid")
+    candidate_id: str
+    request_id: str
+    source_item_id: str
+    project_id: str
+    external_meeting_id: str
+
+    suggested_type: str
+    suggested_category: str | None = None
+    suggested_title: str
+    suggested_content: str
+    suggested_disposition: str
+    suggested_reason: str | None = None
+    suggested_parent_candidate_id: str | None = None
+    suggested_parent_node_id: str | None = None
+
+    reviewed_type: str | None = None
+    reviewed_category: str | None = None
+    reviewed_title: str | None = None
+    reviewed_content: str | None = None
+    reviewed_disposition: str | None = None
+    reviewed_parent_mode: str
+    reviewed_parent_candidate_id: str | None = None
+    reviewed_parent_node_id: str | None = None
+
+    effective_type: str
+    effective_category: str | None = None
+    effective_title: str
+    effective_content: str
+    effective_disposition: str
+    effective_parent_candidate_id: str | None = None
+    effective_parent_node_id: str | None = None
+
+    review_status: str
+    version: int
+    initial_review_node_id: str | None = None
+    confirmed_node_id: str | None = None
+    evidence: list[CandidateEvidenceView] = Field(default_factory=list)
+    created_at: datetime
+    reviewed_at: datetime | None = None
+    reviewed_by: str | None = None
+
+
+class CandidateReviewResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    candidates: list[CandidateView] = Field(default_factory=list)
+    created_node_ids: list[str] = Field(default_factory=list)
+    created_relation_ids: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class FinalLinkRelationType(str, Enum):
+    ATTACHED_TO = "ATTACHED_TO"
+    RELATED_TO = "RELATED_TO"
+
+
+class CompleteInitialReviewCommand(BaseModel):
+    """Body contract; actor identity comes from the authenticated context."""
+
+    model_config = ConfigDict(extra="forbid")
+    candidateId: UUID
+    expectedVersion: int = Field(ge=1)
+
+
+class UnattachedEvidenceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    segmentId: str = Field(min_length=1)
+    quote: str = Field(min_length=10)
+    sourceMeetingId: str | None = Field(default=None, min_length=1)
+
+
+class EditUnattachedNodeCommand(BaseModel):
+    """All editable fields affect Retrieval and therefore invalidate analysis."""
+
+    model_config = ConfigDict(extra="forbid")
+    nodeId: UUID
+    expectedVersion: int = Field(ge=1)
+    nodeType: NodeType | None = None
+    category: str | None = None
+    title: str | None = None
+    content: str | None = None
+    evidence: list[UnattachedEvidenceInput] | None = Field(
+        default=None,
+        min_length=1,
+    )
+
+    @model_validator(mode="after")
+    def require_change(self):
+        if all(
+            value is None
+            for value in (
+                self.nodeType,
+                self.category,
+                self.title,
+                self.content,
+                self.evidence,
+            )
+        ):
+            raise ValueError("at least one editable field is required")
+        return self
+
+
+class UnattachedNodeView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    node_id: str
+    project_id: str
+    node_type: NodeType
+    category: str
+    title: str
+    content: str
+    graph_state: GraphState
+    analysis_status: AnalysisStatus
+    analysis_input_hash: str | None = None
+    current_analysis_run_id: str | None = None
+    version: int
+    evidence: list[CandidateEvidenceView] = Field(default_factory=list)
+
+
+class UnattachedNodeEditResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    node: UnattachedNodeView
+    analysis_invalidated: bool
+
+
+class ReanalyzeUnattachedNodeCommand(BaseModel):
+    """Request a run for the current immutable Node version."""
+
+    model_config = ConfigDict(extra="forbid")
+    nodeId: UUID
+    expectedVersion: int = Field(ge=1)
+
+
+class AnalysisRunView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    analysis_run_id: str
+    source_node_id: str
+    source_node_version: int
+    analysis_input_hash: str
+    analysis_input_hash_version: str
+    retrieval_config_version: str
+    embedding_model: str | None = None
+    embedding_version: str | None = None
+    retrieval_status: RetrievalStageStatus
+    retrieval_result_count: int | None = None
+    retrieval_completed_at: datetime | None = None
+    b_model_status: BModelStatus
+    b_model_skip_reason: str | None = None
+    b_model_failure_code: str | None = None
+    b_model_failure_message: str | None = None
+    b_model_started_at: datetime | None = None
+    b_model_completed_at: datetime | None = None
+    attempt: int
+    status: AnalysisRunStatus
+    requested_by: str
+    failure_code: str | None = None
+    failure_message: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    created_at: datetime
+
+
+class ReanalyzeUnattachedNodeResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    run: AnalysisRunView
+    node_analysis_status: AnalysisStatus
+    created: bool
+
+
+class RetrievalResultView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    target_node_id: str
+    target_node_version: int
+    rank: int
+    similarity: float
+
+
+class AnalysisRetrievalResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    run: AnalysisRunView
+    node_analysis_status: AnalysisStatus
+    embedding_created: bool
+    retrieval_results: list[RetrievalResultView] = Field(default_factory=list)
+
+
+class BModelDecision(BaseModel):
+    """Strict parsed result returned by an injected B-model client."""
+
+    model_config = ConfigDict(extra="forbid")
+    recommendation: RecommendationType
+    targetNodeId: UUID | None = None
+    relationType: FinalLinkRelationType | None = None
+    suggestedTitle: str = Field(min_length=1)
+    suggestedContent: str
+    reason: str = Field(min_length=1)
+    metadata: dict = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_combination(self):
+        if self.recommendation is RecommendationType.CREATE_NEW:
+            if self.targetNodeId is not None or self.relationType is not None:
+                raise ValueError(
+                    "CREATE_NEW must not contain targetNodeId or relationType"
+                )
+        elif self.recommendation is RecommendationType.LINK:
+            if self.targetNodeId is None or self.relationType is None:
+                raise ValueError(
+                    "LINK requires targetNodeId and relationType"
+                )
+        elif self.recommendation is RecommendationType.MERGE:
+            if self.targetNodeId is None or self.relationType is not None:
+                raise ValueError(
+                    "MERGE requires targetNodeId and no relationType"
+                )
+        if not self.suggestedTitle.strip():
+            raise ValueError("suggestedTitle must not be blank")
+        if not self.reason.strip():
+            raise ValueError("reason must not be blank")
+        return self
+
+
+class AnalysisCandidateView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    candidate_id: str
+    analysis_run_id: str
+    source_node_id: str
+    target_node_id: str | None = None
+    recommendation: RecommendationType
+    relation_type: FinalLinkRelationType | None = None
+    suggested_title: str
+    suggested_content: str
+    reason: str
+    status: AnalysisCandidateStatus
+    version: int
+    decided_by: str | None = None
+    decided_at: datetime | None = None
+
+
+class BModelExecutionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    run: AnalysisRunView
+    candidate: AnalysisCandidateView | None = None
+    b_model_called: bool
+
+
+class AnalysisCandidateDecisionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    candidate: AnalysisCandidateView
+    source_node_id: str
+    target_node_id: str | None = None
+    relation_id: str | None = None
+    merge_history_id: str | None = None
+
+
+class ApproveCreateNewCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sourceNodeId: UUID
+    sourceExpectedVersion: int = Field(ge=1)
+    analysisRunId: UUID
+
+
+class ApproveLinkExistingCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sourceNodeId: UUID
+    targetNodeId: UUID
+    relationType: FinalLinkRelationType
+    sourceExpectedVersion: int = Field(ge=1)
+    targetExpectedVersion: int = Field(ge=1)
+    analysisRunId: UUID
+
+
+class ApproveMergeExistingCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sourceNodeId: UUID
+    targetNodeId: UUID
+    mergedTitle: str
+    mergedContent: str
+    sourceExpectedVersion: int = Field(ge=1)
+    targetExpectedVersion: int = Field(ge=1)
+    analysisRunId: UUID

@@ -1,0 +1,2014 @@
+{
+  "meetingId": "M2",
+  "segments": [
+    {
+      "segmentId": "M2-seg-001",
+      "startMs": 2000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "회의 주제 뭔가요?"
+    },
+    {
+      "segmentId": "M2-seg-002",
+      "startMs": 4000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "회의 주제는 이제 지라 재설정. 이랑"
+    },
+    {
+      "segmentId": "M2-seg-003",
+      "startMs": 12000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그다음에 회의록 템플릿"
+    },
+    {
+      "segmentId": "M2-seg-004",
+      "startMs": 14000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "철저와 회의록 템플릿 설정 일단 다들 지라를 한번 들어와 보겠습니다. 근데 이거 피그만 보면서 또 조금 맞춰 줘야 될 것 같은데. 어 좀 아까 전에 보는데?"
+    },
+    {
+      "segmentId": "M2-seg-005",
+      "startMs": 25000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "일단 프론트 쪽에서 또 약간 예를 들어서 홈 화면 UI 건 이런 건 어디서 할지도 모르겠고. 네 저희가 프로젝트 화면을 들어가면은 프로젝트 프로젝트 리스트를 보는 그 기능도 적혀 있어야 되는데 지금 보면은 프로젝트 팀원 관리 에픽 보면은 그런 내용 없잖아요. 리스트 쪽에 그래서 그런 것들도 해 줘야 그 안에서 뭐 그런 사람한테 이렇게 나눌 수 있을 것 같아 가지고"
+    },
+    {
+      "segmentId": "M2-seg-006",
+      "startMs": 49000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "정리하면 피부말을 보고 기능 지금 에픽하고 이게 잘 돼 있는지 보자."
+    },
+    {
+      "segmentId": "M2-seg-007",
+      "startMs": 55000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "보면서 예 필요한 부분을 또 추가해 줘야 될 것 같습니다."
+    },
+    {
+      "segmentId": "M2-seg-008",
+      "startMs": 59000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러면 일단 피그마를 들어가야겠네요."
+    },
+    {
+      "segmentId": "M2-seg-009",
+      "startMs": 68000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "비건 막 위에 있어요. MMOB에 올리면. 그 두 개 있는데 위에 한 덩어리 컴퓨터 한 덩어리인데 예 아 이거 이거?"
+    },
+    {
+      "segmentId": "M2-seg-010",
+      "startMs": 84000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "예"
+    },
+    {
+      "segmentId": "M2-seg-011",
+      "startMs": 84000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아니면 노션에도 있어요."
+    },
+    {
+      "segmentId": "M2-seg-012",
+      "startMs": 100000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "랜딩 페이지 요런 건 어떻게 해야 되나요?"
+    },
+    {
+      "segmentId": "M2-seg-013",
+      "startMs": 105000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "랜딩 페이지? 아 그 스타트 누르기 전에 뒤에 막 뭐 돌아가는 거"
+    },
+    {
+      "segmentId": "M2-seg-014",
+      "startMs": 113000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러니까 그거를 지라에서 어떻게 아 UI 부션이라는 에픽을 하나 만들어야 되나 하고 API 연동 같은 거는 원래 있던 래픽 밑에다가 이렇게 좀"
+    },
+    {
+      "segmentId": "M2-seg-015",
+      "startMs": 132000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "혹시 뭐 있어요? 저 딴 거 들어온 거 같아서. 네."
+    },
+    {
+      "segmentId": "M2-seg-016",
+      "startMs": 135000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "제가 벌써 터져."
+    },
+    {
+      "segmentId": "M2-seg-017",
+      "startMs": 136000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "봐야 된다. UI고."
+    },
+    {
+      "segmentId": "M2-seg-018",
+      "startMs": 140000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "아 그렇습니다."
+    },
+    {
+      "segmentId": "M2-seg-019",
+      "startMs": 141000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "키오스크 거리였네요."
+    },
+    {
+      "segmentId": "M2-seg-020",
+      "startMs": 146000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어 어떻게 해야"
+    },
+    {
+      "segmentId": "M2-seg-021",
+      "startMs": 148000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "UI"
+    },
+    {
+      "segmentId": "M2-seg-022",
+      "startMs": 149000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "에픽을 하나 만들고. UI 작업은 거기서만 진행을 하고 위에 있던 기능들에는 이제 프론트도 뭐 API 연동 같은 거를 해야 될지"
+    },
+    {
+      "segmentId": "M2-seg-023",
+      "startMs": 161000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 정확하게 이해를 못 했습니다."
+    },
+    {
+      "segmentId": "M2-seg-024",
+      "startMs": 166000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러니까 예를 들어서 지금 요 첫 번째 랜딩 디페이지 있잖아요. 네. 요거는 지라에서 지금 있는 에픽에서 들어갈 곳이 사실 없잖아요."
+    },
+    {
+      "segmentId": "M2-seg-025",
+      "startMs": 176000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "네. 그래서 네 또 이것만을 위해서 또 새로 하나를 파기엔 좀 그렇잖아요. 음 네."
+    },
+    {
+      "segmentId": "M2-seg-026",
+      "startMs": 181000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그래서 그냥 지라에 UI 라는 에픽을 하나 만들고 그 밑에 이 각각 각 페이지들이 막 밖에는 모르겠지만 이것들을 뭐 테스크. 아니면 뭐 스토리인가? 스토리 스토리로 하나 만들어 놓고 UI는 여기서만 구현을 하고 그다음에 이제 토론토도 이제 백이랑 연동이 필요한 그런 작업들은 위에서 저희가 어제 적었던 그 밑에 업무 연계 맞나라는 생각이 들었습니다."
+    },
+    {
+      "segmentId": "M2-seg-027",
+      "startMs": 211000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "예 지금 이런 랜딩 요런 거는 지금 만들어진 내편이 바뀌었죠. 그렇기 때문에."
+    },
+    {
+      "segmentId": "M2-seg-028",
+      "startMs": 221000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "사실 백 입장에선 기능만 됐냐 안 됐냐가 중요한데 사실 프론트 쪽에서 이거 확인하려고 하는 거잖아요. 예 그러면은 음 바로 에픽을 파는 게 일단은 제일 간단해 보이긴 하는데."
+    },
+    {
+      "segmentId": "M2-seg-029",
+      "startMs": 240000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "저는 예전에 사실 지라할 때는 약간 홈페이지 별로 그거 뭐냐? 대분류 만들고 그렇게 했어. 가지고 그때는 그렇게 막 했었었는데."
+    },
+    {
+      "segmentId": "M2-seg-030",
+      "startMs": 251000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "음"
+    },
+    {
+      "segmentId": "M2-seg-031",
+      "startMs": 254000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아 프론트끼리 어떤 화면 만들고 있는 체크가 필요하니까 에픽을 만들어야 합니다. 그러면 있는 게 낫겠는데요. 저렇게 위에 있는 에픽이 다 썩는 거보다는."
+    },
+    {
+      "segmentId": "M2-seg-032",
+      "startMs": 263000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "UIF가 하나 파 가지고 UI 전화번호나 거기서만 진행되고 네. 그럼 만들어 볼까요? 좋습니다."
+    },
+    {
+      "segmentId": "M2-seg-033",
+      "startMs": 273000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "제가 어. 사실 그러면 UI도 해결됐습니다. 그냥 UI 에픽 만들고 밑에다가 스토리로 해야겠죠?"
+    },
+    {
+      "segmentId": "M2-seg-034",
+      "startMs": 288000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네. 위하고 맞추려고."
+    },
+    {
+      "segmentId": "M2-seg-035",
+      "startMs": 292000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "위에랑 맞춘다는"
+    },
+    {
+      "segmentId": "M2-seg-036",
+      "startMs": 294000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러니까 이전에 저희가 작성했던 거랑 맞추려면 이전에 스토리를 했지 않나요?"
+    },
+    {
+      "segmentId": "M2-seg-037",
+      "startMs": 298000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "아 근데 뭐 국외 거랑 맞출 필요는 없긴 한데. 음 아 근데 어쨌든 UI를 사용자가 사용을 하는 거처럼"
+    },
+    {
+      "segmentId": "M2-seg-038",
+      "startMs": 308000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "이번에는 웬만했었는데 스터디가 마치지 않을 것 같아요. 근데"
+    },
+    {
+      "segmentId": "M2-seg-039",
+      "startMs": 321000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 이렇게. 이제 얘기해 봐야 되는 게 그 회의록 템플릿 정해집니다. 회의록 이제 만들긴 해야 되잖아요."
+    },
+    {
+      "segmentId": "M2-seg-040",
+      "startMs": 331000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "근데 어떤 형식으로 만드는 게 나을까? 프롬프트로 약간 형식을 정하거나 해야 되잖아. 예 어떤 게 제일 가독성 좋게 효율적일 겁니다."
+    },
+    {
+      "segmentId": "M2-seg-041",
+      "startMs": 339000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "회의록."
+    },
+    {
+      "segmentId": "M2-seg-042",
+      "startMs": 342000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 본인이 약간 회의했을 때 어떤 게 보이면 좋겠는지 얘기해 볼까요? 아니면"
+    },
+    {
+      "segmentId": "M2-seg-043",
+      "startMs": 347000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "저희가 회의록이 아니 나 회의록이 나온다. 그 모드 만들 때 결정이랑 이슈랑 액션 요거 3개를 가지고 그 노드를 생성하잖아요. 그럼 회의록은 그냥 그거를 좀 더 구체화시켜서 보여 주는 건 어때요?"
+    },
+    {
+      "segmentId": "M2-seg-044",
+      "startMs": 371000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러니까 회의록을 결정 액션 이슈에 맞춰서 요약해서 보여주는 걸로."
+    },
+    {
+      "segmentId": "M2-seg-045",
+      "startMs": 375000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "예 그렇게 해서 자세하게 뽑아서 보여주면은"
+    },
+    {
+      "segmentId": "M2-seg-046",
+      "startMs": 380000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "근데 그러면 약간 노드 만드는 거랑 큰 차이가 없잖아요."
+    },
+    {
+      "segmentId": "M2-seg-047",
+      "startMs": 383000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "노더는 대신에 한 눈에 그러니까 한 눈에 볼 수 있고 그러니까 어떤 액션 뭐 액션 액션이라는 게 있으면은 뭐 액션에 대해서 약간 간략한 정보들이 있잖아요. 지금 그 노드에는 노드에는 뭐 장황 근 긴 글이 안 나올 거잖아요. 예 그래서 만약에 내가 그걸 좀 더 획식 좀 더 자세하게 보고 싶으면은 회의록을 까서 본다."
+    },
+    {
+      "segmentId": "M2-seg-048",
+      "startMs": 408000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "이건 어떨까요? 그러면 둘 다 서로 약간 연관된 연관돼서. 노드 가지고는 작업 흐름을 한눈에 알아볼 수 있고 회의록 가지고는 약간 상세하게 할 수 있고."
+    },
+    {
+      "segmentId": "M2-seg-049",
+      "startMs": 422000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그럴 그런 시너지가 있을 것 같다는 생각이 좀 듭니다."
+    },
+    {
+      "segmentId": "M2-seg-050",
+      "startMs": 427000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 저는 괜찮은 거 같아요."
+    },
+    {
+      "segmentId": "M2-seg-051",
+      "startMs": 429000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러면 다르게 또 아이디어를 아이디어가 있다 하면 또 한번 말씀 주시면은 좋을 것 같은데"
+    },
+    {
+      "segmentId": "M2-seg-052",
+      "startMs": 438000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네. 회의록 통해서 법인 찾기도 할 수 있을 것 같은데."
+    },
+    {
+      "segmentId": "M2-seg-053",
+      "startMs": 442000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 이슈 같은 것이 중요하죠."
+    },
+    {
+      "segmentId": "M2-seg-054",
+      "startMs": 444000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "어쨌든 회사에서 중요하니까."
+    },
+    {
+      "segmentId": "M2-seg-055",
+      "startMs": 448000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "구체적인 게 좋죠."
+    },
+    {
+      "segmentId": "M2-seg-056",
+      "startMs": 464000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "좀 약간 제임모 이런 게 사실 필요 없겠죠 왜냐면 주제가 다 분산돼 있을 수 있으니까."
+    },
+    {
+      "segmentId": "M2-seg-057",
+      "startMs": 471000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "날짜"
+    },
+    {
+      "segmentId": "M2-seg-058",
+      "startMs": 472000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러니까 날짜 회의만 하면 되지 않겠나."
+    },
+    {
+      "segmentId": "M2-seg-059",
+      "startMs": 482000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "날짜랑 약간 회의론 이름 이런 거 설정해줘."
+    },
+    {
+      "segmentId": "M2-seg-060",
+      "startMs": 493000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그러면 그 요약본 만들 때 역할별로 이렇게 나눌 건가요? 프론트하고 프론트 할 일이랑 이런 거 좀 자세하게 적고. 백인들 자세하게"
+    },
+    {
+      "segmentId": "M2-seg-061",
+      "startMs": 505000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "지금 노드 자체도 그런 식으로 확인합니다."
+    },
+    {
+      "segmentId": "M2-seg-062",
+      "startMs": 508000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "네 그렇죠."
+    },
+    {
+      "segmentId": "M2-seg-063",
+      "startMs": 520000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 아까 님 뭐 재밌는 거 넣어 보려면은 그러니까 이번 회의 우수상 이런 거 할 수 있죠. 지분 예 지분 지분 분석표 지분을 그래프로 분석합니다."
+    },
+    {
+      "segmentId": "M2-seg-064",
+      "startMs": 535000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어. 괜찮은데요."
+    },
+    {
+      "segmentId": "M2-seg-065",
+      "startMs": 537000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그런 건 좀 그냥 재미 요소로 넣"
+    },
+    {
+      "segmentId": "M2-seg-066",
+      "startMs": 539000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "기분 제일 없는 사람 범위 찾기"
+    },
+    {
+      "segmentId": "M2-seg-067",
+      "startMs": 542000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "말 안 하는 사람 찾기"
+    },
+    {
+      "segmentId": "M2-seg-068",
+      "startMs": 546000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "네 하나 더 말씀드리고 싶습니다. 이거 저희 아까도 말했던 것처럼 뭐 프로젝트 리스트 확인 이런 것도 지금 없잖아요. 원래 백도 필요한 작업인데?"
+    },
+    {
+      "segmentId": "M2-seg-069",
+      "startMs": 558000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "네. 어. 음 이거를 에픽을 내가 페이지 기준으로 해도 괜찮을 것 같은데."
+    },
+    {
+      "segmentId": "M2-seg-070",
+      "startMs": 577000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "지금 추가할 것 같아서 홈이랑 마이 페이지 돈밖에 없거든요. 네. 그래서 아까 거기 추가하고 UI랑 UI 작업들이랑 뭐 그런 앱 작업들 다 거기 넣는 게 깔끔할 것 같다는 생각도 들었어요."
+    },
+    {
+      "segmentId": "M2-seg-071",
+      "startMs": 595000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "지금 UI만 만든 UI라는 래핑 만들어놓고 그렇게 했는데"
+    },
+    {
+      "segmentId": "M2-seg-072",
+      "startMs": 600000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 네 아니요. 화면별로 나누자."
+    },
+    {
+      "segmentId": "M2-seg-073",
+      "startMs": 603000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "사실 지금 저희가 해 놓은 게 거의 화면별로 돼 있긴 하거든요. 근데 좀 부족한 게 홈 화면. 하고 마이 페이지 이렇게 없거든요."
+    },
+    {
+      "segmentId": "M2-seg-074",
+      "startMs": 615000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "근데 그 부분도 사실 백은 필요하잖아요. 그리고 백도 작업할 때 그 화면을 보긴 해야 되잖아. API가 어떤 게 필요한지."
+    },
+    {
+      "segmentId": "M2-seg-075",
+      "startMs": 625000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "맞추면서."
+    },
+    {
+      "segmentId": "M2-seg-076",
+      "startMs": 638000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어떠신가요? 어 지금 뭐 홈에서 보면은 얻어야 되는 정보가 최근 프로젝트하고 최근 활동 뭐 이렇게 있는데 이거 백도 필요하잖아요. 최근 프로젝트 몇 개 줄지."
+    },
+    {
+      "segmentId": "M2-seg-077",
+      "startMs": 657000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "프롬프트도 UI 작업이랑 백이랑 통신하는 작업이 필요하고. 네. 그래서 그렇게 하는 쪽으로 낫지 않았다고."
+    },
+    {
+      "segmentId": "M2-seg-078",
+      "startMs": 665000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "음 그러니까 에픽이 좀 기간에 걸쳐서 만들어야 되는 결과물입니다. 우리는 프로젝트 팀원 관리나 그런 것도 있고 회의랑 그런 것도 있고 그리고 이제 홈이랑 결과물도 필요한 거잖아. 결국에는."
+    },
+    {
+      "segmentId": "M2-seg-079",
+      "startMs": 688000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어 UI 에픽 막 다운된 그러니까 뭐"
+    },
+    {
+      "segmentId": "M2-seg-080",
+      "startMs": 695000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 근데 이걸 약간 저는 도메인 별이 낮다고 보긴 해요. 왜냐하면 이게 결국 화면이 그럼 100개 되면 100개의 픽이 생기냐 하면 좀"
+    },
+    {
+      "segmentId": "M2-seg-081",
+      "startMs": 704000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "100개 B급"
+    },
+    {
+      "segmentId": "M2-seg-082",
+      "startMs": 706000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "화면별로 약간 에픽을 두자는 말씀."
+    },
+    {
+      "segmentId": "M2-seg-083",
+      "startMs": 709000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어 하면은 별로"
+    },
+    {
+      "segmentId": "M2-seg-084",
+      "startMs": 713000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네 그러면 화면이 많아질수록 에픽이 너무 많아지니까 뭐가 중요한지 사실상 모를 것 같아서 에픽은 사실 약간 도메인별로 중요한 기능들을 모아 놓은 거를 생각해 봐요."
+    },
+    {
+      "segmentId": "M2-seg-085",
+      "startMs": 726000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어 그럼 UI 강의 이렇게 두고"
+    },
+    {
+      "segmentId": "M2-seg-086",
+      "startMs": 728000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네. 약간 뭔가 유아에서 찜바가 기능적으로 약간 찐빠가 있다면은 그건 그때 가서 추가하고 약간 하면 될 것 같은데 엄청 중요한 게 빠져 있진 않잖아요. 음 그러니까 짜잘한 것들이 좀 빠져 있을 텐데."
+    },
+    {
+      "segmentId": "M2-seg-087",
+      "startMs": 741000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "내 폰 약간 찾으면서 해야 될 것 같아. 물론 화면별로 하면은 그런 찐빠를 지금 찾기가 편한데 근데 그럼 나중에 이제 결국 페이지가 늘어날수록 에픽도 많아지고 오히려 가독성이 안 좋아질 것 같아서."
+    },
+    {
+      "segmentId": "M2-seg-088",
+      "startMs": 756000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러면 회의로 아직 안 끝나 좋은데 예"
+    },
+    {
+      "segmentId": "M2-seg-089",
+      "startMs": 760000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "일단은 간편하게 그 결정사항 그다음에 액션 이슈하고 그다음에 루트 노드 이렇게 해서 보여주는 걸로 구체화해서 보여주는 것도"
+    },
+    {
+      "segmentId": "M2-seg-090",
+      "startMs": 769000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러면 일단 이거 뒤라 빠지는 것만 좀 넣어 볼까요? 그럼 아까 말했던 것처럼 최근 프로젝트 조회 이런 건 지금 5000원씩 하려고. 이런 거는 필요할 것 같습니다."
+    },
+    {
+      "segmentId": "M2-seg-091",
+      "startMs": 788000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "네 네. 한 번에 접어들어요. 한 번 네 제가 접어 봐요."
+    },
+    {
+      "segmentId": "M2-seg-092",
+      "startMs": 792000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "같이 얘기하면서. 한 번 있었는데 양도 치고 좋을 것 같은데. 그러니까 최근 프로젝트 조회 요거는 프로젝트 팀원 관련해 도움되지 않을까요?"
+    },
+    {
+      "segmentId": "M2-seg-093",
+      "startMs": 803000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "최근 프로젝트 조회 네. 프로젝트 조회라고만 해도 될 거 같은데."
+    },
+    {
+      "segmentId": "M2-seg-094",
+      "startMs": 809000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "왜냐하면 근데 프로젝트 저희랑 최근 프로젝트가 다르잖아요."
+    },
+    {
+      "segmentId": "M2-seg-095",
+      "startMs": 812000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "디폴트가 최근이니까. 어 최근"
+    },
+    {
+      "segmentId": "M2-seg-096",
+      "startMs": 816000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "저렇게 뛰어 이렇게 수를 저희가 몇 개를 딱 정하고 그거에 대한"
+    },
+    {
+      "segmentId": "M2-seg-097",
+      "startMs": 821000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아닌가요? 근데 그럼 프로젝트 조회라고 하고 서브테스크로 프로젝트 최신 순조회랑 약간 인기 순조회 이렇게 넣으면"
+    },
+    {
+      "segmentId": "M2-seg-098",
+      "startMs": 827000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "첫 번째 음 그렇다면 안 되겠네. 예 최근 활동 이거 그때 얘기하다 넘어왔던 거 같아. 가지고 막 넌 나"
+    },
+    {
+      "segmentId": "M2-seg-099",
+      "startMs": 839000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "최근 활동. 이건 어떻게 구현해야 될지 모르겠어요."
+    },
+    {
+      "segmentId": "M2-seg-100",
+      "startMs": 847000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러면 하지 말고 넣을 먹고 싶은 거"
+    },
+    {
+      "segmentId": "M2-seg-101",
+      "startMs": 859000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "이렇게 눌렀을 때 이동되는 것 때문에"
+    },
+    {
+      "segmentId": "M2-seg-102",
+      "startMs": 865000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "백기동 되는 것도 얘기가 나왔고. 예 최근 활동 관리적으로도 뭔가 어려울 것 같다. 좀 어떻게 가져와야 되고 어떻게 관리하는지"
+    },
+    {
+      "segmentId": "M2-seg-103",
+      "startMs": 882000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 근데 또 없으면 너무 포진할 것 같기도 하고. 보여지는 UI적으로 허전할 것 같아. 가지고 뭘 집어넣을지 몰라 몰라."
+    },
+    {
+      "segmentId": "M2-seg-104",
+      "startMs": 892000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "가지고. 이거 만들어 놓고 UI적으로만 만들어 놓고 클릭 안 하려나."
+    },
+    {
+      "segmentId": "M2-seg-105",
+      "startMs": 901000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "눌렀더니 아무 일 없고."
+    },
+    {
+      "segmentId": "M2-seg-106",
+      "startMs": 905000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "아니면 할린 어? 할 일을 띄워 주는 것도 괜찮."
+    },
+    {
+      "segmentId": "M2-seg-107",
+      "startMs": 910000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "할 일 띄워주는 게 더 어려울"
+    },
+    {
+      "segmentId": "M2-seg-108",
+      "startMs": 912000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아니면 프로젝트 일정 같은 거 넣어 놓으면 되고. 아 프로젝트 일정이요? 예 즐겨찾기"
+    },
+    {
+      "segmentId": "M2-seg-109",
+      "startMs": 922000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "음 어 새로운 개념 더 느낀 건 없고 프로젝트"
+    },
+    {
+      "segmentId": "M2-seg-110",
+      "startMs": 928000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 근데 생각해 보니까 덴마크 최근 활동은 그 최근 활동이 프로젝트가 수정됐을 때 글 기준으로 최근 활동을 넣을 거예요. 아니면은 사용자가 최근 최근 들어 최근 이제 브라우저 내에서 들어간 그 프로젝트를 보실 거예요."
+    },
+    {
+      "segmentId": "M2-seg-111",
+      "startMs": 949000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "생선"
+    },
+    {
+      "segmentId": "M2-seg-112",
+      "startMs": 950000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러니까 뭐 수정 생성 삭제 이런 게"
+    },
+    {
+      "segmentId": "M2-seg-113",
+      "startMs": 953000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "들어간 거 하면 너무"
+    },
+    {
+      "segmentId": "M2-seg-114",
+      "startMs": 954000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "개념이 중심인지 웹페이."
+    },
+    {
+      "segmentId": "M2-seg-115",
+      "startMs": 956000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "진심인데요."
+    },
+    {
+      "segmentId": "M2-seg-116",
+      "startMs": 957000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "웹페이지 중심으로 하면은 저 바로 이제 이 기능 프롬프트로 던지면 되는 거라서 그래 가지고 그래서 정확하게 뭔지를 좀 구별하고 싶었어요. 기능"
+    },
+    {
+      "segmentId": "M2-seg-117",
+      "startMs": 967000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "융심이면 빼기 졸려야 되고"
+    },
+    {
+      "segmentId": "M2-seg-118",
+      "startMs": 969000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "저희가 철덩이 올 기능 중심이죠."
+    },
+    {
+      "segmentId": "M2-seg-119",
+      "startMs": 975000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러면 화면도 좋아하긴 해요."
+    },
+    {
+      "segmentId": "M2-seg-120",
+      "startMs": 976000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "와 야 최근 최근에 들어간 화면 보여주는 거 나쁘지 않다. 생각해서 얘기했었는데 오케이."
+    },
+    {
+      "segmentId": "M2-seg-121",
+      "startMs": 984000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네 확인했습니다."
+    },
+    {
+      "segmentId": "M2-seg-122",
+      "startMs": 987000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "죽나 그거 어떠신가요?"
+    },
+    {
+      "segmentId": "M2-seg-123",
+      "startMs": 988000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "저는"
+    },
+    {
+      "segmentId": "M2-seg-124",
+      "startMs": 989000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "북마크 좋아요. 제일 약간 비춰합니다."
+    },
+    {
+      "segmentId": "M2-seg-125",
+      "startMs": 992000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "왜 왜요?"
+    },
+    {
+      "segmentId": "M2-seg-126",
+      "startMs": 993000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러니까 그게 사실 만들기 쉬운데 약간 그 그렇게 중요하지 않아요. 그러니까 실사용 서비스로 만들었는데. 그러니까 실사용이 약간 목적이 아니면 애매한 거 같아요."
+    },
+    {
+      "segmentId": "M2-seg-127",
+      "startMs": 1004000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "알림 어떤 걸까요?"
+    },
+    {
+      "segmentId": "M2-seg-128",
+      "startMs": 1008000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "최근 활동 최근 활동이 여기"
+    },
+    {
+      "segmentId": "M2-seg-129",
+      "startMs": 1010000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "이거 아니야? 그거 말고 저희 그 프로젝트에 요약돈이랑 로드 알림이 왼쪽 저렇게 오긴 하는데 아예 메인 홈 화면에서도 띄워 버리는"
+    },
+    {
+      "segmentId": "M2-seg-130",
+      "startMs": 1022000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "나쁘지 않을 것 같아서. 음 배경이 알림을 넣죠."
+    },
+    {
+      "segmentId": "M2-seg-131",
+      "startMs": 1024000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "알림도 괜찮아."
+    },
+    {
+      "segmentId": "M2-seg-132",
+      "startMs": 1026000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 알림 무엇을 알겠어요?"
+    },
+    {
+      "segmentId": "M2-seg-133",
+      "startMs": 1030000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그냥 최근 활동을 할까요? 어차피 그냥 수정된 거 DB에 쌓아 놓고 그 위에서 그 조회해서 보여주면 되지 않을까요?"
+    },
+    {
+      "segmentId": "M2-seg-134",
+      "startMs": 1037000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "맞긴 하고. 그러니까 아이디 지금 현재 로그인하는 사용자 아이디. 아 근데"
+    },
+    {
+      "segmentId": "M2-seg-135",
+      "startMs": 1046000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "상상하기 약간 어떻게 구현할지 안 떠오르는 문제가 있긴 한데요."
+    },
+    {
+      "segmentId": "M2-seg-136",
+      "startMs": 1050000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "대신에 이거 만들고 프론트 조금 더 철학도 시키자. 음"
+    },
+    {
+      "segmentId": "M2-seg-137",
+      "startMs": 1056000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "문제가 3D 돌아가고 막 반짝반짝 빛나고."
+    },
+    {
+      "segmentId": "M2-seg-138",
+      "startMs": 1061000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "공전하고. 돌아가고 있습니다."
+    },
+    {
+      "segmentId": "M2-seg-139",
+      "startMs": 1068000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "저희가 이제 프론트 비워지는 거 안 보이게 안 허전하게 기능 넣었으니까 이제 그만큼 프롬프트는 아 이제 프론트는 좀 더 촬영도 해 주고. 서로 윈윈 아닐까요? 그러면?"
+    },
+    {
+      "segmentId": "M2-seg-140",
+      "startMs": 1084000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "최근을 통해서 소개해 줬어. 근데 어떤 걸 쌓을까요?"
+    },
+    {
+      "segmentId": "M2-seg-141",
+      "startMs": 1094000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 채용 활동이요? 네 그냥 그 최신으로 수정된 것들이잖아요. 뭐 하루 전 수정됐음 5일 전 수정됐음 이런 것들을 이런 것들 기준으로 또 올려주면 되지 않을까."
+    },
+    {
+      "segmentId": "M2-seg-142",
+      "startMs": 1107000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "음 난 최근에 수정 최근에 그 뭐 생성이라든지 뭐 회의를 했다든지 그러한 프로젝트는 최근 활동 우선순위에 더 젊게 갔고"
+    },
+    {
+      "segmentId": "M2-seg-143",
+      "startMs": 1119000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "근데 내가 뭘 하고 싶은지 생각해 보면 그냥 프로젝트 최근에 한 거 볼 거 같고요. 예 그다음 회의록 최근에 한 거 볼 것 같고요. 예 이거 두 개만 이런 떠오르고."
+    },
+    {
+      "segmentId": "M2-seg-144",
+      "startMs": 1131000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "딴 거는 뭐 크게 안 궁금해 할 것 같은데."
+    },
+    {
+      "segmentId": "M2-seg-145",
+      "startMs": 1134000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그렇죠. 사실 그냥 저희도 그렇잖아요. 또 프로젝트 최근에 한 프로젝트만 계속 들어가지."
+    },
+    {
+      "segmentId": "M2-seg-146",
+      "startMs": 1149000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "진짜 회의록 뭐 목록은 어때요?"
+    },
+    {
+      "segmentId": "M2-seg-147",
+      "startMs": 1151000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "특별한 뭐 먹어도 이제"
+    },
+    {
+      "segmentId": "M2-seg-148",
+      "startMs": 1152000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "예 다시 들어가"
+    },
+    {
+      "segmentId": "M2-seg-149",
+      "startMs": 1154000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "예 들어가서 보는 거지."
+    },
+    {
+      "segmentId": "M2-seg-150",
+      "startMs": 1155000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아니면 랭킹 로키."
+    },
+    {
+      "segmentId": "M2-seg-151",
+      "startMs": 1158000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "랭킹 좋은데 저는 저는 사실 홈에 랭킹 그런 거 너무 좋아하거든요."
+    },
+    {
+      "segmentId": "M2-seg-152",
+      "startMs": 1162000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "랭킹 오더"
+    },
+    {
+      "segmentId": "M2-seg-153",
+      "startMs": 1164000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그러니까 회의자 발화자 같은 거 구분 가능하면은 사실 말한 사람 약간 그런 거"
+    },
+    {
+      "segmentId": "M2-seg-154",
+      "startMs": 1169000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "따를 수 있고. 그러면은 바로 잘 구분해야 되잖아요. 그러면 어떤 프로세스가 돌아가는지 약간 살짝 알려 드릴게요."
+    },
+    {
+      "segmentId": "M2-seg-155",
+      "startMs": 1175000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "발화자가 되려면은 이제 각 저희 노트북마다 마이크 있잖아요. 이 마이크에 저희 인풋값이 들어갑니다. 각각 그다음에 서버에서 각각 6개를 다 조합해요."
+    },
+    {
+      "segmentId": "M2-seg-156",
+      "startMs": 1189000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러면은 발화자가 말하고 있을 때는 뭐 인풋값 들어가겠지만 아니면은 공백이 있어요. 다 전처리를 하기 전에 타임스텝으로 먼저 찍어 놓고 전처리 다 잘라요. 그다음에 왜 이렇게 다 취업됐잖아요."
+    },
+    {
+      "segmentId": "M2-seg-157",
+      "startMs": 1201000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러면은 타임스프대로 주르륵 만들어요. 만들어 놓고 그럼 그때부터 바로 제가 구별이 돼요. 이 과정을 어 근데 생각해 보니까 저희가 하는 거 아니니까라고 말하는 건 아니죠."
+    },
+    {
+      "segmentId": "M2-seg-158",
+      "startMs": 1215000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그 안 갖고 한번 생각을 해 보세요."
+    },
+    {
+      "segmentId": "M2-seg-159",
+      "startMs": 1220000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "필요한 느낌이 없는 것 같기도 하고."
+    },
+    {
+      "segmentId": "M2-seg-160",
+      "startMs": 1222000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "자 근데 이거를 할 수 있으면은 랭킹이라는 재밌는 시스템 요소를 넣을 수 있긴 합니다."
+    },
+    {
+      "segmentId": "M2-seg-161",
+      "startMs": 1227000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 그렇죠. 근데 약간 궁금해. 그런 거 궁금해 할 것 같은데."
+    },
+    {
+      "segmentId": "M2-seg-162",
+      "startMs": 1230000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러니까 말한 것처럼. 누가 말이 말해? 누가 누가 말을 많이 했"
+    },
+    {
+      "segmentId": "M2-seg-163",
+      "startMs": 1233000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "근데 그거는 한 프로젝트 안에서 이루어져야 되는 거 아니에요? 이건 그냥 꿈 아닌가?"
+    },
+    {
+      "segmentId": "M2-seg-164",
+      "startMs": 1238000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "맞네. 또 맞네요."
+    },
+    {
+      "segmentId": "M2-seg-165",
+      "startMs": 1242000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "프로젝트 폼으로 옮기죠."
+    },
+    {
+      "segmentId": "M2-seg-166",
+      "startMs": 1246000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 근데 이런 누가 말 많이 했는지 의견 많이 냈는지 있으면 재밌을 것 같은데."
+    },
+    {
+      "segmentId": "M2-seg-167",
+      "startMs": 1253000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "약간 범인 적게"
+    },
+    {
+      "segmentId": "M2-seg-168",
+      "startMs": 1255000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "누가 말을 안 했나 그러면은 그만큼 이제 구현이 그럼"
+    },
+    {
+      "segmentId": "M2-seg-169",
+      "startMs": 1258000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "뭐라 그러셨는데. 그거를 이제 프로젝트 타워를 넣는다 하면 요 요건 최근 활동 대신 최근 내 음 예 임 이 면 횟수 그러니까 프로젝트"
+    },
+    {
+      "segmentId": "M2-seg-170",
+      "startMs": 1271000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "어 전체 합산해 가지고."
+    },
+    {
+      "segmentId": "M2-seg-171",
+      "startMs": 1273000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어 그런 거 뭐 전체 회의 몇 개 동안 내가 말한 뭐 시각"
+    },
+    {
+      "segmentId": "M2-seg-172",
+      "startMs": 1278000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "11시간 전체로"
+    },
+    {
+      "segmentId": "M2-seg-173",
+      "startMs": 1280000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "시간 뭐 나 3년 뭐 프로젝트"
+    },
+    {
+      "segmentId": "M2-seg-174",
+      "startMs": 1283000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음 사실 뭐 더 발전하면 필터링된 약간 이런 것도 어떤 토픽에 대해서 말했다. 이런 것도 이제"
+    },
+    {
+      "segmentId": "M2-seg-175",
+      "startMs": 1290000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "일단 이거를 구현하던 사람의 의견을 들어와야 돼요."
+    },
+    {
+      "segmentId": "M2-seg-176",
+      "startMs": 1296000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "제가 막힐 뿐이에요. 솔직히. 그분은 중요한 게 있어요."
+    },
+    {
+      "segmentId": "M2-seg-177",
+      "startMs": 1301000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "프링 쪽에서 백엔드 쪽에서 오히려 오픈 기도에서 그 타임스태프를 해 줘야"
+    },
+    {
+      "segmentId": "M2-seg-178",
+      "startMs": 1307000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "제약 받을 수 있어요. 그러면은 CGM이랑 사실 둘이서 상의해 봐야 되잖아요."
+    },
+    {
+      "segmentId": "M2-seg-179",
+      "startMs": 1315000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "저는 그냥 영상에 있는 공백 제거하고 타인 스태프들을 그냥 합치는 거 밖에"
+    },
+    {
+      "segmentId": "M2-seg-180",
+      "startMs": 1321000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 그러면은"
+    },
+    {
+      "segmentId": "M2-seg-181",
+      "startMs": 1322000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "있으면 재밌을 것"
+    },
+    {
+      "segmentId": "M2-seg-182",
+      "startMs": 1324000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 그럼 희재 이미 하신다니까."
+    },
+    {
+      "segmentId": "M2-seg-183",
+      "startMs": 1326000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그럼 저는 이제 사타를 하고 있다고. 경희 님이 이제 아 딜을 해 주실 겁니다."
+    },
+    {
+      "segmentId": "M2-seg-184",
+      "startMs": 1333000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 재밌을 것 같은데"
+    },
+    {
+      "segmentId": "M2-seg-185",
+      "startMs": 1335000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "있으면 재밌을"
+    },
+    {
+      "segmentId": "M2-seg-186",
+      "startMs": 1336000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 그럼 그거 넣을까요?"
+    },
+    {
+      "segmentId": "M2-seg-187",
+      "startMs": 1338000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아 이거 약간 엄청 큰 기능이 될 것 같습니다."
+    },
+    {
+      "segmentId": "M2-seg-188",
+      "startMs": 1340000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 근데 생각해 봐요. 맞네. 이 발화자가 얼마나 말을 했는지 이거 지금 어떤 협업 툴에서 해 줍니까?"
+    },
+    {
+      "segmentId": "M2-seg-189",
+      "startMs": 1350000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그렇긴 해요. 클럽하고 가격이 싸져요. 음 발언자가 구분되어 있으니까 화자 분리 기능을 끌어들"
+    },
+    {
+      "segmentId": "M2-seg-190",
+      "startMs": 1356000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "오 맞네."
+    },
+    {
+      "segmentId": "M2-seg-191",
+      "startMs": 1358000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "어 대신에 오픈 YouTube"
+    },
+    {
+      "segmentId": "M2-seg-192",
+      "startMs": 1361000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "오픈비도 거기서 처리를 다 할까? 클로버 가는 걸 이제"
+    },
+    {
+      "segmentId": "M2-seg-193",
+      "startMs": 1365000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그 각각 각각이 되나요? 근데?"
+    },
+    {
+      "segmentId": "M2-seg-194",
+      "startMs": 1367000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "안 될 거 같아요. 그리고 그 친구들과 그런 것까지는 안 해 주는 거죠."
+    },
+    {
+      "segmentId": "M2-seg-195",
+      "startMs": 1374000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 각각이 안 된다고요? 음성 86개가 안 만들어진다고요?"
+    },
+    {
+      "segmentId": "M2-seg-196",
+      "startMs": 1378000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "음성 파일만 하나로 합쳐지는 기능이 있고 그 모드가"
+    },
+    {
+      "segmentId": "M2-seg-197",
+      "startMs": 1382000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러면 이렇게 안 돼요. 우리가 시간으로 하는 게 아니라 텍스트 그냥 길이로만 퍼센테이지를 매기는 거"
+    },
+    {
+      "segmentId": "M2-seg-198",
+      "startMs": 1388000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "이거 씨* 아니? 근데 그게 문제"
+    },
+    {
+      "segmentId": "M2-seg-199",
+      "startMs": 1391000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "발화자를 구분해요. 발화자를 구분해야 돼요. 그러니까 1 2 3 4를 누군지 알아야"
+    },
+    {
+      "segmentId": "M2-seg-200",
+      "startMs": 1394000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그래서 클로바가 1했다가 갑자기 1사람을 3으로 붙이거나 6으로 붙일 수도 있어요."
+    },
+    {
+      "segmentId": "M2-seg-201",
+      "startMs": 1399000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아니면은 뭐 각자 목소리를 약간 저장해 두고 그 목소리를 통해서 약간 부분에서 누구니 작기?"
+    },
+    {
+      "segmentId": "M2-seg-202",
+      "startMs": 1407000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그걸 어떻게 해요? 가능한가요?"
+    },
+    {
+      "segmentId": "M2-seg-203",
+      "startMs": 1411000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "문 찾기"
+    },
+    {
+      "segmentId": "M2-seg-204",
+      "startMs": 1412000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러니까 일단 클로바에서 1 2 3 4 구분은 되는 거잖아요. 그렇죠? 근데 그게 누구인지는 모르는 거고"
+    },
+    {
+      "segmentId": "M2-seg-205",
+      "startMs": 1416000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "아니요 그것도 안 돼요. 잃은 사람이었다가 3대일 수도 있고 갑자기 5될 수도 있고 해서 1도로 올"
+    },
+    {
+      "segmentId": "M2-seg-206",
+      "startMs": 1422000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그렇죠."
+    },
+    {
+      "segmentId": "M2-seg-207",
+      "startMs": 1424000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그냥 오픈 비도에서. 아 결국에 제 마이크는 제 노트북에 노트북에 있는 아 제 말이 노트북에 있는 마이크로 들어갈 텐데. 그 노트북에 있는 마이크로 들어간 음성만 좀 따로 분리가 안 될 거 아니죠."
+    },
+    {
+      "segmentId": "M2-seg-208",
+      "startMs": 1439000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "근데 그게 안 되나요?"
+    },
+    {
+      "segmentId": "M2-seg-209",
+      "startMs": 1441000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "약간 그러네. 경희 님이 2 기능을 만든 걸로"
+    },
+    {
+      "segmentId": "M2-seg-210",
+      "startMs": 1446000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "아니 근데"
+    },
+    {
+      "segmentId": "M2-seg-211",
+      "startMs": 1446000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "상담사가 나뉘긴 하잖아요. 그게 맞아요. 저거 하진 않죠."
+    },
+    {
+      "segmentId": "M2-seg-212",
+      "startMs": 1450000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "예 맞"
+    },
+    {
+      "segmentId": "M2-seg-213",
+      "startMs": 1450000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그거는 어쩔 수 없는 말이죠."
+    },
+    {
+      "segmentId": "M2-seg-214",
+      "startMs": 1452000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "좀 목소리 비슷한 사람 한두 명만 있어도 그런 게 못 할 것 같은데."
+    },
+    {
+      "segmentId": "M2-seg-215",
+      "startMs": 1457000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "얘가. 근데 1 2 3 4 5에 뭔가 나눠질 것 같긴 한데"
+    },
+    {
+      "segmentId": "M2-seg-216",
+      "startMs": 1460000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "나눠지긴 할 거예요. 왜냐하면은 AI는 엄마가 목소리가 비슷하다고 판단하는 게 아니라 그냥 뭐 그걸 다 수학적으로 다 까 가지고 판단하는 거라고."
+    },
+    {
+      "segmentId": "M2-seg-217",
+      "startMs": 1475000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "나눠질 것 같은데."
+    },
+    {
+      "segmentId": "M2-seg-218",
+      "startMs": 1476000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "얼굴로 못 끊어 먹어도 안 알려지긴 해요."
+    },
+    {
+      "segmentId": "M2-seg-219",
+      "startMs": 1480000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아니 그러니까 오픈기도 자체에서 애초에 6개 8만원 버립니다. 오픈 기도에서. 왜냐면 말하는 일이 다르니까."
+    },
+    {
+      "segmentId": "M2-seg-220",
+      "startMs": 1485000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "이렇게 들어가는 스트림 자체가 다르니까."
+    },
+    {
+      "segmentId": "M2-seg-221",
+      "startMs": 1488000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "설비도는 그렇죠. 지금이라도 클로드 어떻게 물어보기."
+    },
+    {
+      "segmentId": "M2-seg-222",
+      "startMs": 1491000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그리고 경희 님이 이제 실행하기"
+    },
+    {
+      "segmentId": "M2-seg-223",
+      "startMs": 1495000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "물어는 봐 드리겠습니다. 대신에 저도 그럼 로그인만 하겠습니다. 로그인하고 그것만 하겠습니다."
+    },
+    {
+      "segmentId": "M2-seg-224",
+      "startMs": 1500000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "어떻습니까? 되면은 사실 간단할 것 같긴"
+    },
+    {
+      "segmentId": "M2-seg-225",
+      "startMs": 1503000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "아니에요. 표현을 받는 함 물어보죠. 안 물어보죠?"
+    },
+    {
+      "segmentId": "M2-seg-226",
+      "startMs": 1505000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그냥."
+    },
+    {
+      "segmentId": "M2-seg-227",
+      "startMs": 1508000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "어 이게 클럽으로 센 걸로 잘 잡긴 잘 잤네요. 뭐 맞아. 화자 잘 잡아 주는데."
+    },
+    {
+      "segmentId": "M2-seg-228",
+      "startMs": 1513000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "너무 해. 그래서."
+    },
+    {
+      "segmentId": "M2-seg-229",
+      "startMs": 1517000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러니까 아까 전에 저 클로버 앱도 보면은 안에서 그냥 화자 1 2 4 5 이렇게 다 나오긴 해요. 그러면 그 API로 해서 얻을 수 있는지는 잘 모르겠는데. 근데 그 API를 써 가지고 1 2 3 4로 나뉘어지면은 6년이 나눠지는 게 사실 나오"
+    },
+    {
+      "segmentId": "M2-seg-230",
+      "startMs": 1533000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "하자."
+    },
+    {
+      "segmentId": "M2-seg-231",
+      "startMs": 1534000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "자 여기서 주간 제가 보내 드린 거예요?"
+    },
+    {
+      "segmentId": "M2-seg-232",
+      "startMs": 1536000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "아니요 아니요. 그 오늘 회의 한번 클로바한테 보낸 거예요."
+    },
+    {
+      "segmentId": "M2-seg-233",
+      "startMs": 1539000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어 잠깐만 잘 돼 있는데? 아니 이 정도면 그냥 저희가 시간으로 안 하고 그냥 텍스트 길이에 대한 퍼센테이지만 매기면 그냥 이거 하면"
+    },
+    {
+      "segmentId": "M2-seg-234",
+      "startMs": 1547000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아니 그게 그러니까 누군지 몰라요. 누군지 모르는 거예요."
+    },
+    {
+      "segmentId": "M2-seg-235",
+      "startMs": 1550000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "누군지 생각보다 잘 잡긴 잘 잡아요."
+    },
+    {
+      "segmentId": "M2-seg-236",
+      "startMs": 1552000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "저희 그 사용자가 A인지 B인지 모른다는 거잖아요."
+    },
+    {
+      "segmentId": "M2-seg-237",
+      "startMs": 1554000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "예 아마도 AB CD."
+    },
+    {
+      "segmentId": "M2-seg-238",
+      "startMs": 1556000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "뭔지 몰라요. 어 그러니까"
+    },
+    {
+      "segmentId": "M2-seg-239",
+      "startMs": 1558000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그냥 1 2 3 4 5 16으로 보여주고 누군지 맞추기하고. 갑자기 퀴즈 쇼를 하고."
+    },
+    {
+      "segmentId": "M2-seg-240",
+      "startMs": 1565000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "이제 저 마벨링은 누가 나왔어요?"
+    },
+    {
+      "segmentId": "M2-seg-241",
+      "startMs": 1568000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "근데 이 겹치는 것도 좋다 되는 거야?"
+    },
+    {
+      "segmentId": "M2-seg-242",
+      "startMs": 1571000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "자전거 아 느"
+    },
+    {
+      "segmentId": "M2-seg-243",
+      "startMs": 1572000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "A가 나고 B가 팀장님을 90 10 10"
+    },
+    {
+      "segmentId": "M2-seg-244",
+      "startMs": 1583000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그래서 가능하던데. 어? 어 진짜."
+    },
+    {
+      "segmentId": "M2-seg-245",
+      "startMs": 1587000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "화장 그 자기 6명이면 6개가 나오게 할 수 있던데."
+    },
+    {
+      "segmentId": "M2-seg-246",
+      "startMs": 1591000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어. 혹 실현 가능한 그러면"
+    },
+    {
+      "segmentId": "M2-seg-247",
+      "startMs": 1594000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "해 볼까요?"
+    },
+    {
+      "segmentId": "M2-seg-248",
+      "startMs": 1597000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "진짜 해 볼까요? 저는 했지 좋을 것 같아요. 전"
+    },
+    {
+      "segmentId": "M2-seg-249",
+      "startMs": 1603000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "거기와 전철이 그대로 저는 이재명 대가지고. 저는 솔직히 할 게 없어요."
+    },
+    {
+      "segmentId": "M2-seg-250",
+      "startMs": 1607000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아 뭐 진짜 차가 안 돼요. 차별점 될 수 있어요. 근데 뭔가"
+    },
+    {
+      "segmentId": "M2-seg-251",
+      "startMs": 1610000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "똑같긴 해요."
+    },
+    {
+      "segmentId": "M2-seg-252",
+      "startMs": 1610000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "진짜 좋을"
+    },
+    {
+      "segmentId": "M2-seg-253",
+      "startMs": 1611000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "누가 더 후회 적극적으로 참여했?"
+    },
+    {
+      "segmentId": "M2-seg-254",
+      "startMs": 1614000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "시간으로 썼다는 거예요. 시간도 되었습니다."
+    },
+    {
+      "segmentId": "M2-seg-255",
+      "startMs": 1616000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "개인 음성이 각각 나가면은 하나의 음성 파일로 만들어지게 할 수 있다는"
+    },
+    {
+      "segmentId": "M2-seg-256",
+      "startMs": 1621000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러면 전점 음성도 있고 개인 답답"
+    },
+    {
+      "segmentId": "M2-seg-257",
+      "startMs": 1624000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "전체는 되는지 물어보려고. 둘 다 같이 되는지."
+    },
+    {
+      "segmentId": "M2-seg-258",
+      "startMs": 1632000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "쓰러지겠다. 되면 너무"
+    },
+    {
+      "segmentId": "M2-seg-259",
+      "startMs": 1648000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "최근 활동보다 금액 조금 더 나아."
+    },
+    {
+      "segmentId": "M2-seg-260",
+      "startMs": 1651000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "뭐"
+    },
+    {
+      "segmentId": "M2-seg-261",
+      "startMs": 1651000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "응?"
+    },
+    {
+      "segmentId": "M2-seg-262",
+      "startMs": 1657000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "여기에 코덱스 설치할 수 있는 거 맞아요. 없길래 없길래. 근데"
+    },
+    {
+      "segmentId": "M2-seg-263",
+      "startMs": 1667000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "몰려와. 어떠지?"
+    },
+    {
+      "segmentId": "M2-seg-264",
+      "startMs": 1669000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "오키를래."
+    },
+    {
+      "segmentId": "M2-seg-265",
+      "startMs": 1670000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "스캔들을 가방에 뜬 거예요. 방금"
+    },
+    {
+      "segmentId": "M2-seg-266",
+      "startMs": 1672000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그러니까"
+    },
+    {
+      "segmentId": "M2-seg-267",
+      "startMs": 1675000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "아니 이거 원래 여기 이래 뜨잖아."
+    },
+    {
+      "segmentId": "M2-seg-268",
+      "startMs": 1678000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "모르는 거 같네. 해 줄게. 내일가."
+    },
+    {
+      "segmentId": "M2-seg-269",
+      "startMs": 1683000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어? 아닌데."
+    },
+    {
+      "segmentId": "M2-seg-270",
+      "startMs": 1687000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "근데 아까 트러스트 했는데"
+    },
+    {
+      "segmentId": "M2-seg-271",
+      "startMs": 1689000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "뭐야? 어 미*다. 아 덥네."
+    },
+    {
+      "segmentId": "M2-seg-272",
+      "startMs": 1692000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "자네 안 해."
+    },
+    {
+      "segmentId": "M2-seg-273",
+      "startMs": 1694000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "영어지게."
+    },
+    {
+      "segmentId": "M2-seg-274",
+      "startMs": 1696000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "니클로드 계정했나?"
+    },
+    {
+      "segmentId": "M2-seg-275",
+      "startMs": 1697000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "계정은 있는데"
+    },
+    {
+      "segmentId": "M2-seg-276",
+      "startMs": 1699000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "불어가."
+    },
+    {
+      "segmentId": "M2-seg-277",
+      "startMs": 1701000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그럼 아예 못 쓰는데?"
+    },
+    {
+      "segmentId": "M2-seg-278",
+      "startMs": 1702000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "돌아갈 수 없을"
+    },
+    {
+      "segmentId": "M2-seg-279",
+      "startMs": 1703000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "클로드가 그런데 굳이 둘 다 돌릴 필요가 있을까요?"
+    },
+    {
+      "segmentId": "M2-seg-280",
+      "startMs": 1707000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 맞지 맞지. 하나만. 이렇게 저희는 그냥 8 6 개만 나눠 주면 돼요."
+    },
+    {
+      "segmentId": "M2-seg-281",
+      "startMs": 1712000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "네 되는 거는 오픈비도 3에선 되고 2에서 나왔는데"
+    },
+    {
+      "segmentId": "M2-seg-282",
+      "startMs": 1715000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그럼 3로 겁내셨나요? 쓰림 돈이에요?"
+    },
+    {
+      "segmentId": "M2-seg-283",
+      "startMs": 1721000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "3가"
+    },
+    {
+      "segmentId": "M2-seg-284",
+      "startMs": 1726000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "음 우리가 유료예요?"
+    },
+    {
+      "segmentId": "M2-seg-285",
+      "startMs": 1728000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "제가 했던 게 2인 거 같은데. 남자 이렇게 한번 물어보겠습니다."
+    },
+    {
+      "segmentId": "M2-seg-286",
+      "startMs": 1733000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "갑자기 쓰리는 돈 버는데 그럴 정도."
+    },
+    {
+      "segmentId": "M2-seg-287",
+      "startMs": 1747000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "녹음 이대로 준다? 그리고 이 정도면 데이터 많이 쌓인 거 같은데"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "meetingId": "e2e-meeting-B",
+  "profile": "candidate-quality-v1",
+  "items": [
+    {
+      "id": "m1",
+      "type": "DECISION",
+      "title": "프론트 정적 파일 배포는 EC2 대신 S3 정적 호스팅 사용",
+      "content": "프론트 정적 파일 배포 방식으로 EC2가 아니라 S3 정적 호스팅을 사용하기로 했다.",
+      "evidence": [
+        {
+          "quote": "프론트 정적 파일 배포용으로는 EC2 말고 S3 정적 호스팅을 쓰기로 하죠.",
+          "segmentId": "b1"
+        }
+      ],
+      "predictedCategory": "INFRA"
+    },
+    {
+      "id": "m2",
+      "type": "ACTION",
+      "title": "배포 스크립트 작성 진행",
+      "content": "배포 스크립트를 작성 중이며 아직 진행 중이라고 공유했다.",
+      "evidence": [
+        {
+          "quote": "배포 스크립트는 제가 작성하고 있습니다. 아직 진행 중이에요.",
+          "segmentId": "b2"
+        }
+      ],
+      "predictedCategory": "INFRA"
+    }
+  ],
+  "judgments": [
+    {
+      "itemId": "m1",
+      "result": "NEW_DECISION",
+      "category": "INFRA"
+    },
+    {
+      "itemId": "m2",
+      "result": "ATTACH",
+      "attachTo": "m1"
+    }
+  ],
+  "storedDispositions": {
+    "m1": "NEW_DECISION",
+    "m2": "ATTACH"
+  }
+}

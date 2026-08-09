@@ -1,0 +1,46 @@
+# 프로젝트명 고정 — 디렉터리명이 바뀌어도 컨테이너/네트워크 이름이 갈리지 않도록
+name: personal-audio
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: personal-audio-app
+    restart: unless-stopped
+    # DB는 private subnet의 외부 인스턴스를 사용하므로 .env의 DB_HOST를 그대로 쓴다
+    env_file:
+      - .env
+    # === 로컬 테스트 전용 (배포 전 제거) === .env보다 우선하여 아래 mysql 컨테이너를 바라본다
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    # === 로컬 테스트 전용 끝 ===
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # === 로컬 테스트 전용 (배포 전 이 서비스와 위 블록을 함께 제거) ===
+  mysql:
+    image: mysql:8.0
+    container_name: personal-audio-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Seoul
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DB_PASSWORD}"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 20s

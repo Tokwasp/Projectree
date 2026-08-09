@@ -1,0 +1,121 @@
+{
+  "meetingId": "M2Y",
+  "items": [
+    {
+      "id": "m1",
+      "type": "ACTION",
+      "predictedCategory": "BACKEND",
+      "title": "SQS 컨슈머·DLQ 설정 구현 완료",
+      "content": "재시도 3회 후 DLQ 이동까지 테스트 통과. 기존 작업의 완료 보고.",
+      "evidence": [
+        {
+          "segmentId": "M2Y-seg-002",
+          "quote": "SQS 컨슈머 구현은 끝났습니다"
+        },
+        {
+          "segmentId": "M2Y-seg-003",
+          "quote": "그러면 그 작업은 완료로 처리하면 되겠다"
+        }
+      ]
+    },
+    {
+      "id": "m2",
+      "type": "ACTION",
+      "predictedCategory": "BACKEND",
+      "title": "Lambda에서 SQS 메시지 수신·처리 구현",
+      "content": "큐 메시지를 꺼내 처리를 시작하는 신규 구현 작업. 이번 주 진행.",
+      "evidence": [
+        {
+          "segmentId": "M2Y-seg-004",
+          "quote": "람다 쪽에서 큐 메시지를 꺼내서 처리 시작하는 부분을 새로 구현해야 해요"
+        }
+      ]
+    },
+    {
+      "id": "m3",
+      "type": "ISSUE",
+      "predictedCategory": "INFRA",
+      "title": "S3 버킷 접근 권한 문제로 저장 로직 구현 차질",
+      "content": "현재 계정으로 put이 막혀 있어 IAM 정책 수정 필요.",
+      "evidence": [
+        {
+          "segmentId": "M2Y-seg-005",
+          "quote": "버킷 접근 권한 이슈가 있어서요"
+        }
+      ]
+    },
+    {
+      "id": "m4",
+      "type": "ACTION",
+      "predictedCategory": "BACKEND",
+      "title": "S3 저장 로직 구현 기한을 다음 주 화요일로 연기",
+      "content": "권한 이슈로 인한 기존 작업의 기한 변경.",
+      "evidence": [
+        {
+          "segmentId": "M2Y-seg-006",
+          "quote": "저장 로직 구현은 다음 주 화요일까지로 미루겠습니다"
+        },
+        {
+          "segmentId": "M2Y-seg-007",
+          "quote": "오케이 화요일로 변경할게요"
+        }
+      ]
+    },
+    {
+      "id": "m5",
+      "type": "ACTION",
+      "predictedCategory": "AI",
+      "title": "잡담 제거 프롬프트 초안 작성·공유 완료",
+      "content": "초안이 노션에 공유됨. 기존 작업의 완료 보고.",
+      "evidence": [
+        {
+          "segmentId": "M2Y-seg-008",
+          "quote": "잡담 제거 프롬프트 초안은 어제 공유 드렸어요"
+        }
+      ]
+    },
+    {
+      "id": "m6",
+      "type": "ACTION",
+      "predictedCategory": "AI",
+      "title": "피드백 반영하여 잡담 제거 프롬프트 최종 확정",
+      "content": "초안 공유와 별개의 후속 작업. 이번 주 내 완료 목표.",
+      "evidence": [
+        {
+          "segmentId": "M2Y-seg-010",
+          "quote": "피드백 반영해서 최종본으로 확정하는 작업을 따로 진행할게요"
+        }
+      ]
+    },
+    {
+      "id": "m7",
+      "type": "ACTION",
+      "predictedCategory": "INFRA",
+      "title": "S3 수명 주기 정책 설정 (90일 경과 녹음 자동 삭제)",
+      "content": "녹음 파일 용량 우려에 대한 대응 작업. 이번 스프린트 포함.",
+      "evidence": [
+        {
+          "segmentId": "M2Y-seg-011",
+          "quote": "수명 주기 정책을 걸어서 90일 지난 녹음은 자동으로 삭제되게 설정하는 작업을 하죠"
+        }
+      ]
+    },
+    {
+      "id": "m8",
+      "type": "ISSUE",
+      "predictedCategory": "INFRA",
+      "title": "Redis 캐시 도입 보류 — 현 트래픽 규모에서 불필요 판단",
+      "content": "조사 결과 공유 후 보류 합의.",
+      "evidence": [
+        {
+          "segmentId": "M2Y-seg-013",
+          "quote": "지금 트래픽 규모에서는 굳이 필요 없을 것 같아요"
+        },
+        {
+          "segmentId": "M2Y-seg-014",
+          "quote": "그럼 캐시 얘기는 보류"
+        }
+      ]
+    }
+  ]
+}

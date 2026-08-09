@@ -1,0 +1,195 @@
+{
+  "meetingId": "M2X",
+  "synthetic": true,
+  "segments": [
+    {
+      "segmentId": "M2X-seg-001",
+      "startMs": 15000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "자 그러면 어제 얘기했던 것들 이어서 진행 상황 공유부터 할까요?"
+    },
+    {
+      "segmentId": "M2X-seg-002",
+      "startMs": 30000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "네 제가 어제 말한 대로 SQS 쪽 먼저 보고 있는데요. 이제 컨슈머랑 DLQ 설정을 이번 주 안에 구현해 보려고요."
+    },
+    {
+      "segmentId": "M2X-seg-003",
+      "startMs": 45000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "오 좋네요. 그 재시도 세 번 실패하면 DLQ로 빠지는 거까지요?"
+    },
+    {
+      "segmentId": "M2X-seg-004",
+      "startMs": 60000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "네 그거까지 해서 올릴게요."
+    },
+    {
+      "segmentId": "M2X-seg-005",
+      "startMs": 75000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "근데 하나 걸리는 게 있는데 SQS 표준 큐는 메시지 순서가 보장이 안 되더라고요. 같은 회의에서 회의록 요청이랑 노드 요청 두 개 넣으면 순서가 뒤집힐 수도 있어요."
+    },
+    {
+      "segmentId": "M2X-seg-006",
+      "startMs": 90000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아 그건 피포 큐 쓰면 되는 거 아니에요?"
+    },
+    {
+      "segmentId": "M2X-seg-007",
+      "startMs": 105000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "피포는 처리량 제한이 있어서 일단 이슈로만 적어둘게요."
+    },
+    {
+      "segmentId": "M2X-seg-008",
+      "startMs": 120000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "오케이. 그리고 STT 텍스트 s3에 저장하는 거, 그거 버킷 구조 제가 정리해서 올리기로 했잖아요. 회의 아이디 기준으로 키 잡아서 저장하는 로직 오늘 구현할게요."
+    },
+    {
+      "segmentId": "M2X-seg-009",
+      "startMs": 135000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "네 그거 하시면 노드 생성 쪽에서도 바로 갖다 쓸게요."
+    },
+    {
+      "segmentId": "M2X-seg-010",
+      "startMs": 150000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "아 그리고 녹음 파일 관련해서요. 저희 웹엠 그대로 두기로 했잖아요. 근데 어제 한 시간짜리 테스트 녹음 돌려보니까 파일이 생각보다 커요. 이거 몇 주 쌓이면 용량 꽤 나올 것 같은데요."
+    },
+    {
+      "segmentId": "M2X-seg-011",
+      "startMs": 165000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "음 그건 뭐 수명 주기 정책 걸면 되긴 할 텐데 일단 기록해 두죠."
+    },
+    {
+      "segmentId": "M2X-seg-012",
+      "startMs": 180000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그리고 콜백 쪽에서 하나 발견한 게 있는데요. 클로바 콜백이 안 오면 저희가 디비에 저장해 둔 요청이 계속 대기 상태로 남아요. 타임아웃 처리가 없어서요."
+    },
+    {
+      "segmentId": "M2X-seg-013",
+      "startMs": 195000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아 그러네요. 요청 저장할 때 상태 컬럼은 있는데 만료 처리가 없구나."
+    },
+    {
+      "segmentId": "M2X-seg-014",
+      "startMs": 210000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "네 그래서 그건 요청 상태 관리 쪽 이슈로 적어둘게요."
+    },
+    {
+      "segmentId": "M2X-seg-015",
+      "startMs": 225000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "저 하나 제안이 있는데요. 전처리 텍스트 보니까 잡담이 꽤 섞여 있어서요. 회의록이랑 노드 만들기 전에 잡담 제거하는 전처리 단계를 하나 더 두는 게 어때요?"
+    },
+    {
+      "segmentId": "M2X-seg-016",
+      "startMs": 240000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "오 좋은데요. 어차피 지금도 프롬프트로 일부 하고 있으니까 아예 단계로 분리하죠."
+    },
+    {
+      "segmentId": "M2X-seg-017",
+      "startMs": 255000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "네 그럼 그렇게 가는 걸로 하죠."
+    },
+    {
+      "segmentId": "M2X-seg-018",
+      "startMs": 270000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그러면 제가 잡담 제거 프롬프트 초안 만들어서 내일까지 공유할게요."
+    },
+    {
+      "segmentId": "M2X-seg-019",
+      "startMs": 285000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "아 그리고 캐시 얘기 잠깐 나왔었잖아요. 레디스 같은 거 한번 조사해 볼까 하는데요."
+    },
+    {
+      "segmentId": "M2X-seg-020",
+      "startMs": 300000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "근데 그거 지금 단계에서 필요해요? 운영 비용도 있고."
+    },
+    {
+      "segmentId": "M2X-seg-021",
+      "startMs": 315000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "아직 도입하자는 건 아니고 그냥 조사만요."
+    },
+    {
+      "segmentId": "M2X-seg-022",
+      "startMs": 330000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "그리고 나중에 트래픽 커지면 SQS 말고 카프카로 가야 하는 거 아니냐는 얘기도 있었는데 그건 지금 결정할 건 아니죠?"
+    },
+    {
+      "segmentId": "M2X-seg-023",
+      "startMs": 345000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "네 그건 나중에 다시 얘기하죠."
+    },
+    {
+      "segmentId": "M2X-seg-024",
+      "startMs": 360000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "아 맞다. 파이썬 쪽도 하나 있어요. 저희 3.13으로 올렸잖아요. 근데 오디오 라이브러리 하나가 아직 3.13 휠이 없어서 빌드가 깨지더라고요."
+    },
+    {
+      "segmentId": "M2X-seg-025",
+      "startMs": 375000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "어 그럼 어떡해요?"
+    },
+    {
+      "segmentId": "M2X-seg-026",
+      "startMs": 390000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "소스 빌드하면 되는데 도커 이미지가 좀 무거워져요. 일단 이슈로 올려둘게요."
+    },
+    {
+      "segmentId": "M2X-seg-027",
+      "startMs": 405000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "오케이 그럼 오늘 정리하면 SQS 컨슈머 구현, s3 저장 로직, 잡담 제거 프롬프트 이렇게 가고 나머지는 이슈로 남기는 걸로. 녹음 끌게요."
+    }
+  ]
+}

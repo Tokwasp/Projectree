@@ -1,0 +1,89 @@
+{
+  "meetingId": "M1",
+  "judgments": [
+    {
+      "itemId": "m1",
+      "result": "NEW_DECISION",
+      "category": "AI",
+      "note": "R1 확정: 암묵 동의 결정 인정"
+    },
+    {
+      "itemId": "m2",
+      "result": "ATTACH",
+      "attachTo": "m1"
+    },
+    {
+      "itemId": "m3",
+      "result": "NEW_DECISION",
+      "category": "AI"
+    },
+    {
+      "itemId": "m4",
+      "result": "ATTACH",
+      "attachTo": "m3"
+    },
+    {
+      "itemId": "m5",
+      "result": "MINUTES_ONLY",
+      "reason": "NO_RELATED_DECISION"
+    },
+    {
+      "itemId": "m6",
+      "result": "NEW_DECISION",
+      "category": "INFRA"
+    },
+    {
+      "itemId": "m7",
+      "result": "MINUTES_ONLY",
+      "reason": "NOT_CONFIRMED",
+      "note": "R2 확정(B안): 다음 행동이 검증이므로 NOT_CONFIRMED"
+    },
+    {
+      "itemId": "m8",
+      "result": "MINUTES_ONLY",
+      "reason": "NO_RELATED_DECISION"
+    },
+    {
+      "itemId": "m9",
+      "result": "MINUTES_ONLY",
+      "reason": "NO_RELATED_DECISION"
+    },
+    {
+      "itemId": "m10",
+      "result": "MINUTES_ONLY",
+      "reason": "NO_RELATED_DECISION",
+      "reviewNote": "유형 C 대표 사례: 결정 없는 검증 작업"
+    },
+    {
+      "itemId": "m11",
+      "result": "NEW_DECISION",
+      "category": "BACKEND"
+    },
+    {
+      "itemId": "m12",
+      "result": "NEW_DECISION",
+      "category": "BACKEND"
+    },
+    {
+      "itemId": "m13",
+      "result": "MINUTES_ONLY",
+      "reason": "NO_RELATED_DECISION"
+    },
+    {
+      "itemId": "m14",
+      "result": "MINUTES_ONLY",
+      "reason": "NOT_CONFIRMED",
+      "note": "R7 확정: 팀 동의 발화 없음"
+    },
+    {
+      "itemId": "m15",
+      "result": "NEW_DECISION",
+      "category": "INFRA"
+    },
+    {
+      "itemId": "m16",
+      "result": "MINUTES_ONLY",
+      "reason": "NOT_CONFIRMED"
+    }
+  ]
+}

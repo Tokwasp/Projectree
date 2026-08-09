@@ -1,0 +1,260 @@
+{
+  "schema_version": "1.1",
+  "dictionary_version": "2026-07-30.3",
+  "terms": [
+    {
+      "id": "clova",
+      "canonical": "CLOVA",
+      "variants": [
+        "클로바",
+        "클로버"
+      ],
+      "match_mode": "word",
+      "enabled": true
+    },
+    {
+      "id": "redis",
+      "canonical": "Redis",
+      "variants": [
+        "레디스",
+        "랜디스",
+        "레디우스"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "docker-compose",
+      "canonical": "Docker Compose",
+      "variants": [
+        "도커 컴포즈"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "docker",
+      "canonical": "Docker",
+      "variants": [
+        "도커",
+        "도코",
+        "독호"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "jenkins",
+      "canonical": "Jenkins",
+      "variants": [
+        "젠킨스",
+        "딘킨스"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "gitlab",
+      "canonical": "GitLab",
+      "variants": [
+        "깃랩",
+        "깃 랩",
+        "길렙",
+        "gitlab"
+      ],
+      "case_sensitive": false,
+      "enabled": true
+    },
+    {
+      "id": "spring",
+      "canonical": "Spring",
+      "variants": [
+        "스프링",
+        "아스플링"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "python",
+      "canonical": "Python",
+      "variants": [
+        "파이썬"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "aws-lambda",
+      "canonical": "AWS Lambda",
+      "variants": [
+        "람다",
+        "람노"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "s3",
+      "canonical": "S3",
+      "variants": [
+        "s3",
+        "x3",
+        "스3",
+        "에스3"
+      ],
+      "case_sensitive": false,
+      "enabled": true
+    },
+    {
+      "id": "ec2",
+      "canonical": "EC2",
+      "variants": [
+        "ec2",
+        "이시2",
+        "이 시2",
+        "이슈2"
+      ],
+      "case_sensitive": false,
+      "enabled": true
+    },
+    {
+      "id": "rabbitmq",
+      "canonical": "RabbitMQ",
+      "variants": [
+        "레빈 MQ",
+        "레비 덴큐"
+      ],
+      "case_sensitive": false,
+      "enabled": true
+    },
+    {
+      "id": "kafka",
+      "canonical": "Kafka",
+      "variants": [
+        "카프카",
+        "카톡카",
+        "카프컷",
+        "카프가"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "openvidu",
+      "canonical": "OpenVidu",
+      "variants": [
+        "오픈비도",
+        "오픈 비도",
+        "오픈 YouTube",
+        "오픈기도"
+      ],
+      "case_sensitive": false,
+      "enabled": true
+    },
+    {
+      "id": "webrtc",
+      "canonical": "WebRTC",
+      "variants": [
+        "외 알티시",
+        "외부 RTC"
+      ],
+      "case_sensitive": false,
+      "enabled": true
+    },
+    {
+      "id": "iam",
+      "canonical": "IAM",
+      "variants": [
+        "아이엠"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "callback",
+      "canonical": "callback",
+      "variants": [
+        "콜백",
+        "콜랩"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "jira",
+      "canonical": "Jira",
+      "variants": [
+        "지라"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "rag",
+      "canonical": "RAG",
+      "variants": [
+        "레그"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "gitlab-runner",
+      "canonical": "GitLab Runner",
+      "variants": [
+        "길렛 러너"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "ci-cd",
+      "canonical": "CI/CD",
+      "variants": [
+        "CICD"
+      ],
+      "case_sensitive": false,
+      "enabled": true
+    },
+    {
+      "id": "docker-compose-up",
+      "canonical": "Docker Compose up",
+      "variants": [
+        "컴포즈업"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "serverless",
+      "canonical": "serverless",
+      "variants": [
+        "서버 리스",
+        "서브리스"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "webm",
+      "canonical": "WebM",
+      "variants": [
+        "webm",
+        "웹엠"
+      ],
+      "case_sensitive": false,
+      "enabled": true
+    },
+    {
+      "id": "gil",
+      "canonical": "GIL",
+      "variants": [
+        "gil"
+      ],
+      "case_sensitive": false,
+      "enabled": true
+    },
+    {
+      "id": "java",
+      "canonical": "Java",
+      "variants": [
+        "자바"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "claude",
+      "canonical": "Claude",
+      "variants": [
+        "클로드"
+      ],
+      "enabled": true
+    }
+  ]
+}
