@@ -26,11 +26,14 @@ SUMMARY 성공 → Java meeting-record HTTP Callback → Java
 SUMMARY와 NODES는 STT 결과만 공유하고 동시에 실행되는 독립 작업이다. Java command의 `generateSummary`, `generateNodes`가 각각 task 생성을 결정한다. SUMMARY 성공은 Java HTTP Callback, NODES 성공은 `PROJECT_GRAPH_CHANGED`, 최종 실패는 task별 `ANALYSIS_TASK_STATUS_CHANGED`로 통지하며 통합 성공 barrier는 사용하지 않는다. 상세 계약은 [Command Join v1](docs/contracts/meeting-analysis-command-join-v1.md), [Result Event v3](docs/contracts/java-result-event-v3.md), [자동 흡수 병합](docs/contracts/automatic-node-merge.md), [Meeting Summary](docs/contracts/meeting-summary-contract.md)을 따른다.
 
 같은 `ANALYSIS_COMMAND_QUEUE_URL`은 저장 완료된 canonical Node의 사용자 사후 수정
-`NODE_CONTENT_UPDATE_REQUESTED`도 받는다. 이 명령은 회의 recording join이나 LLM을
-실행하지 않고 Node row lock, USER Revision, Embedding/Analysis 무효화, graphVersion,
-Full Snapshot Artifact와 Result v3 Outbox를 한 트랜잭션으로 반영한다. 성공 Result는
-`PROJECT_GRAPH_CHANGED`, `sourceType=NODE_CONTENT_UPDATE`, top-level
-`meetingId=null`이다. 상세 계약은 [Node Content Update Command v1](docs/contracts/node-content-update-command-v1.md)을 따른다.
+`NODE_CONTENT_UPDATE_REQUESTED`도 받는다. V1은 제목·본문 단건 수정이고, V2는 제목만
+1~100건 수정하는 원자적 Batch다. V2는 모든 Node를 먼저 검증한 뒤 변경 Node마다 USER
+Revision을 만들고 graphVersion·Full Snapshot Artifact·Result v3 Outbox는 명령 전체에서
+한 번만 생성한다. 성공 Result는 `PROJECT_GRAPH_CHANGED`, 실패 Result는
+`NODE_CONTENT_UPDATE_REJECTED`이며 `sourceType=NODE_CONTENT_UPDATE`, top-level
+`meetingId=null`이다. V1 wire 동작은 그대로 유지한다. 상세 계약은
+[V1 단건 계약](docs/contracts/node-content-update-command-v1.md)과
+[V2 Batch 계약](docs/contracts/node-content-update-command-v2.md)을 따른다.
 
 `SUMMARY_ADAPTER=gms`는 기존 OpenAI 호환 GMS Client를 사용해 `title`, `summary`, `decisions`, `nextTodos`, `issues`의 엄격한 JSON 계약을 생성한다. `fake`는 `tests/config/fake/`에서만 허용되며 production coordinator는 모든 Fake AI adapter를 시작 단계에서 거부한다. `NO_EXTERNAL_AI_CALLS=1`이면 GMS Client 생성 전에 차단되므로 기본 테스트는 크레딧을 사용하지 않는다.
 

@@ -10,17 +10,21 @@ from sqlalchemy import func, select
 
 from data_pipeline.jobs.outbox import (
     S3ClaimCheckSqsTransport,
+    _to_message,
     publish_pending_events,
 )
+from data_pipeline.meeting_analysis import node_updates
 from data_pipeline.meeting_analysis.consumers import AnalysisCommandConsumer
 from data_pipeline.meeting_analysis.contracts import (
     AnalysisCommandValidationError,
     JavaCommandParser,
     MeetingAnalysisCommandMessage,
+    NodeContentBatchUpdateCommandMessage,
     NodeContentUpdateCommandMessage,
     NodeContentUpdateCommandParser,
 )
 from data_pipeline.meeting_analysis.node_updates import (
+    process_node_content_batch_update,
     process_node_content_update,
 )
 from data_pipeline.meeting_analysis.persistence import CommandPayloadConflictError
@@ -72,6 +76,38 @@ def _command(**changes) -> dict:
 
 def _parse(value: dict) -> NodeContentUpdateCommandMessage:
     return NodeContentUpdateCommandParser().parse(json.dumps(value))
+
+
+def _batch_command(node_ids: list[tuple[uuid.UUID, int, str]], **changes) -> dict:
+    value = {
+        "commandSchemaVersion": 2,
+        "commandId": str(uuid.uuid4()),
+        "commandType": "NODE_CONTENT_UPDATE_REQUESTED",
+        "requestedAt": "2026-08-09T07:30:00Z",
+        "projectId": int(PROJECT),
+        "payload": {
+            "nodes": [
+                {
+                    "nodeId": str(node_id),
+                    "expectedNodeVersion": version,
+                    "title": title,
+                }
+                for node_id, version, title in node_ids
+            ],
+            "requestedByMemberId": 15,
+        },
+    }
+    nested = changes.pop("payload", None)
+    value.update(changes)
+    if nested is not None:
+        value["payload"].update(nested)
+    return value
+
+
+def _parse_batch(value: dict) -> NodeContentBatchUpdateCommandMessage:
+    parsed = NodeContentUpdateCommandParser().parse(json.dumps(value))
+    assert isinstance(parsed, NodeContentBatchUpdateCommandMessage)
+    return parsed
 
 
 def _seed_node(
@@ -142,6 +178,64 @@ def test_node_update_parser_and_router_accept_strict_contract() -> None:
         JavaCommandParser().parse(json.dumps(meeting)),
         MeetingAnalysisCommandMessage,
     )
+
+
+@pytest.mark.parametrize("node_count", [1, 3])
+def test_node_batch_update_parser_and_router_accept_strict_contract(
+    node_count,
+) -> None:
+    items = [(uuid.uuid4(), index + 1, f"제목 {index}") for index in range(node_count)]
+    value = _batch_command(items)
+    parsed = NodeContentUpdateCommandParser().parse(json.dumps(value))
+    routed = JavaCommandParser().parse(json.dumps(value))
+    assert isinstance(parsed, NodeContentBatchUpdateCommandMessage)
+    assert isinstance(routed, NodeContentBatchUpdateCommandMessage)
+    assert parsed.project_id == PROJECT
+    assert parsed.requested_by_member_id == "15"
+    assert [item.node_id for item in parsed.nodes] == [item[0] for item in items]
+    assert [item.title for item in parsed.nodes] == [item[2] for item in items]
+
+
+def test_node_batch_update_parser_rejects_invalid_contracts() -> None:
+    node_id = uuid.uuid4()
+    valid = (node_id, 1, "정상 제목")
+    invalid_values = [
+        _batch_command([], payload={"nodes": []}),
+        _batch_command([valid] * 101),
+        _batch_command([valid, valid]),
+        _batch_command([valid], payload={"nodes": [{"nodeId": "bad", "expectedNodeVersion": 1, "title": "제목"}]}),
+        _batch_command([valid], payload={"nodes": [{"nodeId": str(node_id), "expectedNodeVersion": 0, "title": "제목"}]}),
+        _batch_command([valid], payload={"nodes": [{"nodeId": str(node_id), "expectedNodeVersion": 1, "title": " "}]}),
+        _batch_command(
+            [valid],
+            payload={
+                "nodes": [
+                    {
+                        "nodeId": str(node_id),
+                        "expectedNodeVersion": 1,
+                        "title": "x" * 256,
+                    }
+                ]
+            },
+        ),
+        _batch_command([valid], payload={"requestedByMemberId": "15"}),
+        _batch_command(
+            [valid],
+            payload={
+                "nodes": [
+                    {
+                        "nodeId": str(node_id),
+                        "expectedNodeVersion": 1,
+                        "title": "제목",
+                        "content": "금지",
+                    }
+                ]
+            },
+        ),
+    ]
+    for value in invalid_values:
+        with pytest.raises(AnalysisCommandValidationError):
+            JavaCommandParser().parse(json.dumps(value))
 
 
 @pytest.mark.parametrize(
@@ -538,6 +632,381 @@ def test_snapshot_failure_rolls_back_revision_embedding_and_versions(
                 MeetingAnalysisCommand.command_id == command.command_id
             )
         ) == 1
+        assert session.scalar(
+            select(func.count(OutboxEvent.id)).where(
+                OutboxEvent.event_type == "NODE_CONTENT_UPDATE_REJECTED"
+            )
+        ) == 0
+
+
+def test_batch_update_is_one_atomic_graph_mutation(session_factory) -> None:
+    first_id = _seed_node(session_factory, title="첫 제목")
+    second_id = _seed_node(session_factory, title="둘째 제목")
+    untouched_id = _seed_node(session_factory, title="그대로")
+    with session_factory() as session:
+        first = session.get(Node, first_id)
+        second = session.get(Node, second_id)
+        untouched = session.get(Node, untouched_id)
+        versions = {first_id: first.version, second_id: second.version}
+        untouched_state = (untouched.version, untouched.current_revision_id)
+        graph_version = session.get(ProjectGraphState, PROJECT).graph_version
+
+    command = _parse_batch(
+        _batch_command(
+            [
+                (first_id, versions[first_id], "첫 제목 변경"),
+                (second_id, versions[second_id], "둘째 제목 변경"),
+            ]
+        )
+    )
+    result = process_node_content_batch_update(
+        session_factory, command=command
+    )
+
+    assert result.status == "COMPLETED"
+    assert result.changed is True
+    assert result.graph_version == graph_version + 1
+    assert result.node_versions == {
+        first_id: versions[first_id] + 1,
+        second_id: versions[second_id] + 1,
+    }
+    with session_factory() as session:
+        assert session.get(Node, first_id).title == "첫 제목 변경"
+        assert session.get(Node, second_id).title == "둘째 제목 변경"
+        untouched = session.get(Node, untouched_id)
+        assert (untouched.version, untouched.current_revision_id) == untouched_state
+        assert session.get(ProjectGraphState, PROJECT).graph_version == graph_version + 1
+        row = session.execute(
+            select(MeetingAnalysisCommand).where(
+                MeetingAnalysisCommand.command_id == command.command_id
+            )
+        ).scalar_one()
+        assert row.target_node_id is None
+        assert row.expected_node_version is None
+        assert session.scalar(
+            select(func.count(GraphChangeEvent.id)).where(
+                GraphChangeEvent.request_id == str(command.command_id)
+            )
+        ) == 2
+        assert session.scalar(
+            select(func.count(GraphSnapshotArtifact.id)).where(
+                GraphSnapshotArtifact.command_id == command.command_id
+            )
+        ) == 1
+        events = session.execute(
+            select(OutboxEvent).where(
+                OutboxEvent.project_id == PROJECT,
+                OutboxEvent.event_type == "PROJECT_GRAPH_CHANGED",
+            )
+        ).scalars()
+        assert sum(
+            event.payload.get("commandId") == str(command.command_id)
+            for event in events
+        ) == 1
+
+
+def test_batch_preflight_failure_mutates_no_node(session_factory) -> None:
+    first_id = _seed_node(session_factory, title="첫 제목")
+    second_id = _seed_node(session_factory, title="둘째 제목")
+    with session_factory() as session:
+        first_version = session.get(Node, first_id).version
+        second_version = session.get(Node, second_id).version
+        first_revision = session.get(Node, first_id).current_revision_id
+        graph_version = session.get(ProjectGraphState, PROJECT).graph_version
+    command = _parse_batch(
+        _batch_command(
+            [
+                (first_id, first_version, "변경되면 안 됨"),
+                (second_id, second_version + 1, "충돌"),
+            ]
+        )
+    )
+
+    result = process_node_content_batch_update(
+        session_factory, command=command
+    )
+
+    assert result.status == "FAILED"
+    assert result.failure_code == "NODE_VERSION_CONFLICT"
+    assert result.failed_node_id == second_id
+    with session_factory() as session:
+        first = session.get(Node, first_id)
+        second = session.get(Node, second_id)
+        assert (first.title, first.version, first.current_revision_id) == (
+            "첫 제목",
+            first_version,
+            first_revision,
+        )
+        assert (second.title, second.version) == ("둘째 제목", second_version)
+        assert session.get(ProjectGraphState, PROJECT).graph_version == graph_version
+        assert session.scalar(
+            select(func.count(GraphChangeEvent.id)).where(
+                GraphChangeEvent.request_id == str(command.command_id)
+            )
+        ) == 0
+        assert session.scalar(
+            select(func.count(GraphSnapshotArtifact.id)).where(
+                GraphSnapshotArtifact.command_id == command.command_id
+            )
+        ) == 0
+        event = session.get(OutboxEvent, result.event_id)
+        assert event.event_type == "NODE_CONTENT_UPDATE_REJECTED"
+        assert event.payload["payload"] == {
+            "sourceType": "NODE_CONTENT_UPDATE",
+            "reasonCode": "NODE_VERSION_CONFLICT",
+            "failedNodeId": str(second_id),
+        }
+        body = json.loads(_to_message(event).to_json())
+        assert body == {
+            "eventSchemaVersion": 3,
+            "eventId": str(event.id),
+            "eventType": "NODE_CONTENT_UPDATE_REJECTED",
+            "occurredAt": body["occurredAt"],
+            "projectId": int(PROJECT),
+            "meetingId": None,
+            "commandId": str(command.command_id),
+            "payload": {
+                "sourceType": "NODE_CONTENT_UPDATE",
+                "reasonCode": "NODE_VERSION_CONFLICT",
+                "failedNodeId": str(second_id),
+            },
+        }
+
+
+@pytest.mark.parametrize(
+    ("case", "expected_code"),
+    [
+        ("missing", "NODE_NOT_FOUND"),
+        ("archived", "NODE_NOT_EDITABLE"),
+        ("merged", "MERGED_SOURCE_NOT_EDITABLE"),
+        ("revision", "INVALID_CURRENT_REVISION"),
+    ],
+)
+def test_batch_rejections_are_terminal_result_events(
+    session_factory, case, expected_code
+) -> None:
+    node_id = uuid.uuid4() if case == "missing" else _seed_node(session_factory)
+    version = 1
+    if case != "missing":
+        with session_factory() as session:
+            node = session.get(Node, node_id)
+            version = node.version
+            if case == "archived":
+                node.graph_state = "ARCHIVED"
+            elif case == "merged":
+                node.graph_state = "MERGED"
+                node.merged_into_node_id = _seed_node(session_factory)
+            elif case == "revision":
+                node.current_revision_id = None
+            session.commit()
+    command = _parse_batch(_batch_command([(node_id, version, "새 제목")]))
+
+    result = process_node_content_batch_update(
+        session_factory, command=command
+    )
+
+    assert result.status == "FAILED"
+    assert result.failure_code == expected_code
+    assert result.failed_node_id == node_id
+    with session_factory() as session:
+        event = session.get(OutboxEvent, result.event_id)
+        assert event.event_type == "NODE_CONTENT_UPDATE_REJECTED"
+        assert event.payload["payload"]["reasonCode"] == expected_code
+        assert event.payload["payload"]["failedNodeId"] == str(node_id)
+
+
+def test_batch_partial_noop_changes_only_one_node(session_factory) -> None:
+    noop_id = _seed_node(session_factory, title="그대로")
+    changed_id = _seed_node(session_factory, title="변경 전")
+    with session_factory() as session:
+        noop = session.get(Node, noop_id)
+        changed = session.get(Node, changed_id)
+        versions = {noop_id: noop.version, changed_id: changed.version}
+        noop_revision = noop.current_revision_id
+        graph_version = session.get(ProjectGraphState, PROJECT).graph_version
+    command = _parse_batch(
+        _batch_command(
+            [
+                (noop_id, versions[noop_id], "  그대로  "),
+                (changed_id, versions[changed_id], "변경 후"),
+            ]
+        )
+    )
+
+    result = process_node_content_batch_update(
+        session_factory, command=command
+    )
+
+    assert result.status == "COMPLETED"
+    assert result.graph_version == graph_version + 1
+    assert result.node_versions[noop_id] == versions[noop_id]
+    assert result.node_versions[changed_id] == versions[changed_id] + 1
+    with session_factory() as session:
+        noop = session.get(Node, noop_id)
+        assert noop.current_revision_id == noop_revision
+        assert noop.version == versions[noop_id]
+        assert session.scalar(
+            select(func.count(GraphChangeEvent.id)).where(
+                GraphChangeEvent.request_id == str(command.command_id)
+            )
+        ) == 1
+
+
+def test_batch_invalidates_only_changed_node_embedding(session_factory) -> None:
+    changed_id = _seed_node(session_factory, title="변경 전")
+    noop_id = _seed_node(session_factory, title="유지")
+    with session_factory() as session:
+        versions = {}
+        for node_id in (changed_id, noop_id):
+            node = session.get(Node, node_id)
+            current = load_current_revision_embedding_input(session, node=node)
+            session.add(
+                NodeEmbedding(
+                    node_id=node.id,
+                    embedding_version=EMBEDDING_CONTRACT_VERSION,
+                    embedding_model="text-embedding-3-small",
+                    dimension=1536,
+                    embedded_text_hash=current.text_hash,
+                    embedding=[1.0] + [0.0] * 1535,
+                    status="READY",
+                )
+            )
+            versions[node_id] = node.version
+        session.commit()
+    command = _parse_batch(
+        _batch_command(
+            [
+                (changed_id, versions[changed_id], "변경 후"),
+                (noop_id, versions[noop_id], "유지"),
+            ]
+        )
+    )
+
+    process_node_content_batch_update(session_factory, command=command)
+
+    with session_factory() as session:
+        assert session.get(
+            NodeEmbedding, (changed_id, EMBEDDING_CONTRACT_VERSION)
+        ).status == "STALE"
+        assert session.get(
+            NodeEmbedding, (noop_id, EMBEDDING_CONTRACT_VERSION)
+        ).status == "READY"
+
+
+def test_batch_all_noop_rejects_once_and_replays(session_factory) -> None:
+    node_id = _seed_node(session_factory, title="같은 제목")
+    with session_factory() as session:
+        node = session.get(Node, node_id)
+        version = node.version
+        revision_id = node.current_revision_id
+        graph_version = session.get(ProjectGraphState, PROJECT).graph_version
+    command = _parse_batch(
+        _batch_command([(node_id, version, " 같은 제목 ")])
+    )
+
+    first = process_node_content_batch_update(session_factory, command=command)
+    replay = process_node_content_batch_update(session_factory, command=command)
+
+    assert first.status == "FAILED"
+    assert first.failure_code == "NO_CHANGE"
+    assert first.failed_node_id is None
+    assert replay.replayed is True
+    assert replay.event_id == first.event_id
+    with session_factory() as session:
+        node = session.get(Node, node_id)
+        assert (node.version, node.current_revision_id) == (version, revision_id)
+        assert session.get(ProjectGraphState, PROJECT).graph_version == graph_version
+        assert session.scalar(
+            select(func.count(GraphSnapshotArtifact.id)).where(
+                GraphSnapshotArtifact.command_id == command.command_id
+            )
+        ) == 0
+        events = session.execute(
+            select(OutboxEvent).where(
+                OutboxEvent.event_type == "NODE_CONTENT_UPDATE_REJECTED"
+            )
+        ).scalars()
+        assert sum(
+            event.payload.get("commandId") == str(command.command_id)
+            for event in events
+        ) == 1
+
+
+def test_batch_success_replays_and_payload_change_conflicts(session_factory) -> None:
+    node_id = _seed_node(session_factory)
+    with session_factory() as session:
+        version = session.get(Node, node_id).version
+        graph_version = session.get(ProjectGraphState, PROJECT).graph_version
+    raw = _batch_command([(node_id, version, "한 번만 변경")])
+    command = _parse_batch(raw)
+
+    applied = process_node_content_batch_update(session_factory, command=command)
+    replay = process_node_content_batch_update(session_factory, command=command)
+    changed_raw = _batch_command(
+        [(node_id, version, "다른 제목")], commandId=str(command.command_id)
+    )
+    changed = _parse_batch(changed_raw)
+
+    assert replay.replayed is True
+    assert replay.graph_version == applied.graph_version
+    assert replay.node_versions == applied.node_versions
+    assert replay.event_id == applied.event_id
+    with pytest.raises(
+        CommandPayloadConflictError, match="COMMAND_ID_PAYLOAD_CONFLICT"
+    ):
+        process_node_content_batch_update(session_factory, command=changed)
+    with session_factory() as session:
+        assert session.get(Node, node_id).version == version + 1
+        assert session.get(ProjectGraphState, PROJECT).graph_version == graph_version + 1
+
+
+def test_batch_snapshot_failure_rolls_back_and_rejects(session_factory, monkeypatch) -> None:
+    first_id = _seed_node(session_factory, title="첫 제목")
+    second_id = _seed_node(session_factory, title="둘째 제목")
+    with session_factory() as session:
+        versions = {
+            first_id: session.get(Node, first_id).version,
+            second_id: session.get(Node, second_id).version,
+        }
+        revisions = {
+            first_id: session.get(Node, first_id).current_revision_id,
+            second_id: session.get(Node, second_id).current_revision_id,
+        }
+        graph_version = session.get(ProjectGraphState, PROJECT).graph_version
+    command = _parse_batch(
+        _batch_command(
+            [
+                (first_id, versions[first_id], "첫 변경"),
+                (second_id, versions[second_id], "둘 변경"),
+            ]
+        )
+    )
+    monkeypatch.setenv("PROJECTREE_GRAPH_SNAPSHOT_MAX_SIZE_BYTES", "1")
+
+    result = process_node_content_batch_update(
+        session_factory, command=command
+    )
+
+    assert result.status == "FAILED"
+    assert result.failure_code == "GRAPH_SNAPSHOT_TOO_LARGE"
+    assert result.event_id is not None
+    with session_factory() as session:
+        for node_id in (first_id, second_id):
+            node = session.get(Node, node_id)
+            assert node.version == versions[node_id]
+            assert node.current_revision_id == revisions[node_id]
+        assert session.get(ProjectGraphState, PROJECT).graph_version == graph_version
+        assert session.scalar(
+            select(func.count(GraphChangeEvent.id)).where(
+                GraphChangeEvent.request_id == str(command.command_id)
+            )
+        ) == 0
+        event = session.get(OutboxEvent, result.event_id)
+        assert event.payload["payload"] == {
+            "sourceType": "NODE_CONTENT_UPDATE",
+            "reasonCode": "GRAPH_SNAPSHOT_TOO_LARGE",
+            "failedNodeId": None,
+        }
 
 
 class _SqsInput:
@@ -570,6 +1039,86 @@ def test_command_consumer_dispatches_update_and_acks_after_commit(session_factor
         assert session.get(Node, node_id).title == "사용자가 확정한 제목"
 
 
+def test_command_consumer_dispatches_v2_batch_and_acks_terminal_result(
+    session_factory,
+) -> None:
+    node_id = _seed_node(session_factory)
+    with session_factory() as session:
+        version = session.get(Node, node_id).version
+    body = _batch_command([(node_id, version, "배치로 변경")])
+    sqs = _SqsInput(json.dumps(body))
+
+    result = AnalysisCommandConsumer(
+        sqs_client=sqs,
+        queue_url="command-queue",
+        session_factory=session_factory,
+        wait_time_seconds=0,
+    ).poll_once()
+
+    assert result.acknowledged == 1
+    assert len(sqs.deleted) == 1
+    with session_factory() as session:
+        assert session.get(Node, node_id).title == "배치로 변경"
+
+
+def test_command_consumer_acks_v2_business_rejection(session_factory) -> None:
+    missing_id = uuid.uuid4()
+    body = _batch_command([(missing_id, 1, "없는 노드")])
+    sqs = _SqsInput(json.dumps(body))
+
+    result = AnalysisCommandConsumer(
+        sqs_client=sqs,
+        queue_url="command-queue",
+        session_factory=session_factory,
+        wait_time_seconds=0,
+    ).poll_once()
+
+    assert result.acknowledged == 1
+    assert len(sqs.deleted) == 1
+    with session_factory() as session:
+        command = session.execute(select(MeetingAnalysisCommand)).scalar_one()
+        assert command.status == "FAILED"
+        assert command.failure_code == "NODE_NOT_FOUND"
+        event = session.execute(
+            select(OutboxEvent).where(
+                OutboxEvent.event_type == "NODE_CONTENT_UPDATE_REJECTED"
+            )
+        ).scalar_one()
+        assert event.payload["payload"]["failedNodeId"] == str(missing_id)
+
+
+def test_command_consumer_does_not_ack_v2_unexpected_failure(
+    session_factory, monkeypatch
+) -> None:
+    node_id = _seed_node(session_factory)
+    with session_factory() as session:
+        version = session.get(Node, node_id).version
+    body = _batch_command([(node_id, version, "변경")])
+    sqs = _SqsInput(json.dumps(body))
+
+    def explode(*args, **kwargs):
+        raise RuntimeError("temporary database failure")
+
+    monkeypatch.setattr(node_updates, "lock_project_graph_state", explode)
+    result = AnalysisCommandConsumer(
+        sqs_client=sqs,
+        queue_url="command-queue",
+        session_factory=session_factory,
+        wait_time_seconds=0,
+    ).poll_once()
+
+    assert result.acknowledged == 0
+    assert result.failed == 1
+    assert sqs.deleted == []
+    with session_factory() as session:
+        assert session.scalar(
+            select(func.count(MeetingAnalysisCommand.id)).where(
+                MeetingAnalysisCommand.command_id
+                == uuid.UUID(body["commandId"])
+            )
+        ) == 0
+
+
 def test_command_consumer_persists_business_failure_before_ack(session_factory) -> None:
     body = _command(payload={"nodeId": str(uuid.uuid4()), "expectedNodeVersion": 1})
     sqs = _SqsInput(json.dumps(body))
@@ -585,6 +1134,11 @@ def test_command_consumer_persists_business_failure_before_ack(session_factory) 
         assert command.status == "FAILED"
         assert command.failure_code == "NODE_NOT_FOUND"
         assert session.scalar(select(func.count(GraphSnapshotArtifact.id))) == 0
+        assert session.scalar(
+            select(func.count(OutboxEvent.id)).where(
+                OutboxEvent.event_type == "NODE_CONTENT_UPDATE_REJECTED"
+            )
+        ) == 0
 
 
 class _S3:
@@ -699,6 +1253,71 @@ def test_concurrent_expected_version_allows_one_update_on_postgresql(session_fac
     ]
     with session_factory() as session:
         assert session.get(Node, node_id).version == version + 1
+        assert session.get(ProjectGraphState, PROJECT).graph_version == graph_version + 1
+
+
+def test_concurrent_overlapping_batches_allow_one_stale_view_on_postgresql(
+    session_factory,
+) -> None:
+    with session_factory() as session:
+        if session.get_bind().dialect.name != "postgresql":
+            pytest.skip("PostgreSQL batch row-lock concurrency contract")
+    first_id = _seed_node(session_factory, title="A")
+    shared_id = _seed_node(session_factory, title="B")
+    third_id = _seed_node(session_factory, title="C")
+    with session_factory() as session:
+        versions = {
+            node_id: session.get(Node, node_id).version
+            for node_id in (first_id, shared_id, third_id)
+        }
+        graph_version = session.get(ProjectGraphState, PROJECT).graph_version
+    commands = [
+        _parse_batch(
+            _batch_command(
+                [
+                    (first_id, versions[first_id], "A1"),
+                    (shared_id, versions[shared_id], "B1"),
+                ]
+            )
+        ),
+        _parse_batch(
+            _batch_command(
+                [
+                    (shared_id, versions[shared_id], "B2"),
+                    (third_id, versions[third_id], "C2"),
+                ]
+            )
+        ),
+    ]
+    barrier = threading.Barrier(2)
+    results = []
+    errors = []
+
+    def run(command):
+        try:
+            barrier.wait(timeout=5)
+            results.append(
+                process_node_content_batch_update(
+                    session_factory, command=command
+                )
+            )
+        except Exception as exc:  # pragma: no cover - assertion reports details
+            errors.append(exc)
+
+    threads = [threading.Thread(target=run, args=(command,)) for command in commands]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+
+    assert not errors
+    assert all(not thread.is_alive() for thread in threads)
+    assert sorted((row.status, row.failure_code) for row in results) == [
+        ("COMPLETED", None),
+        ("FAILED", "NODE_VERSION_CONFLICT"),
+    ]
+    with session_factory() as session:
+        assert session.get(Node, shared_id).version == versions[shared_id] + 1
         assert session.get(ProjectGraphState, PROJECT).graph_version == graph_version + 1
 
 

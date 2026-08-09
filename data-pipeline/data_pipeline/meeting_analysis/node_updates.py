@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -29,14 +29,24 @@ from data_pipeline.pipeline.event_contract import (
     release_unmutated_graph_state,
 )
 from data_pipeline.pipeline.revisions import (
+    EvidenceSpec,
     create_node_revision,
     current_revision_evidence_specs,
     reconcile_embedding_status_after_revision,
 )
 
-from .contracts import NodeContentUpdateCommandMessage
+from .contracts import (
+    NodeContentBatchUpdateCommandMessage,
+    NodeContentBatchUpdateItem,
+    NodeContentUpdateCommandMessage,
+)
 from .persistence import CommandPayloadConflictError
-from .result_events import stage_project_graph_changed_v3
+from .result_events import (
+    NODE_CONTENT_UPDATE_REJECTED,
+    PROJECT_GRAPH_CHANGED,
+    stage_node_content_update_rejected_v3,
+    stage_project_graph_changed_v3,
+)
 from .snapshot import GraphSnapshotTooLargeError
 
 
@@ -56,6 +66,34 @@ class NodeContentUpdateResult:
     event_id: uuid.UUID | None = None
     artifact_id: uuid.UUID | None = None
     replayed: bool = False
+
+
+@dataclass(frozen=True)
+class NodeContentBatchUpdateResult:
+    command_id: uuid.UUID
+    status: str
+    node_versions: dict[uuid.UUID, int] = field(default_factory=dict)
+    graph_version: int | None = None
+    changed: bool = False
+    failure_code: str | None = None
+    failed_node_id: uuid.UUID | None = None
+    event_id: uuid.UUID | None = None
+    artifact_id: uuid.UUID | None = None
+    replayed: bool = False
+
+
+@dataclass(frozen=True)
+class _BatchNodePlan:
+    item: NodeContentBatchUpdateItem
+    node: Node
+    next_title: str
+    current_revision: NodeRevision
+    evidence_specs: tuple[EvidenceSpec, ...]
+    old_embedding_hash: str | None
+
+    @property
+    def changed(self) -> bool:
+        return self.next_title != self.node.title
 
 
 def _payload_hash(command: NodeContentUpdateCommandMessage) -> str:
@@ -538,9 +576,546 @@ def process_node_content_update(
         session.close()
 
 
+def _batch_payload_hash(command: NodeContentBatchUpdateCommandMessage) -> str:
+    payload = {
+        "commandSchemaVersion": 2,
+        "commandId": str(command.command_id),
+        "commandType": NODE_CONTENT_UPDATE_REQUESTED,
+        "requestedAt": command.requested_at.isoformat(),
+        "projectId": command.project_id,
+        "payload": {
+            "nodes": [
+                {
+                    "nodeId": str(item.node_id),
+                    "expectedNodeVersion": item.expected_node_version,
+                    "title": item.title,
+                }
+                for item in command.nodes
+            ],
+            "requestedByMemberId": command.requested_by_member_id,
+        },
+    }
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _new_batch_inbox_row(
+    *,
+    command: NodeContentBatchUpdateCommandMessage,
+    payload_hash: str,
+    status: str,
+) -> MeetingAnalysisCommand:
+    return MeetingAnalysisCommand(
+        command_id=command.command_id,
+        command_type=NODE_CONTENT_UPDATE_REQUESTED,
+        project_id=command.project_id,
+        meeting_id=None,
+        room_name=None,
+        generate_summary=None,
+        generate_nodes=None,
+        target_node_id=None,
+        expected_node_version=None,
+        expected_graph_version=None,
+        requested_by_member_id=command.requested_by_member_id,
+        requested_at=command.requested_at,
+        status=status,
+        payload_hash=payload_hash,
+    )
+
+
+def _command_result_event(
+    session,
+    *,
+    command_id: uuid.UUID,
+    project_id: str,
+    event_type: str,
+) -> OutboxEvent | None:
+    events = session.execute(
+        select(OutboxEvent).where(
+            OutboxEvent.project_id == project_id,
+            OutboxEvent.event_type == event_type,
+            OutboxEvent.schema_version == "3",
+        )
+    ).scalars()
+    return next(
+        (
+            event
+            for event in events
+            if event.payload.get("commandId") == str(command_id)
+        ),
+        None,
+    )
+
+
+def _existing_batch_result(
+    session,
+    *,
+    command: NodeContentBatchUpdateCommandMessage,
+    row: MeetingAnalysisCommand,
+) -> NodeContentBatchUpdateResult:
+    artifact = session.execute(
+        select(GraphSnapshotArtifact).where(
+            GraphSnapshotArtifact.project_id == command.project_id,
+            GraphSnapshotArtifact.command_id == command.command_id,
+        )
+    ).scalar_one_or_none()
+    event = _command_result_event(
+        session,
+        command_id=command.command_id,
+        project_id=command.project_id,
+        event_type=(
+            PROJECT_GRAPH_CHANGED
+            if artifact is not None
+            else NODE_CONTENT_UPDATE_REJECTED
+        ),
+    )
+    node_versions: dict[uuid.UUID, int] = {}
+    if artifact is not None:
+        snapshot_versions = {
+            item.get("nodeId"): item.get("nodeVersion")
+            for item in artifact.payload_json.get("nodes", [])
+        }
+        for item in command.nodes:
+            version = snapshot_versions.get(str(item.node_id))
+            if not isinstance(version, int):
+                raise RuntimeError(
+                    "completed batch snapshot is missing a requested Node version"
+                )
+            node_versions[item.node_id] = version
+    failed_node_id = None
+    if event is not None:
+        raw_failed_node_id = event.payload.get("payload", {}).get("failedNodeId")
+        if isinstance(raw_failed_node_id, str):
+            failed_node_id = uuid.UUID(raw_failed_node_id)
+    return NodeContentBatchUpdateResult(
+        command_id=command.command_id,
+        status=row.status,
+        node_versions=node_versions,
+        graph_version=artifact.graph_version if artifact is not None else None,
+        changed=artifact is not None,
+        failure_code=row.failure_code,
+        failed_node_id=failed_node_id,
+        event_id=event.id if event is not None else None,
+        artifact_id=artifact.id if artifact is not None else None,
+        replayed=True,
+    )
+
+
+def _reject_batch(
+    session,
+    *,
+    row: MeetingAnalysisCommand,
+    command: NodeContentBatchUpdateCommandMessage,
+    reason_code: str,
+    message: str,
+    failed_node_id: uuid.UUID | None,
+    materialized_graph_state: bool,
+) -> NodeContentBatchUpdateResult:
+    """Commit a deterministic V2 rejection and its Result event together."""
+
+    row.status = "FAILED"
+    row.failure_code = reason_code
+    row.failure_message = message[:2000]
+    event = stage_node_content_update_rejected_v3(
+        session,
+        command=row,
+        reason_code=reason_code,
+        failed_node_id=(
+            str(failed_node_id) if failed_node_id is not None else None
+        ),
+    )
+    if materialized_graph_state:
+        release_unmutated_graph_state(session, project_id=command.project_id)
+    session.commit()
+    return NodeContentBatchUpdateResult(
+        command_id=command.command_id,
+        status="FAILED",
+        failure_code=reason_code,
+        failed_node_id=failed_node_id,
+        event_id=event.id,
+    )
+
+
+def _persist_batch_terminal_failure(
+    session_factory,
+    *,
+    command: NodeContentBatchUpdateCommandMessage,
+    payload_hash: str,
+    code: str,
+    message: str,
+) -> NodeContentBatchUpdateResult:
+    """Persist a deterministic failure after the mutation transaction rolled back."""
+
+    session = session_factory()
+    try:
+        existing = session.execute(
+            select(MeetingAnalysisCommand)
+            .where(MeetingAnalysisCommand.command_id == command.command_id)
+            .with_for_update()
+        ).scalar_one_or_none()
+        if existing is not None:
+            if (
+                existing.command_type != NODE_CONTENT_UPDATE_REQUESTED
+                or existing.payload_hash != payload_hash
+            ):
+                raise CommandPayloadConflictError(
+                    "COMMAND_ID_PAYLOAD_CONFLICT"
+                )
+            result = _existing_batch_result(
+                session, command=command, row=existing
+            )
+            session.rollback()
+            return result
+
+        row = _new_batch_inbox_row(
+            command=command,
+            payload_hash=payload_hash,
+            status="FAILED",
+        )
+        row.failure_code = code
+        row.failure_message = message[:2000]
+        session.add(row)
+        session.flush()
+        event = stage_node_content_update_rejected_v3(
+            session,
+            command=row,
+            reason_code=code,
+            failed_node_id=None,
+        )
+        session.commit()
+        return NodeContentBatchUpdateResult(
+            command_id=command.command_id,
+            status="FAILED",
+            failure_code=code,
+            event_id=event.id,
+        )
+    except IntegrityError:
+        session.rollback()
+        verification = session_factory()
+        try:
+            concurrent = verification.execute(
+                select(MeetingAnalysisCommand.id).where(
+                    MeetingAnalysisCommand.command_id == command.command_id
+                )
+            ).scalar_one_or_none()
+        finally:
+            verification.close()
+        if concurrent is not None:
+            return _persist_batch_terminal_failure(
+                session_factory,
+                command=command,
+                payload_hash=payload_hash,
+                code=code,
+                message=message,
+            )
+        raise
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def _locked_batch_nodes(
+    session,
+    *,
+    command: NodeContentBatchUpdateCommandMessage,
+) -> dict[uuid.UUID, Node]:
+    node_ids = [item.node_id for item in command.nodes]
+    return {
+        node.id: node
+        for node in session.execute(
+            select(Node)
+            .where(
+                Node.id.in_(node_ids),
+                Node.project_id == command.project_id,
+            )
+            .order_by(Node.id)
+            .with_for_update()
+        ).scalars()
+    }
+
+
+def _batch_preflight(
+    session,
+    *,
+    command: NodeContentBatchUpdateCommandMessage,
+    locked_nodes: dict[uuid.UUID, Node],
+) -> tuple[
+    list[_BatchNodePlan],
+    tuple[str, str, uuid.UUID] | None,
+]:
+    """Validate every item before the first Revision is created."""
+
+    plans: list[_BatchNodePlan] = []
+    for item in command.nodes:
+        node = locked_nodes.get(item.node_id)
+        if node is None:
+            return plans, (
+                "NODE_NOT_FOUND",
+                "Node is missing or belongs to another project",
+                item.node_id,
+            )
+        if (
+            node.deleted_at is not None
+            or node.graph_state in {"DELETED", "ARCHIVED", "EXCLUDED"}
+        ):
+            return plans, (
+                "NODE_NOT_EDITABLE",
+                "deleted, archived, or excluded Nodes are not editable",
+                item.node_id,
+            )
+        if node.graph_state == "MERGED" or node.merged_into_node_id is not None:
+            return plans, (
+                "MERGED_SOURCE_NOT_EDITABLE",
+                "edit the canonical merge target instead",
+                item.node_id,
+            )
+        if node.graph_state not in {"ACTIVE", "UNATTACHED"}:
+            return plans, (
+                "NODE_NOT_EDITABLE",
+                "only ACTIVE or UNATTACHED canonical Nodes are editable",
+                item.node_id,
+            )
+        if node.version != item.expected_node_version:
+            return plans, (
+                "NODE_VERSION_CONFLICT",
+                "expected Node version does not match current version",
+                item.node_id,
+            )
+        current_revision = (
+            session.get(NodeRevision, node.current_revision_id)
+            if node.current_revision_id is not None
+            else None
+        )
+        if current_revision is None:
+            return plans, (
+                "INVALID_CURRENT_REVISION",
+                "Node has no valid current Revision",
+                item.node_id,
+            )
+        evidence_specs = tuple(
+            current_revision_evidence_specs(session, node=node)
+        )
+        if current_revision.requires_evidence and not evidence_specs:
+            return plans, (
+                "INVALID_CURRENT_REVISION",
+                "current Revision has no required Evidence",
+                item.node_id,
+            )
+        plans.append(
+            _BatchNodePlan(
+                item=item,
+                node=node,
+                next_title=item.title.strip(),
+                current_revision=current_revision,
+                evidence_specs=evidence_specs,
+                old_embedding_hash=_current_embedding_hash(session, node=node),
+            )
+        )
+    return plans, None
+
+
+def _apply_batch_node_mutation(
+    session,
+    *,
+    command: NodeContentBatchUpdateCommandMessage,
+    plan: _BatchNodePlan,
+) -> None:
+    node = plan.node
+    before = {
+        "nodeId": str(node.id),
+        "title": node.title,
+        "content": node.content,
+        "nodeType": node.node_type,
+        "category": node.category,
+        "graphState": node.graph_state,
+        "version": node.version,
+    }
+    create_node_revision(
+        session,
+        node=node,
+        title=plan.next_title,
+        content=node.content,
+        node_type=node.node_type,
+        category=node.category,
+        due_date=node.due_date,
+        created_by_type="USER",
+        created_by_id=command.requested_by_member_id,
+        generation_run_id=None,
+        evidence_specs=list(plan.evidence_specs),
+        requires_evidence=plan.current_revision.requires_evidence,
+        legacy_imported=plan.current_revision.legacy_imported,
+    )
+    new_embedding_hash = _current_embedding_hash(session, node=node)
+    reconcile_embedding_status_after_revision(session, node=node)
+    analysis_invalidated = plan.old_embedding_hash != new_embedding_hash
+    if analysis_invalidated:
+        _invalidate_analysis(session, node=node)
+    session.add(
+        GraphChangeEvent(
+            project_id=command.project_id,
+            request_id=str(command.command_id),
+            node_id=node.id,
+            item_id=node.source_item_id,
+            change_type="USER_EDIT_NODE",
+            actor_type="USER",
+            before=before,
+            after={
+                "nodeId": str(node.id),
+                "title": node.title,
+                "content": node.content,
+                "nodeType": node.node_type,
+                "category": node.category,
+                "graphState": node.graph_state,
+                "version": node.version,
+            },
+            detail={
+                "actorId": command.requested_by_member_id,
+                "commandId": str(command.command_id),
+                "sourceType": NODE_CONTENT_UPDATE_SOURCE,
+                "analysisInvalidated": analysis_invalidated,
+            },
+        )
+    )
+
+
+def process_node_content_batch_update(
+    session_factory,
+    *,
+    command: NodeContentBatchUpdateCommandMessage,
+) -> NodeContentBatchUpdateResult:
+    """Apply one V2 batch atomically and emit one terminal Result event."""
+
+    payload_hash = _batch_payload_hash(command)
+    session = session_factory()
+    try:
+        existing = session.execute(
+            select(MeetingAnalysisCommand)
+            .where(MeetingAnalysisCommand.command_id == command.command_id)
+            .with_for_update()
+        ).scalar_one_or_none()
+        if existing is not None:
+            if (
+                existing.command_type != NODE_CONTENT_UPDATE_REQUESTED
+                or existing.payload_hash != payload_hash
+            ):
+                raise CommandPayloadConflictError(
+                    "COMMAND_ID_PAYLOAD_CONFLICT"
+                )
+            if existing.status in {"COMPLETED", "FAILED"}:
+                result = _existing_batch_result(
+                    session, command=command, row=existing
+                )
+                session.rollback()
+                return result
+            raise RuntimeError("Node batch update command is already processing")
+
+        row = _new_batch_inbox_row(
+            command=command,
+            payload_hash=payload_hash,
+            status="PROCESSING",
+        )
+        session.add(row)
+        session.flush()
+
+        _, materialized = lock_project_graph_state(
+            session, project_id=command.project_id
+        )
+        locked_nodes = _locked_batch_nodes(session, command=command)
+        plans, rejection = _batch_preflight(
+            session,
+            command=command,
+            locked_nodes=locked_nodes,
+        )
+        if rejection is not None:
+            reason_code, message, failed_node_id = rejection
+            return _reject_batch(
+                session,
+                row=row,
+                command=command,
+                reason_code=reason_code,
+                message=message,
+                failed_node_id=failed_node_id,
+                materialized_graph_state=materialized,
+            )
+
+        changed_plans = [plan for plan in plans if plan.changed]
+        if not changed_plans:
+            return _reject_batch(
+                session,
+                row=row,
+                command=command,
+                reason_code="NO_CHANGE",
+                message="all requested Node titles already have the requested value",
+                failed_node_id=None,
+                materialized_graph_state=materialized,
+            )
+
+        for plan in changed_plans:
+            _apply_batch_node_mutation(session, command=command, plan=plan)
+
+        event, artifact, graph_version = stage_project_graph_changed_v3(
+            session,
+            command=row,
+            source_type=NODE_CONTENT_UPDATE_SOURCE,
+        )
+        row.status = "COMPLETED"
+        row.failure_code = None
+        row.failure_message = None
+        node_versions = {plan.node.id: plan.node.version for plan in plans}
+        session.commit()
+        return NodeContentBatchUpdateResult(
+            command_id=command.command_id,
+            status="COMPLETED",
+            node_versions=node_versions,
+            graph_version=graph_version,
+            changed=True,
+            event_id=event.id,
+            artifact_id=artifact.id,
+        )
+    except GraphSnapshotTooLargeError as exc:
+        session.rollback()
+        return _persist_batch_terminal_failure(
+            session_factory,
+            command=command,
+            payload_hash=payload_hash,
+            code="GRAPH_SNAPSHOT_TOO_LARGE",
+            message=str(exc),
+        )
+    except IntegrityError:
+        session.rollback()
+        verification = session_factory()
+        try:
+            concurrent = verification.execute(
+                select(MeetingAnalysisCommand.id).where(
+                    MeetingAnalysisCommand.command_id == command.command_id
+                )
+            ).scalar_one_or_none()
+        finally:
+            verification.close()
+        if concurrent is not None:
+            return process_node_content_batch_update(
+                session_factory, command=command
+            )
+        raise
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 __all__ = [
     "NODE_CONTENT_UPDATE_REQUESTED",
     "NODE_CONTENT_UPDATE_SOURCE",
+    "NodeContentBatchUpdateResult",
     "NodeContentUpdateResult",
+    "process_node_content_batch_update",
     "process_node_content_update",
 ]
