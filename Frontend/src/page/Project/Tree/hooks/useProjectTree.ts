@@ -5,6 +5,8 @@ import { mockProjectTree } from "../../../../mocks/TreeMocks";
 
 export const useProjectTree = (projectId: number) => {
   const [tree, setTree] = useState<TreeNodeInput | null>(null);
+  // 삭제 요청이 expectedGraphVersion으로 되돌려 보내야 하는 값
+  const [graphVersion, setGraphVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   // 노드 API가 아직 없어서 실패하면 샘플로 떨어진다 — 화면에 그 사실을 표시하기 위한 값
   const [usingMock, setUsingMock] = useState(false);
@@ -21,10 +23,12 @@ export const useProjectTree = (projectId: number) => {
         const response = await getProjectTree(projectId);
         if (cancelled) return;
         setTree(toTreeNodeInput(response.root));
+        setGraphVersion(response.graphVersion);
         setUsingMock(false);
       } catch {
         if (cancelled) return;
         setTree(mockProjectTree);
+        setGraphVersion(0);
         setUsingMock(true);
       } finally {
         if (!cancelled) setLoading(false);
@@ -38,5 +42,5 @@ export const useProjectTree = (projectId: number) => {
     };
   }, [projectId, reloadToken]);
 
-  return { tree, loading, usingMock, reload };
+  return { tree, graphVersion, loading, usingMock, reload };
 };

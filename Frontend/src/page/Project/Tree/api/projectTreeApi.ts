@@ -57,10 +57,11 @@ export const getProjectTree = (
 export const deleteProjectNodes = (
   projectId: number,
   nodeIds: string[],
+  expectedGraphVersion: number,
 ): Promise<void> =>
-  apiRequest<void>(`/projects/${projectId}/nodes`, {
-    method: "DELETE",
-    body: JSON.stringify({ nodeIds }),
+  apiRequest<void>(`/projects/${projectId}/nodes/delete`, {
+    method: "POST",
+    body: JSON.stringify({ nodeIds, expectedGraphVersion }),
   });
 
 export interface ProjectNodeTitleUpdate {

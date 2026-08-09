@@ -111,7 +111,7 @@ const findDecisionSelection = (
 
 export default function ProjectTree() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { tree, loading, usingMock, reload } = useProjectTree(
+  const { tree, graphVersion, loading, usingMock, reload } = useProjectTree(
     Number(projectId),
   );
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
@@ -174,7 +174,11 @@ export default function ProjectTree() {
     setIsSubmitting(true);
 
     try {
-      await deleteProjectNodes(Number(projectId), [...checkedIds]);
+      await deleteProjectNodes(
+        Number(projectId),
+        [...checkedIds],
+        graphVersion,
+      );
       toast.success(`${checkedIds.size}개 노드를 삭제했습니다.`);
       exitPickMode();
       // 지운 노드가 화면에 남지 않도록 서버 트리를 다시 받는다
