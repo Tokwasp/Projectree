@@ -40,6 +40,9 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ProjectService {
 
+    // ProjectRepository 의 검색 쿼리에 선언된 escape 문자와 반드시 같아야 한다.
+    private static final String LIKE_ESCAPE_CHAR = "!";
+
     private final MemberRepository memberRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
@@ -136,9 +139,9 @@ public class ProjectService {
         return projectMemberRepository.findMemberResponsesByProjectId(projectId);
     }
 
-    public ProjectListResponse getProjectList(Pageable pageable, int memberId) {
+    public ProjectListResponse getProjectList(Pageable pageable, int memberId, String keyword) {
         Page<ProjectItemResponse> projectPage =
-                projectRepository.findProjectItemsByMemberId(memberId, pageable);
+                projectRepository.findProjectItemsByMemberId(memberId, normalizeKeyword(keyword), pageable);
 
         return new ProjectListResponse(projectPage);
     }
@@ -158,6 +161,17 @@ public class ProjectService {
         List<PersonalSpeakingResponse> speakingResponses = calculatePersonalSpeakPercentBy(recentOneMeetingReviews);
         MyMeetingReviewResponse myReviewResponse = MyMeetingReviewResponse.of(myMeetingReview);
         return ProjectHomeResponse.of(projectDetail, meetingRecords, speakingResponses, myReviewResponse);
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+
+        return keyword.trim()
+                .replace(LIKE_ESCAPE_CHAR, LIKE_ESCAPE_CHAR + LIKE_ESCAPE_CHAR)
+                .replace("%", LIKE_ESCAPE_CHAR + "%")
+                .replace("_", LIKE_ESCAPE_CHAR + "_");
     }
 
     private void validateMember(int memberId) {

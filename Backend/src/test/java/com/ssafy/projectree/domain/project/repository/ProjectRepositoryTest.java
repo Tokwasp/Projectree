@@ -38,7 +38,7 @@ class ProjectRepositoryTest extends IntegrationTestSupport {
 
         // when
         Page<ProjectItemResponse> page = projectRepository.findProjectItemsByMemberId(
-                1, PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"))
+                1, null, PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"))
         );
 
         // then
@@ -62,7 +62,7 @@ class ProjectRepositoryTest extends IntegrationTestSupport {
 
         // when
         Page<ProjectItemResponse> page = projectRepository.findProjectItemsByMemberId(
-                1, PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt", "id"))
+                1, null, PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt", "id"))
         );
 
         // then
@@ -82,7 +82,7 @@ class ProjectRepositoryTest extends IntegrationTestSupport {
 
         // when
         Page<ProjectItemResponse> secondPage = projectRepository.findProjectItemsByMemberId(
-                1, PageRequest.of(1, 2, Sort.by(Sort.Direction.ASC, "id"))
+                1, null, PageRequest.of(1, 2, Sort.by(Sort.Direction.ASC, "id"))
         );
 
         // then
@@ -110,11 +110,170 @@ class ProjectRepositoryTest extends IntegrationTestSupport {
 
         // when
         projectRepository.findProjectItemsByMemberId(
-                1, PageRequest.of(0, 2, Sort.by(Sort.Direction.ASC, "id"))
+                1, null, PageRequest.of(0, 2, Sort.by(Sort.Direction.ASC, "id"))
         );
 
         // then
         assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
+    }
+
+    @DisplayName("keyword를 주면 제목에 keyword가 포함된 프로젝트만 조회한다.")
+    @Test
+    void findProjectItemsByMemberId_withKeyword() {
+        // given
+        saveProject("포트폴리오 사이트", 1);
+        saveProject("팀 포트폴리오", 1);
+        saveProject("스터디 관리 서비스", 1);
+        flushAndClear();
+
+        // when
+        Page<ProjectItemResponse> page = projectRepository.findProjectItemsByMemberId(
+                1, "포트폴리오", PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"))
+        );
+
+        // then
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        assertThat(page.getContent())
+                .extracting(ProjectItemResponse::getTitle)
+                .containsExactly("포트폴리오 사이트", "팀 포트폴리오");
+    }
+
+    @DisplayName("keyword가 제목과 일치해도 참여하지 않은 프로젝트는 조회되지 않는다.")
+    @Test
+    void findProjectItemsByMemberId_withKeywordDoesNotLeakOtherMembersProject() {
+        // given
+        saveProject("포트폴리오 사이트", 1);
+        saveProject("포트폴리오 백엔드", 2);
+        flushAndClear();
+
+        // when
+        Page<ProjectItemResponse> page = projectRepository.findProjectItemsByMemberId(
+                1, "포트폴리오", PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"))
+        );
+
+        // then
+        assertThat(page.getTotalElements()).isEqualTo(1);
+        assertThat(page.getContent())
+                .extracting(ProjectItemResponse::getTitle)
+                .containsExactly("포트폴리오 사이트");
+    }
+
+    @DisplayName("keyword가 빈 문자열이면 필터링하지 않고 전체를 조회한다.")
+    @Test
+    void findProjectItemsByMemberId_withBlankKeyword() {
+        // given
+        saveProject("포트폴리오 사이트", 1);
+        saveProject("스터디 관리 서비스", 1);
+        flushAndClear();
+
+        // when
+        Page<ProjectItemResponse> page = projectRepository.findProjectItemsByMemberId(
+                1, "", PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"))
+        );
+
+        // then
+        assertThat(page.getTotalElements()).isEqualTo(2);
+    }
+
+    @DisplayName("어떤 제목에도 포함되지 않는 keyword로 조회하면 빈 목록을 반환한다.")
+    @Test
+    void findProjectItemsByMemberId_withNoMatchingKeyword() {
+        // given
+        saveProject("포트폴리오 사이트", 1);
+        flushAndClear();
+
+        // when
+        Page<ProjectItemResponse> page = projectRepository.findProjectItemsByMemberId(
+                1, "존재하지않는키워드", PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"))
+        );
+
+        // then
+        assertThat(page.getTotalElements()).isZero();
+        assertThat(page.getContent()).isEmpty();
+    }
+
+    @DisplayName("대소문자를 구분하지 않고 검색한다.")
+    @Test
+    void findProjectItemsByMemberId_isCaseInsensitive() {
+        // given
+        saveProject("Portfolio Site", 1);
+        saveProject("스터디 관리 서비스", 1);
+        flushAndClear();
+
+        // when
+        Page<ProjectItemResponse> page = projectRepository.findProjectItemsByMemberId(
+                1, "portfolio", PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"))
+        );
+
+        // then
+        assertThat(page.getContent())
+                .extracting(ProjectItemResponse::getTitle)
+                .containsExactly("Portfolio Site");
+    }
+
+    @DisplayName("이스케이프된 %는 와일드카드가 아니라 리터럴로 검색된다.")
+    @Test
+    void findProjectItemsByMemberId_withEscapedPercent() {
+        // given
+        saveProject("100% 달성 프로젝트", 1);
+        saveProject("1000개 목표 프로젝트", 1);
+        saveProject("스터디 관리 서비스", 1);
+        flushAndClear();
+
+        // when
+        Page<ProjectItemResponse> page = projectRepository.findProjectItemsByMemberId(
+                1, "100!%", PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"))
+        );
+
+        // then
+        assertThat(page.getTotalElements()).isEqualTo(1);
+        assertThat(page.getContent())
+                .extracting(ProjectItemResponse::getTitle)
+                .containsExactly("100% 달성 프로젝트");
+    }
+
+    @DisplayName("이스케이프된 _는 임의의 한 글자가 아니라 리터럴로 검색된다.")
+    @Test
+    void findProjectItemsByMemberId_withEscapedUnderscore() {
+        // given
+        saveProject("snake_case 정리", 1);
+        saveProject("snakeXcase 정리", 1);
+        flushAndClear();
+
+        // when
+        Page<ProjectItemResponse> page = projectRepository.findProjectItemsByMemberId(
+                1, "snake!_case", PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"))
+        );
+
+        // then
+        assertThat(page.getTotalElements()).isEqualTo(1);
+        assertThat(page.getContent())
+                .extracting(ProjectItemResponse::getTitle)
+                .containsExactly("snake_case 정리");
+    }
+
+    @DisplayName("keyword 조건이 count 쿼리에도 적용되어 전체 건수와 페이지 수가 줄어든다.")
+    @Test
+    void findProjectItemsByMemberId_appliesKeywordToCountQuery() {
+        // given
+        saveProject("포트폴리오 1", 1);
+        saveProject("포트폴리오 2", 1);
+        saveProject("포트폴리오 3", 1);
+        saveProject("스터디 1", 1);
+        saveProject("스터디 2", 1);
+        flushAndClear();
+
+        // when
+        Page<ProjectItemResponse> page = projectRepository.findProjectItemsByMemberId(
+                1, "포트폴리오", PageRequest.of(0, 2, Sort.by(Sort.Direction.ASC, "id"))
+        );
+
+        // then
+        assertThat(page.getTotalElements()).isEqualTo(3);
+        assertThat(page.getTotalPages()).isEqualTo(2);
+        assertThat(page.getContent())
+                .extracting(ProjectItemResponse::getTitle)
+                .containsExactly("포트폴리오 1", "포트폴리오 2");
     }
 
     private int saveProject(String title, int... memberIds) {

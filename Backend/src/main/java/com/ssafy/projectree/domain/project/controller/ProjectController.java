@@ -106,10 +106,11 @@ public class ProjectController {
     public ResponseEntity<ApiResponse<ProjectListResponse>> getProjectList(
             @PageableDefault(size = 10, sort = {"createdAt", "id"}, direction = Sort.Direction.DESC)
             Pageable pageable,
-            @Login LoginMember loginMember
+            @Login LoginMember loginMember,
+            @RequestParam(value = "keyword", required = false) String keyword
     ) {
 
-        ProjectListResponse projectList = projectService.getProjectList(pageable, loginMember.getId());
+        ProjectListResponse projectList = projectService.getProjectList(pageable, loginMember.getId(), keyword);
 
         return ResponseEntity.ok(ApiResponse.success(projectList));
     }

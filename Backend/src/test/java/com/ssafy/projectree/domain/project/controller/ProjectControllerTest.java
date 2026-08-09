@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
@@ -600,7 +601,7 @@ class ProjectControllerTest extends ControllerTestSupport {
     @Test
     void getProjectList() throws Exception {
         // given
-        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+        given(projectService.getProjectList(any(Pageable.class), anyInt(), any()))
                 .willReturn(projectListResponse(
                         List.of(
                                 new ProjectItemResponse(1, "포트폴리오 사이트", "https://projectree.site/1.png", 3),
@@ -633,7 +634,7 @@ class ProjectControllerTest extends ControllerTestSupport {
     @Test
     void getProjectList_withNoProject() throws Exception {
         // given
-        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+        given(projectService.getProjectList(any(Pageable.class), anyInt(), any()))
                 .willReturn(emptyProjectListResponse());
 
         // when // then
@@ -649,7 +650,7 @@ class ProjectControllerTest extends ControllerTestSupport {
     @Test
     void getProjectList_withDefaultPageable() throws Exception {
         // given
-        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+        given(projectService.getProjectList(any(Pageable.class), anyInt(), any()))
                 .willReturn(emptyProjectListResponse());
         ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
 
@@ -658,7 +659,7 @@ class ProjectControllerTest extends ControllerTestSupport {
                 .andExpect(status().isOk());
 
         // then
-        then(projectService).should().getProjectList(captor.capture(), anyInt());
+        then(projectService).should().getProjectList(captor.capture(), anyInt(), any());
         Pageable pageable = captor.getValue();
         assertThat(pageable.getPageNumber()).isZero();
         assertThat(pageable.getPageSize()).isEqualTo(10);
@@ -672,7 +673,7 @@ class ProjectControllerTest extends ControllerTestSupport {
     @Test
     void getProjectList_passesPageable() throws Exception {
         // given
-        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+        given(projectService.getProjectList(any(Pageable.class), anyInt(), any()))
                 .willReturn(emptyProjectListResponse());
         ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
 
@@ -686,7 +687,7 @@ class ProjectControllerTest extends ControllerTestSupport {
                 .andExpect(status().isOk());
 
         // then
-        then(projectService).should().getProjectList(captor.capture(), anyInt());
+        then(projectService).should().getProjectList(captor.capture(), anyInt(), any());
         assertThat(captor.getValue().getPageNumber()).isEqualTo(2);
         assertThat(captor.getValue().getPageSize()).isEqualTo(5);
     }
@@ -695,7 +696,7 @@ class ProjectControllerTest extends ControllerTestSupport {
     @Test
     void getProjectList_withTooLargeSize() throws Exception {
         // given
-        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+        given(projectService.getProjectList(any(Pageable.class), anyInt(), any()))
                 .willReturn(emptyProjectListResponse());
         ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
 
@@ -708,7 +709,7 @@ class ProjectControllerTest extends ControllerTestSupport {
                 .andExpect(status().isOk());
 
         // then
-        then(projectService).should().getProjectList(captor.capture(), anyInt());
+        then(projectService).should().getProjectList(captor.capture(), anyInt(), any());
         assertThat(captor.getValue().getPageSize()).isEqualTo(50);
     }
 
@@ -716,7 +717,7 @@ class ProjectControllerTest extends ControllerTestSupport {
     @Test
     void getProjectList_passesLoginMemberId() throws Exception {
         // given
-        given(projectService.getProjectList(any(Pageable.class), anyInt()))
+        given(projectService.getProjectList(any(Pageable.class), anyInt(), any()))
                 .willReturn(emptyProjectListResponse());
 
         // when
@@ -724,7 +725,41 @@ class ProjectControllerTest extends ControllerTestSupport {
                 .andExpect(status().isOk());
 
         // then
-        then(projectService).should().getProjectList(any(Pageable.class), eq(42));
+        then(projectService).should().getProjectList(any(Pageable.class), eq(42), any());
+    }
+
+    @DisplayName("keyword 파라미터를 붙여서 조회하면 서비스로 그대로 전달된다.")
+    @Test
+    void getProjectList_passesKeyword() throws Exception {
+        // given
+        given(projectService.getProjectList(any(Pageable.class), anyInt(), any()))
+                .willReturn(emptyProjectListResponse());
+
+        // when
+        mockMvc.perform(
+                        get("/api/projects")
+                                .session(loginSession(10))
+                                .param("keyword", "포트폴리오")
+                )
+                .andExpect(status().isOk());
+
+        // then
+        then(projectService).should().getProjectList(any(Pageable.class), anyInt(), eq("포트폴리오"));
+    }
+
+    @DisplayName("keyword 파라미터가 없으면 서비스에 null이 전달된다.")
+    @Test
+    void getProjectList_withoutKeyword() throws Exception {
+        // given
+        given(projectService.getProjectList(any(Pageable.class), anyInt(), any()))
+                .willReturn(emptyProjectListResponse());
+
+        // when
+        mockMvc.perform(get("/api/projects").session(loginSession(10)))
+                .andExpect(status().isOk());
+
+        // then
+        then(projectService).should().getProjectList(any(Pageable.class), anyInt(), isNull());
     }
 
     @DisplayName("세션이 없으면 프로젝트 목록을 조회할 수 없다.")
@@ -737,7 +772,7 @@ class ProjectControllerTest extends ControllerTestSupport {
                 .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.errorMessage").value("로그인이 필요합니다."));
 
-        then(projectService).should(never()).getProjectList(any(Pageable.class), anyInt());
+        then(projectService).should(never()).getProjectList(any(Pageable.class), anyInt(), any());
     }
 
     private ProjectListResponse emptyProjectListResponse() {
