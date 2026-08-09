@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useAuthStore } from "../../../../store/authStore";
 import AiFeedback from "../components/AiFeedback/AiFeedback";
 import SpeakingDistribution from "../components/SpeakingDistribution/SpeakingDistribution";
@@ -51,6 +51,7 @@ export default function ProjectHome() {
       isCurrentUser: member.name === currentUserName,
     })) ?? [];
   const meetingRecords = data?.meetingRecordList ?? [];
+  const recentMeetingRecords = meetingRecords.slice(0, 3);
   const projectDetail = data?.projectDetail;
 
   return (
@@ -108,20 +109,28 @@ export default function ProjectHome() {
                   >
                     최근 회의록
                   </h2>
+                  <Link
+                    className={style.viewAllLink}
+                    to={`/projects/${validProjectId}/meetings/records`}
+                  >
+                    전체보기 <span aria-hidden="true">›</span>
+                  </Link>
                 </div>
 
-                {meetingRecords.length === 0 ? (
+                {recentMeetingRecords.length === 0 ? (
                   <p className={style.meetingEmpty}>
                     최근 회의록이 없습니다.
                   </p>
                 ) : (
                   <ul className={style.meetingList}>
-                    {meetingRecords.slice(0, 2).map((meeting, index) => (
-                      <li
-                        className={style.meetingItem}
-                        key={`${meeting.name}-${index}`}
-                      >
-                        <strong>{meeting.name}</strong>
+                    {recentMeetingRecords.map((meeting) => (
+                      <li key={meeting.meetingId}>
+                        <Link
+                          className={style.meetingItem}
+                          to={`/projects/${validProjectId}/meetings/${meeting.meetingId}/record`}
+                        >
+                          <strong>{meeting.name}</strong>
+                        </Link>
                       </li>
                     ))}
                   </ul>
