@@ -9,42 +9,67 @@ import {
   type ProjectListResponse,
 } from "../api/projectListApi";
 
-export default function useProjectList(page: number, size: number) {
+export default function useProjectList(
+  page: number,
+  size: number,
+  keyword = "",
+) {
   const [projectList, setProjectList] =
     useState<ProjectListResponse | null>(() =>
-      getCachedProjectList(page, size),
+      getCachedProjectList(page, size, keyword),
     );
   const [isLoading, setIsLoading] = useState(
-    () => getCachedProjectList(page, size) === null,
+    () => getCachedProjectList(page, size, keyword) === null,
   );
   const [error, setError] = useState<string | null>(null);
 
-  const cachedProjectList = getCachedProjectList(page, size);
+  const normalizedKeyword = keyword.trim();
+  const cachedProjectList = getCachedProjectList(
+    page,
+    size,
+    normalizedKeyword,
+  );
   const currentProjectList = cachedProjectList ?? projectList;
 
   useEffect(
     () =>
       subscribeProjectList(() => {
-        const updatedProjectList = getCachedProjectList(page, size);
+        const updatedProjectList = getCachedProjectList(
+          page,
+          size,
+          normalizedKeyword,
+        );
 
         if (updatedProjectList) {
           setProjectList(updatedProjectList);
         }
       }),
-    [page, size],
+    [page, size, normalizedKeyword],
   );
 
   useEffect(() => {
     let isActive = true;
 
     const fetchProjectList = async () => {
-      const cachedResponse = getCachedProjectList(page, size);
+      const cachedResponse = getCachedProjectList(
+        page,
+        size,
+        normalizedKeyword,
+      );
 
       setIsLoading(cachedResponse === null);
       setError(null);
 
+      if (cachedResponse === null) {
+        setProjectList(null);
+      }
+
       try {
-        const response = await getProjectList(page, size);
+        const response = await getProjectList(
+          page,
+          size,
+          normalizedKeyword,
+        );
 
         if (isActive) {
           setProjectList(response);
@@ -52,7 +77,7 @@ export default function useProjectList(page: number, size: number) {
 
         const nextPage = response.page + 1;
 
-        if (nextPage < response.totalPages) {
+        if (!normalizedKeyword && nextPage < response.totalPages) {
           void prefetchProjectList(nextPage, size).catch(
             () => undefined,
           );
@@ -78,7 +103,7 @@ export default function useProjectList(page: number, size: number) {
     return () => {
       isActive = false;
     };
-  }, [page, size]);
+  }, [page, size, normalizedKeyword]);
 
   const projects: ProjectSummary[] =
     currentProjectList?.projects.map((project) => ({
