@@ -53,3 +53,27 @@ export const getProjectTree = (
   projectId: number,
 ): Promise<ProjectTreeResponse> =>
   apiRequest<ProjectTreeResponse>(`/projects/${projectId}/nodes/tree`);
+
+export const deleteProjectNodes = (
+  projectId: number,
+  nodeIds: string[],
+): Promise<void> =>
+  apiRequest<void>(`/projects/${projectId}/nodes`, {
+    method: "DELETE",
+    body: JSON.stringify({ nodeIds }),
+  });
+
+export interface ProjectNodeTitleUpdate {
+  nodeId: string;
+  title: string;
+}
+
+/** 여러 노드의 라벨을 한 번에 고친다 — 삭제와 같이 id 목록을 한 요청으로 보낸다. */
+export const updateProjectNodeTitles = (
+  projectId: number,
+  nodes: ProjectNodeTitleUpdate[],
+): Promise<void> =>
+  apiRequest<void>(`/projects/${projectId}/nodes`, {
+    method: "PATCH",
+    body: JSON.stringify({ nodes }),
+  });
