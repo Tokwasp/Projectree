@@ -20,11 +20,24 @@ const pendingRequests = new Map<
   string,
   Promise<ProjectListResponse>
 >();
+const projectListListeners = new Set<() => void>();
 
 let cacheVersion = 0;
 
 const createCacheKey = (page: number, size: number) =>
   `${page}:${size}`;
+
+const notifyProjectListListeners = () => {
+  projectListListeners.forEach((listener) => listener());
+};
+
+export const subscribeProjectList = (listener: () => void) => {
+  projectListListeners.add(listener);
+
+  return () => {
+    projectListListeners.delete(listener);
+  };
+};
 
 export const getCachedProjectList = (
   page: number,
@@ -101,6 +114,34 @@ export const addProjectToListCache = (
       totalPages: Math.ceil(totalElements / response.size),
     });
   });
+
+  notifyProjectListListeners();
+};
+
+export const updateProjectInListCache = (
+  projectId: number,
+  updates: Partial<Pick<ProjectListItemResponse, "title" | "photoUrl">>,
+) => {
+  let isUpdated = false;
+
+  projectListCache.forEach((response, cacheKey) => {
+    const projects = response.projects.map((project) => {
+      if (project.projectId !== projectId) {
+        return project;
+      }
+
+      isUpdated = true;
+      return { ...project, ...updates };
+    });
+
+    projectListCache.set(cacheKey, { ...response, projects });
+  });
+
+  if (isUpdated) {
+    cacheVersion += 1;
+    pendingRequests.clear();
+    notifyProjectListListeners();
+  }
 };
 
 export const clearProjectListCache = () => {
