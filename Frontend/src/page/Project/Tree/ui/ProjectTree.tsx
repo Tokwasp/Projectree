@@ -193,7 +193,7 @@ export default function ProjectTree() {
     if (isSubmitting || editTargets.length === 0) return;
 
     const updates = editTargets.map((node) => ({
-      nodeId: node.id,
+      id: node.id,
       title: (drafts[node.id] ?? node.title).trim(),
       expectedNodeVersion: nodeVersions.get(node.id) ?? 0,
     }));

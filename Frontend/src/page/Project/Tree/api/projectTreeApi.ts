@@ -78,7 +78,7 @@ export const deleteProjectNodes = (
   });
 
 export interface ProjectNodeTitleUpdate {
-  nodeId: string;
+  id: string;
   title: string;
   expectedNodeVersion: number;
 }
