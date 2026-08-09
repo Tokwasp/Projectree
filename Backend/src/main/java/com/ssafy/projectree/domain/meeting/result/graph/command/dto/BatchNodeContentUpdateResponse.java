@@ -2,6 +2,9 @@ package com.ssafy.projectree.domain.meeting.result.graph.command.dto;
 
 import java.util.UUID;
 
+/**
+ * Acceptance result for the asynchronous title-only batch update command.
+ */
 public record BatchNodeContentUpdateResponse(
         UUID commandId,
         int requestedNodeCount,

@@ -43,6 +43,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.inOrder;
@@ -272,6 +273,36 @@ class GraphNodeUpdateServiceTest {
                 .isEqualTo(ProjectErrorCode.PROJECT_NOT_FOUND);
 
         verify(nodeRepository, never()).findByNodeIdAndProjectId(any(), any(Integer.class));
+        verify(outboxRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void activeGraphOperationRejectsBatchWithoutLoadingNodesOrStagingOutbox() {
+        String nodeId = UUID.randomUUID().toString();
+        when(projectRepository.findByIdForUpdate(1))
+                .thenReturn(Optional.of(mock(Project.class)));
+        when(memberRepository.existsByProjectIdAndMemberId(1, 15)).thenReturn(true);
+        doThrow(new CustomException(
+                ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS
+        )).when(graphOperationGuard).acquire(
+                org.mockito.ArgumentMatchers.eq(1),
+                any(),
+                any(),
+                any()
+        );
+
+        assertThatThrownBy(() -> service.updateBatch(
+                1,
+                15,
+                new BatchNodeContentUpdateRequest(List.of(
+                        new BatchNodeContentUpdateItem(nodeId, "new title", 3L)
+                ))
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting(exception -> ((CustomException) exception).getErrorCode())
+                .isEqualTo(ProjectGraphOperationErrorCode.GRAPH_OPERATION_IN_PROGRESS);
+
+        verify(nodeRepository, never()).findAllByProjectIdAndNodeIdIn(anyInt(), any());
         verify(outboxRepository, never()).saveAndFlush(any());
     }
 
