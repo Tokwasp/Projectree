@@ -26,10 +26,20 @@ export default function MeetingRecordList() {
   );
 
   const records = data?.records ?? [];
+  const totalElements = data?.totalElements ?? 0;
   const totalPages = data?.totalPages ?? 0;
 
   return (
     <div className={style.page}>
+      {validProjectId !== null && (
+        <Link
+          className={style.backLink}
+          to={`/projects/${validProjectId}`}
+        >
+          ← 프로젝트 홈
+        </Link>
+      )}
+
       <div className={style.heading}>
         <div>
           <h1>전체 회의록</h1>
@@ -38,7 +48,7 @@ export default function MeetingRecordList() {
 
         {!isLoading && !error && (
           <span className={style.recordCount}>
-            총 {data?.totalElements ?? 0}개
+            총 {totalElements}개
           </span>
         )}
       </div>
@@ -65,10 +75,10 @@ export default function MeetingRecordList() {
                   to={`/projects/${validProjectId}/meetings/${record.meetingId}/record`}
                 >
                   <div className={style.recordInfo}>
-                    <strong>{record.title}</strong>
                     <time dateTime={record.meetingDate}>
                       {formatMeetingDate(record.meetingDate)}
                     </time>
+                    <strong>{record.title}</strong>
                   </div>
 
                   <span aria-hidden="true">›</span>

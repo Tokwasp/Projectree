@@ -37,7 +37,7 @@
   padding: 0;
   background: var(--color-white);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   list-style: none;
 }
@@ -52,7 +52,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-5);
+  padding: var(--space-3) var(--space-5);
   color: inherit;
   text-decoration: none;
   transition: background-color 0.2s ease;
@@ -75,8 +75,8 @@
   display: flex;
   min-width: 0;
   flex: 1;
-  flex-direction: column;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-4);
 }
 
 .recordInfo strong {
@@ -89,8 +89,27 @@
 }
 
 .recordInfo time {
+  width: 104px;
+  flex-shrink: 0;
   color: var(--color-gray-500);
   font-size: var(--text-xs);
+}
+
+.backLink {
+  width: fit-content;
+  color: var(--color-gray-600);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--color-primary);
+}
+
+.backLink:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .recordItem > span {
@@ -120,7 +139,7 @@
   padding: var(--space-2) var(--space-4);
   background: var(--color-white);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--color-text);
   cursor: pointer;
   font: inherit;
