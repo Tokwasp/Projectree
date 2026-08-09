@@ -1,0 +1,259 @@
+.card {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardHeader {
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+}
+
+.cardDescription {
+  margin: var(--space-2) 0 0;
+  color: var(--color-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.settingList {
+  display: flex;
+  flex-direction: column;
+}
+
+.settingItem,
+.photoSetting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-5);
+}
+
+.settingItem + .settingItem,
+.photoSetting + .settingItem,
+.imageEditor + .settingItem,
+.updateError + .settingItem {
+  border-top: 1px solid var(--color-border);
+}
+
+.settingLabel {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.settingDescription {
+  margin: var(--space-1) 0 0;
+  color: var(--color-secondary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+.settingControl,
+.photoControl {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.settingValue {
+  width: 220px;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectImage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 14%,
+    var(--color-white)
+  );
+  color: var(--color-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+}
+
+.projectImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.secondaryButton {
+  height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.secondaryButton:not(:disabled):hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.secondaryButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.editControl {
+  display: flex;
+  width: min(420px, 100%);
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.textInput,
+.textArea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.textInput {
+  height: 40px;
+  padding: 0 var(--space-3);
+}
+
+.textArea {
+  min-height: 88px;
+  padding: var(--space-3);
+  resize: vertical;
+}
+
+.textInput:focus,
+.textArea:focus {
+  border-color: var(--color-primary);
+}
+
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.cancelEditButton,
+.saveButton {
+  height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+}
+
+.cancelEditButton {
+  border: 1px solid var(--color-border);
+  background: var(--color-white);
+  color: var(--color-text);
+}
+
+.saveButton {
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.cancelEditButton:disabled,
+.saveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.cancelEditButton:focus-visible,
+.saveButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.imageEditor {
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+.updateError {
+  margin: 0;
+  padding: 0 var(--space-5) var(--space-4);
+  color: var(--color-error);
+  font-size: var(--text-xs);
+  text-align: right;
+}
+
+.imageEditor .updateError {
+  padding: var(--space-3) 0 0;
+}
+
+.imageEditor .editActions {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .settingItem,
+  .photoSetting {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .settingControl,
+  .photoControl {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .editControl {
+    width: 100%;
+  }
+
+  .settingValue {
+    width: auto;
+    max-width: 65%;
+    text-align: left;
+  }
+}

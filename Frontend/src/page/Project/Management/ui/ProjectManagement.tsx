@@ -1,17 +1,29 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../../../store/authStore";
+import useProjectHome from "../../Home/hooks/useProjectHome";
 import useProjectList from "../../List/hooks/useProjectList";
 import useProjectMembers from "../../Member/hooks/useProjectMembers";
 import ProjectDeleteModal from "../components/ProjectDeleteModal/ProjectDeleteModal";
+import ProjectGeneralSettings from "../components/ProjectGeneralSettings/ProjectGeneralSettings";
+import ProjectManagementSkeleton from "../components/ProjectManagementSkeleton/ProjectManagementSkeleton";
 import useDeleteProject from "../hooks/useDeleteProject";
 import useLeaveProject from "../hooks/useLeaveProject";
 import style from "../css/ProjectManagement.module.css";
+
+function formatProjectDate(date: string) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(date));
+}
 
 export default function ProjectManagement() {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [updatedTitle, setUpdatedTitle] = useState<string | null>(null);
   const parsedProjectId = Number(projectId);
   const validProjectId =
     Number.isInteger(parsedProjectId) && parsedProjectId > 0
@@ -19,6 +31,8 @@ export default function ProjectManagement() {
       : null;
   const memberId = useAuthStore((state) => state.memberId);
   const { projects, isLoading: isProjectLoading } = useProjectList(0, 100);
+  const { data: projectHome, isLoading: isProjectHomeLoading } =
+    useProjectHome(validProjectId);
   const { members, isLoading: isMemberLoading } =
     useProjectMembers(validProjectId);
   const {
@@ -41,10 +55,12 @@ export default function ProjectManagement() {
   const currentMember = members.find(
     (member) => member.memberId === memberId,
   );
+  const projectDetail = projectHome?.projectDetail;
   const isOwner = currentMember?.role === "OWNER";
   const isProcessing = isDeleting || isLeaving;
   const actionError = isOwner ? deleteError : leaveError;
-  const projectInitial = currentProject?.title.trim().charAt(0) || "P";
+  const projectName =
+    updatedTitle ?? projectDetail?.projectTitle ?? currentProject?.title;
   const projectActionLabel = isMemberLoading
     ? "권한 확인 중..."
     : isOwner
@@ -81,6 +97,10 @@ export default function ProjectManagement() {
     }
   };
 
+  if (isProjectLoading || isProjectHomeLoading || isMemberLoading) {
+    return <ProjectManagementSkeleton />;
+  }
+
   return (
     <section className={style.page}>
       <header className={style.pageHeader}>
@@ -91,77 +111,16 @@ export default function ProjectManagement() {
       </header>
 
       <div className={style.contentGrid}>
-        <section className={style.card}>
-          <div className={style.cardHeader}>
-            <h2 className={style.cardTitle}>일반 설정</h2>
-            <p className={style.cardDescription}>
-              프로젝트의 대표 정보입니다.
-            </p>
-          </div>
-
-          <div className={style.settingList}>
-            <div className={style.photoSetting}>
-              <div>
-                <h3 className={style.settingLabel}>프로젝트 사진</h3>
-                <p className={style.settingDescription}>
-                  프로젝트를 구분할 수 있는 대표 이미지입니다.
-                </p>
-              </div>
-
-              <div className={style.photoControl}>
-                <div className={style.projectImage} aria-hidden="true">
-                  {currentProject?.thumbnailUrl ? (
-                    <img
-                      src={currentProject.thumbnailUrl}
-                      alt=""
-                    />
-                  ) : (
-                    projectInitial
-                  )}
-                </div>
-                <button className={style.secondaryButton} type="button" disabled>
-                  사진 변경
-                </button>
-              </div>
-            </div>
-
-            <div className={style.settingItem}>
-              <div>
-                <h3 className={style.settingLabel}>프로젝트 이름</h3>
-                <p className={style.settingDescription}>
-                  프로젝트에 표시되는 이름입니다.
-                </p>
-              </div>
-
-              <div className={style.settingControl}>
-                <span className={style.settingValue}>
-                  {isProjectLoading
-                    ? "불러오는 중..."
-                    : (currentProject?.title ?? "-")}
-                </span>
-                <button className={style.secondaryButton} type="button" disabled>
-                  변경
-                </button>
-              </div>
-            </div>
-
-            <div className={style.settingItem}>
-              <div>
-                <h3 className={style.settingLabel}>프로젝트 설명</h3>
-                <p className={style.settingDescription}>
-                  프로젝트의 목표와 내용을 소개합니다.
-                </p>
-              </div>
-
-              <div className={style.settingControl}>
-                <span className={style.settingValue}>-</span>
-                <button className={style.secondaryButton} type="button" disabled>
-                  변경
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <ProjectGeneralSettings
+          projectId={validProjectId}
+          isOwner={isOwner}
+          projectName={projectName}
+          projectContent={projectDetail?.projectContent}
+          projectImage={currentProject?.thumbnailUrl}
+          isProjectLoading={isProjectLoading}
+          isProjectHomeLoading={isProjectHomeLoading}
+          onTitleUpdated={setUpdatedTitle}
+        />
 
         <aside className={style.sideColumn}>
           <section className={style.card}>
@@ -178,15 +137,21 @@ export default function ProjectManagement() {
               </div>
               <div className={style.infoItem}>
                 <dt>생성일</dt>
-                <dd>-</dd>
+                <dd>
+                  {isProjectHomeLoading
+                    ? "불러오는 중..."
+                    : projectDetail?.projectCreatedAt
+                      ? formatProjectDate(projectDetail.projectCreatedAt)
+                      : "-"}
+                </dd>
               </div>
               <div className={style.infoItem}>
                 <dt>멤버 수</dt>
                 <dd>
-                  {isProjectLoading
+                  {isProjectHomeLoading
                     ? "불러오는 중..."
-                    : currentProject
-                      ? `${currentProject.memberCount}명`
+                    : projectDetail
+                      ? `${projectDetail.participantCount}명`
                       : "-"}
                 </dd>
               </div>
@@ -217,7 +182,7 @@ export default function ProjectManagement() {
 
       <ProjectDeleteModal
         isOpen={isDeleteModalOpen}
-        projectName={currentProject?.title ?? "현재"}
+        projectName={projectName ?? "현재"}
         actionType={isOwner ? "delete" : "leave"}
         isProcessing={isProcessing}
         error={actionError}
