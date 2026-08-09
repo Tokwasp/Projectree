@@ -5,6 +5,7 @@ import {
   getCachedProjectList,
   getProjectList,
   prefetchProjectList,
+  subscribeProjectList,
   type ProjectListResponse,
 } from "../api/projectListApi";
 
@@ -20,6 +21,18 @@ export default function useProjectList(page: number, size: number) {
 
   const cachedProjectList = getCachedProjectList(page, size);
   const currentProjectList = cachedProjectList ?? projectList;
+
+  useEffect(
+    () =>
+      subscribeProjectList(() => {
+        const updatedProjectList = getCachedProjectList(page, size);
+
+        if (updatedProjectList) {
+          setProjectList(updatedProjectList);
+        }
+      }),
+    [page, size],
+  );
 
   useEffect(() => {
     let isActive = true;
