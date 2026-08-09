@@ -49,6 +49,19 @@ export const toTreeNodeInput = (
   children: node.children?.map(toTreeNodeInput),
 });
 
+/**
+ * 노드별 nodeVersion을 id로 찾을 수 있게 모은다 — 화면에 그리는 TreeNodeInput은
+ * 버전을 들고 있지 않아서, 수정 요청에 실을 값을 여기서 따로 챙겨 둔다.
+ */
+export const collectNodeVersions = (
+  node: ProjectTreeNodeResponse,
+  versions = new Map<string, number>(),
+): Map<string, number> => {
+  versions.set(node.id, node.nodeVersion ?? 0);
+  node.children?.forEach((child) => collectNodeVersions(child, versions));
+  return versions;
+};
+
 export const getProjectTree = (
   projectId: number,
 ): Promise<ProjectTreeResponse> =>
@@ -67,9 +80,9 @@ export const deleteProjectNodes = (
 export interface ProjectNodeTitleUpdate {
   nodeId: string;
   title: string;
+  expectedNodeVersion: number;
 }
 
-/** 여러 노드의 라벨을 한 번에 고친다 — 삭제와 같이 id 목록을 한 요청으로 보낸다. */
 export const updateProjectNodeTitles = (
   projectId: number,
   nodes: ProjectNodeTitleUpdate[],
