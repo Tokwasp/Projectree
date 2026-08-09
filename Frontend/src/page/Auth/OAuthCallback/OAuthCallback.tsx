@@ -4,6 +4,7 @@ import { googleLogin, naverLogin } from "../api/authApi";
 import {
   getGoogleRedirectUri,
   getNaverRedirectUri,
+  popLoginRedirectPath,
   popNaverState,
 } from "../hooks/useSocialLogin";
 import { useAuthStore } from "../../../store/authStore";
@@ -59,7 +60,7 @@ export default function OAuthCallback() {
           () => undefined,
         );
 
-        navigate("/home", { replace: true });
+        navigate(popLoginRedirectPath() ?? "/home", { replace: true });
       })
       .catch((error) => {
         console.error("소셜 로그인 실패:", error);

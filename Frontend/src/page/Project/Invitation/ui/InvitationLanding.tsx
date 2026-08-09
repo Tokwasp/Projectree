@@ -1,7 +1,11 @@
+import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import logo from "../../../../assets/logo.svg";
+import { setLoginRedirectPath } from "../../../Auth/hooks/useSocialLogin";
 import type { InvitationStatus } from "../api/invitationApi";
 import useInvitationLanding from "../hooks/useInvitationLanding";
+import { useAuthStore } from "../../../../store/authStore";
+import { useLoginModalStore } from "../../../../store/loginModalStore";
 import { toast } from "../../../../store/toastStore";
 import style from "../css/InvitationLanding.module.css";
 
@@ -41,6 +45,8 @@ function InvitationBrand({ compact = false }: InvitationBrandProps) {
 export default function InvitationLanding() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const isLoggedIn = useAuthStore((state) => state.memberId !== null);
+  const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
 
   const {
     invitation,
@@ -50,7 +56,19 @@ export default function InvitationLanding() {
     error,
     acceptInvitation,
     rejectInvitation,
-  } = useInvitationLanding(token ?? null);
+  } = useInvitationLanding(isLoggedIn ? (token ?? null) : null);
+
+  useEffect(() => {
+    if (isLoggedIn || !token) {
+      return;
+    }
+
+    setLoginRedirectPath(
+      `${window.location.pathname}${window.location.search}`,
+    );
+    openLoginModal();
+    navigate("/", { replace: true });
+  }, [isLoggedIn, token, navigate, openLoginModal]);
 
   const handleAccept = async () => {
     const projectId = await acceptInvitation();
@@ -68,7 +86,7 @@ export default function InvitationLanding() {
     }
   };
 
-  if (isLoading) {
+  if (!isLoggedIn || isLoading) {
     return (
       <main className={style.page}>
         <section
