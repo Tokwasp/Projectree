@@ -1,0 +1,112 @@
+spring:
+  config:
+    import: optional:file:./.env[.properties]
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  #JPA
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    show-sql: true
+    open-in-view: false
+
+  # Session Mock
+  session:
+    store-type: none
+  # AWS — 실제 호출은 하지 않지만 S3Client 빈 생성에 자격증명·리전이 필요하다.
+  cloud:
+    aws:
+      credentials:
+        access-key: test-access-key
+        secret-key: test-secret-key
+      region:
+        static: ap-northeast-2
+  mail:
+    host: localhost
+    port: 2525
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      ssl:
+        enabled: false
+
+# CORS
+app:
+  invitation:
+    base-url: https://projectree.site
+  # 통합 테스트 중 백그라운드 스위퍼가 테스트 데이터를 처리하지 않도록 비활성화한다.
+  invitation-mail:
+    scheduling-enabled: false
+  meeting-sync:
+    enabled: false
+    fixed-delay-ms: 5000
+    scan-count: 200
+    key-prefix: "meeting:project:"
+  meeting-analysis:
+    graph-snapshot:
+      max-size-bytes: 10485760
+      s3:
+        enabled: false
+        expected-bucket: ""
+        allowed-object-key-prefix: graph-snapshots/
+        region: ap-northeast-2
+        endpoint-override: ""
+    publisher:
+      enabled: false
+      fixed-delay-ms: 1000
+      batch-size: 20
+      max-attempts: 3
+      lease-duration-seconds: 60
+      first-retry-delay-seconds: 30
+      second-retry-delay-seconds: 120
+      api-call-attempt-timeout-seconds: 5
+      api-call-timeout-seconds: 10
+      queue-url: ""
+      region: ap-northeast-2
+    result-consumer:
+      enabled: false
+      queue-url: ""
+      wait-time-seconds: 20
+      max-number-of-messages: 10
+      polling-delay-ms: 1000
+      region: ap-northeast-2
+  # 통합 테스트 중 백그라운드 스케줄러가 테스트 데이터를 건드리지 않도록 비활성화한다.
+  scheduling:
+    enabled: false
+  notification:
+    enabled: false
+    sse:
+      timeout: 30m
+      heartbeat-interval: 30s
+  cors:
+    allowed-origins: http://localhost:5173
+  session:
+    cookie:
+      secure: false
+      same-site: Lax
+  s3:
+    bucket: test-bucket
+    presigned-url-expire-seconds: 300
+
+# Google Oauth
+google:
+  client-id: test-client-id
+  client-secret: test-client-secret
+  token-uri: https://oauth2.googleapis.com/token
+  userinfo-uri: https://www.googleapis.com/oauth2/v3/userinfo
+
+# Naver Oauth
+naver:
+  client-id: test-client-id
+  client-secret: test-client-secret
+  token-uri: https://nid.naver.com/oauth2.0/token
+  userinfo-uri: https://openapi.naver.com/v1/nid/me

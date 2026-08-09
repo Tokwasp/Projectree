@@ -1,0 +1,89 @@
+.viewport {
+  position: fixed;
+  top: var(--space-6);
+  right: var(--space-6);
+  /* 회의 오버레이(100)·트리 화면(50)보다 위. 토스트는 무엇에도 가리면 안 된다 */
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 340px;
+  max-width: calc(100vw - var(--space-12));
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--toast-color);
+  box-shadow: var(--shadow-lg);
+  animation: toastSlideIn 0.28s cubic-bezier(0.21, 1.02, 0.73, 1);
+}
+.leaving {
+  animation: toastSlideOut 0.24s ease forwards;
+}
+
+.icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--toast-color);
+}
+.message {
+  flex: 1;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  word-break: break-word;
+}
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-full);
+  background-color: transparent;
+  color: var(--color-gray-500);
+  cursor: pointer;
+}
+.closeBtn:hover {
+  background-color: var(--color-gray-100);
+}
+
+.success {
+  --toast-color: var(--color-success);
+}
+.error {
+  --toast-color: var(--color-error);
+}
+.warning {
+  --toast-color: var(--color-warning);
+}
+.info {
+  --toast-color: var(--color-info);
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes toastSlideOut {
+  to {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}

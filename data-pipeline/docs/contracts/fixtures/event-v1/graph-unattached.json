@@ -1,0 +1,15 @@
+{
+  "eventSchemaVersion": 1,
+  "eventId": "00000000-0000-0000-0000-000000000002",
+  "eventType": "PROJECT_GRAPH_CHANGED",
+  "occurredAt": "2026-08-03T01:01:00.000000Z",
+  "projectId": 10,
+  "payload": {
+    "projectId": 10,
+    "graphVersion": 21,
+    "upsertedNodes": [
+      {"nodeId":"10000000-0000-0000-0000-000000000003","nodeVersion":1,"nodeType":"ACTION","category":"BACKEND","title":"Unresolved action","content":"Needs a Decision parent","dueDate":null,"graphState":"UNATTACHED","consistencyStatus":"NEEDS_ATTENTION","parentNodeId":null,"mergedIntoNodeId":null,"originType":"LLM_GENERATED","createdAt":"2026-08-03T01:01:00.000000Z","updatedAt":"2026-08-03T01:01:00.000000Z","evidence":[]}
+    ],
+    "deletedNodes": []
+  }
+}

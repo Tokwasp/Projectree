@@ -1,0 +1,39 @@
+{
+  "promptSha256": "258e5b42b74f2f1a25960e9eaf4f15d5894f77e48088b6938eaaf481d4f1c352",
+  "attempts": 1,
+  "error": null,
+  "errorCode": null,
+  "inputTokens": 100,
+  "outputTokens": 50,
+  "totalTokens": 150,
+  "latencyMs": 1,
+  "creditUsage": 8.75,
+  "attemptDiagnostics": [
+    {
+      "attempt": 1,
+      "success": true,
+      "errorCode": null,
+      "inputTokens": 100,
+      "outputTokens": 50,
+      "totalTokens": 150,
+      "creditUsage": 8.75,
+      "latencyMs": 1
+    }
+  ],
+  "rawResponse": "{\"meetingId\": \"M-CHAIN\", \"judgments\": [{\"itemId\": \"m1\", \"result\": \"NEW_DECISION\", \"category\": \"BACKEND\"}, {\"itemId\": \"m2\", \"result\": \"MINUTES_ONLY\", \"reason\": \"NO_RELATED_DECISION\"}]}",
+  "parsed": {
+    "meetingId": "M-CHAIN",
+    "judgments": [
+      {
+        "itemId": "m1",
+        "result": "NEW_DECISION",
+        "category": "BACKEND"
+      },
+      {
+        "itemId": "m2",
+        "result": "MINUTES_ONLY",
+        "reason": "NO_RELATED_DECISION"
+      }
+    ]
+  }
+}

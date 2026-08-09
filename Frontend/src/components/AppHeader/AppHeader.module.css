@@ -1,0 +1,133 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  max-width: var(--container-width);
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 calc(var(--space-8) + var(--space-12));
+}
+
+.startContent {
+  display: flex;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: var(--space-4);
+}
+
+.profileButton:focus-visible,
+.profileMenuItem:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.profileMenuWrapper {
+  position: relative;
+}
+
+.profileButton {
+  display: flex;
+  width: var(--space-8);
+  height: var(--space-8);
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-white);
+  color: var(--color-text);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.profileImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profileFallback {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.profileMenu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 20;
+  display: flex;
+  min-width: 160px;
+  flex-direction: column;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-md);
+}
+
+.profileMenuItem {
+  display: flex;
+  width: 100%;
+  height: var(--space-8);
+  align-items: center;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.profileMenuItem:hover {
+  background: var(--color-gray-50);
+}
+
+.logoutButton {
+  border-top: 1px solid var(--color-gray-100);
+  color: var(--color-error);
+}
+
+.logoutButton:hover {
+  background: color-mix(in srgb, var(--color-error) 7%, transparent);
+}
+
+.logoutButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.logoutError {
+  margin: var(--space-1) var(--space-2);
+  color: var(--color-error);
+  font-size: 10px;
+  line-height: var(--leading-normal);
+}
+
+@media (max-width: 900px) {
+  .startContent {
+    min-width: var(--space-8);
+    overflow: visible;
+    flex: 0 0 var(--space-8);
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--space-6);
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "eventSchemaVersion": 1,
+  "eventId": "00000000-0000-0000-0000-000000000010",
+  "eventType": "PROJECT_GRAPH_CHANGED",
+  "occurredAt": "2026-08-03T01:09:00.000000Z",
+  "projectId": 10,
+  "payload": {
+    "projectId": 10,
+    "graphVersion": 26,
+    "upsertedNodes": [
+      {"nodeId":"10000000-0000-0000-0000-000000000008","nodeVersion":4,"nodeType":"DECISION","category":"INFRA","title":"Infra root","content":"Moved subtree","dueDate":null,"graphState":"ACTIVE","consistencyStatus":"NORMAL","parentNodeId":null,"mergedIntoNodeId":null,"originType":"LLM_GENERATED","createdAt":"2026-08-03T01:09:00.000000Z","updatedAt":"2026-08-03T01:09:00.000000Z","evidence":[]},
+      {"nodeId":"10000000-0000-0000-0000-000000000009","nodeVersion":5,"nodeType":"ACTION","category":"INFRA","title":"Infra child","content":"Cascaded","dueDate":null,"graphState":"ACTIVE","consistencyStatus":"NORMAL","parentNodeId":"10000000-0000-0000-0000-000000000008","mergedIntoNodeId":null,"originType":"LLM_GENERATED","createdAt":"2026-08-03T01:09:00.000000Z","updatedAt":"2026-08-03T01:09:00.000000Z","evidence":[]}
+    ],
+    "deletedNodes": []
+  }
+}

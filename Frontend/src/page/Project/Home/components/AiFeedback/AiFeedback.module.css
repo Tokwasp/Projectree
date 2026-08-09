@@ -1,0 +1,125 @@
+.card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.heading img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.feedbackFace {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+}
+
+.empty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  margin: 0;
+  padding: var(--space-8);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-secondary);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.detailList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detailItem {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.detailItem strong {
+  width: fit-content;
+  padding: 0 2px;
+  color: var(--color-text);
+  background-repeat: no-repeat;
+}
+
+.detailItem:nth-child(1) strong {
+  background-image: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--color-primary) 38%, transparent) 0 48%,
+    transparent 48% 100%
+  );
+}
+
+.detailItem:nth-child(2) strong {
+  background-image: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--color-info) 32%, transparent) 0 48%,
+    transparent 48% 100%
+  );
+}
+
+.detailItem:nth-child(3) strong {
+  background-image: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--color-warning) 38%, transparent) 0 48%,
+    transparent 48% 100%
+  );
+}
+
+.detailItem span {
+  padding: var(--space-4);
+  color: var(--color-gray-600);
+  border-radius: var(--radius-md);
+}
+
+.detailItem:nth-child(1) span {
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-white));
+}
+
+.detailItem:nth-child(2) span {
+  background: color-mix(in srgb, var(--color-info) 9%, var(--color-white));
+}
+
+.detailItem:nth-child(3) span {
+  background: color-mix(in srgb, var(--color-warning) 10%, var(--color-white));
+}

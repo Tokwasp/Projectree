@@ -1,0 +1,161 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+}
+
+.description {
+  margin: 0;
+  color: var(--color-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 0.9fr);
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+.sideColumn {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: 1fr auto;
+  gap: var(--space-4);
+}
+
+.sideColumn .card {
+  width: 100%;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardHeader {
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+}
+
+.cardDescription {
+  margin: var(--space-2) 0 0;
+  color: var(--color-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-5);
+}
+
+.infoItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.infoItem dt {
+  color: var(--color-secondary);
+  font-size: var(--text-sm);
+}
+
+.infoItem dd {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dangerCard {
+  border-color: color-mix(
+    in srgb,
+    var(--color-error) 35%,
+    var(--color-border)
+  );
+}
+
+.dangerCard .cardHeader {
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--color-error) 20%,
+    var(--color-border)
+  );
+}
+
+.dangerButton {
+  width: calc(100% - (var(--space-5) * 2));
+  height: 40px;
+  margin: var(--space-5);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  background: var(--color-error);
+  color: var(--color-white);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.dangerButton:not(:disabled):hover {
+  background: color-mix(
+    in srgb,
+    var(--color-error) 86%,
+    var(--color-text)
+  );
+}
+
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dangerButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1100px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+}

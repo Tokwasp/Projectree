@@ -1,0 +1,142 @@
+{
+  "meetingId": "M2",
+  "items": [
+    {
+      "id": "m1",
+      "type": "DECISION",
+      "predictedCategory": "PLANNING",
+      "title": "Jira에 UI 전용 에픽을 만들고 UI 작업은 그 안에서 스토리로 진행한다",
+      "content": "랜딩 페이지 등 기존 에픽에 들어갈 곳 없는 UI 작업을 UI 에픽으로 모음.",
+      "evidence": [
+        {
+          "segmentId": "M2-seg-026",
+          "quote": "그냥 지라에 UI 라는 에픽을 하나 만들고"
+        },
+        {
+          "segmentId": "M2-seg-032",
+          "quote": "그럼 만들어 볼까요? 좋습니다"
+        }
+      ]
+    },
+    {
+      "id": "m2",
+      "type": "DECISION",
+      "predictedCategory": "PLANNING",
+      "title": "에픽은 화면별이 아니라 도메인별로 유지한다",
+      "content": "화면별 에픽은 페이지 증가 시 가독성이 떨어져 도메인별 유지.",
+      "evidence": [
+        {
+          "segmentId": "M2-seg-084",
+          "quote": "그러면 화면이 많아질수록 에픽이 너무 많아지니까"
+        }
+      ]
+    },
+    {
+      "id": "m3",
+      "type": "DECISION",
+      "predictedCategory": "AI",
+      "title": "회의록 템플릿은 결정·액션·이슈 중심으로 구체화한 형식으로 한다",
+      "content": "노드는 한눈에 흐름, 회의록은 상세 내용을 담아 상호 보완.",
+      "evidence": [
+        {
+          "segmentId": "M2-seg-044",
+          "quote": "회의록을 결정 액션 이슈에 맞춰서 요약해서 보여주는 걸로"
+        },
+        {
+          "segmentId": "M2-seg-089",
+          "quote": "결정사항 그다음에 액션 이슈하고 그다음에 루트 노드 이렇게 해서 보여주는 걸로 구체화해서"
+        }
+      ]
+    },
+    {
+      "id": "m4",
+      "type": "DECISION",
+      "predictedCategory": "FRONTEND",
+      "title": "홈 화면에 프로젝트 조회를 넣고 최신순·인기순 서브태스크로 구성한다",
+      "content": "Jira에 누락된 프로젝트 리스트 조회 기능을 보충.",
+      "evidence": [
+        {
+          "segmentId": "M2-seg-097",
+          "quote": "프로젝트 조회라고 하고 서브테스크로 프로젝트 최신 순조회랑 약간 인기 순조회 이렇게 넣으면"
+        }
+      ]
+    },
+    {
+      "id": "m5",
+      "type": "ISSUE",
+      "predictedCategory": "FRONTEND",
+      "title": "홈 화면 최근 활동 기능의 구현·관리 방식 불명확",
+      "content": "무엇을 쌓고 어떻게 조회할지 결론 없이 보류.",
+      "evidence": [
+        {
+          "segmentId": "M2-seg-099",
+          "quote": "최근 활동. 이건 어떻게 구현해야 될지 모르겠어요"
+        }
+      ]
+    },
+    {
+      "id": "m6",
+      "type": "ISSUE",
+      "predictedCategory": "AI",
+      "title": "클로바 화자 라벨이 사용자와 매핑되지 않고 불안정함",
+      "content": "같은 화자가 다른 번호로 붙을 수 있고 누구인지 특정 불가.",
+      "evidence": [
+        {
+          "segmentId": "M2-seg-205",
+          "quote": "잃은 사람이었다가 3대일 수도 있고 갑자기 5될 수도 있고"
+        },
+        {
+          "segmentId": "M2-seg-236",
+          "quote": "저희 그 사용자가 A인지 B인지 모른다는 거잖아요"
+        }
+      ]
+    },
+    {
+      "id": "m7",
+      "type": "DECISION",
+      "predictedCategory": "FRONTEND",
+      "title": "홈 화면에 발화 지분(랭킹) 기능을 도입한다",
+      "content": "참가자별 발화 비율을 랭킹으로 보여주는 차별화 기능. OpenVidu 개별 스트림 지원 확인이 전제.",
+      "evidence": [
+        {
+          "segmentId": "M2-seg-248",
+          "quote": "진짜 해 볼까요? 저는 했지 좋을 것 같아요"
+        }
+      ]
+    },
+    {
+      "id": "m8",
+      "type": "ACTION",
+      "predictedCategory": "INFRA",
+      "title": "OpenVidu가 참가자별 개별 음성 스트림을 지원하는지 확인",
+      "content": "발화 지분 기능의 전제 조건 검증.",
+      "evidence": [
+        {
+          "segmentId": "M2-seg-223",
+          "quote": "물어는 봐 드리겠습니다"
+        },
+        {
+          "segmentId": "M2-seg-285",
+          "quote": "이렇게 한번 물어보겠습니다"
+        }
+      ]
+    },
+    {
+      "id": "m9",
+      "type": "ISSUE",
+      "predictedCategory": "INFRA",
+      "title": "개별 스트림은 OpenVidu 3에서 지원되며 v3 유료 여부 불확실",
+      "content": "현재 사용 버전은 2로 추정, 3의 비용 확인 필요.",
+      "evidence": [
+        {
+          "segmentId": "M2-seg-281",
+          "quote": "되는 거는 오픈비도 3에선 되고 2에서 나왔는데"
+        },
+        {
+          "segmentId": "M2-seg-284",
+          "quote": "음 우리가 유료예요?"
+        }
+      ]
+    }
+  ]
+}

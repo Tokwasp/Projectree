@@ -1,0 +1,62 @@
+{
+  "meetingId": "M-CHAIN",
+  "pipelineProfile": "poc-lts",
+  "promptProfile": "poc-lts",
+  "lineage": {
+    "pipelineVersion": "node-generation-0.4.0",
+    "schemaVersion": "v2.2",
+    "extractionPromptName": "extraction-poc-v3-lts",
+    "extractionPromptVersion": "poc-v3-lts",
+    "extractionPromptSha256": "d719d6bcfbf544268bede4a79b17cf04eeffd2ce81f50c86eb624db3482b7b1d",
+    "judgmentPromptName": "judgment-poc-v4-lts",
+    "judgmentPromptVersion": "poc-v4-lts",
+    "judgmentPromptSha256": "258e5b42b74f2f1a25960e9eaf4f15d5894f77e48088b6938eaaf481d4f1c352",
+    "promptRendererVersion": "poc-v3-v4-pair-2",
+    "judgmentContractAdapterVersion": "poc-v4-to-server-v1",
+    "model": "fake-model",
+    "payloadHash": "92d50c7ba4f078a2b537aa8a10dfccac1bf65f2ec75144564683e127b9bca4d5",
+    "categorySchemaVersion": "cat-v1",
+    "generatedBy": "AI",
+    "extra": {
+      "pipelineProfile": "poc-lts",
+      "profileStatus": "DEFAULT",
+      "promptProfile": "poc-lts",
+      "inputHash": "67c181e4bae1ae47faa96a50b8609b38e874a4a14ce820dc3aaf9de21c3a3cf5",
+      "inputHashVersion": "generation-input-v2",
+      "sttNormalizationSchemaVersion": "1.1",
+      "sttDictionaryVersion": "2026-07-30.3",
+      "sttDictionarySha256": "bde0511b75762f14dc797e816fc0067240442ec57d84188887a2dc9b5cf7430e"
+    }
+  },
+  "droppedItemIds": [],
+  "credits": 17.5,
+  "inputTokens": 200,
+  "outputTokens": 100,
+  "proposalResult": {
+    "requestId": "req-M-CHAIN",
+    "externalMeetingId": "M-CHAIN",
+    "status": "REVIEW_PENDING",
+    "outcome": "NEWLY_CREATED_REVIEW_PENDING",
+    "candidateIds": [
+      "5fd19760-c7f2-46d2-a8c8-ac19c47b8f9b",
+      "1fd3d615-0fd9-47a6-91dc-6138620adbb7"
+    ],
+    "candidateCount": 2,
+    "suggestedDispositionCounts": {
+      "NEW_DECISION": 1,
+      "UNATTACHED": 1
+    },
+    "filled": [],
+    "dropped": [],
+    "demoted": [],
+    "invalidEvidence": [],
+    "warnings": [],
+    "detail": {
+      "sequentialOrder": [
+        "m1",
+        "m2"
+      ],
+      "responseInvalid": null
+    }
+  }
+}

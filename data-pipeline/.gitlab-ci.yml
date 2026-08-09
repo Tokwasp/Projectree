@@ -1,0 +1,43 @@
+# data-pipeline 전용 CI (경로 필터 포함).
+#
+# 이 파일은 독립 실행 가능하지만, 모노레포 루트 파이프라인에서 아래 한 줄로 include 하는 것을
+# 권장한다. 그러면 data-pipeline/** 가 바뀔 때만 잡이 생성되어 Backend/·Frontend/ CI 와 완전히
+# 분리된다. (루트에 아직 .gitlab-ci.yml 이 없으므로 기존 CI 를 건드리지 않는다.)
+#
+#   # 루트 .gitlab-ci.yml
+#   include:
+#     - local: data-pipeline/.gitlab-ci.yml
+#
+# 모든 잡은 rules 로 data-pipeline/** 변경에만 반응한다.
+
+stages:
+  - test
+
+.data-pipeline-changes: &data_pipeline_changes
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "data-pipeline/**/*"
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - "data-pipeline/**/*"
+
+data-pipeline:test:
+  stage: test
+  image: python:3.12-slim
+  <<: *data_pipeline_changes
+  services:
+    - name: pgvector/pgvector:pg16
+      alias: postgres
+  variables:
+    POSTGRES_USER: pipeline
+    POSTGRES_PASSWORD: pipeline
+    POSTGRES_DB: pipeline
+    DATABASE_URL: "postgresql+psycopg://pipeline:pipeline@postgres:5432/pipeline"
+  before_script:
+    - cd data-pipeline
+    - pip install --quiet -e ".[dev]"
+  script:
+    # alembic 로 정본 PG 스키마 구축 후 전체 테스트 (E2E 포함).
+    - alembic upgrade head
+    - pytest

@@ -1,0 +1,985 @@
+{
+  "meetingId": "M1",
+  "segments": [
+    {
+      "segmentId": "M1-seg-001",
+      "startMs": 0,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "크게 안 들릴 것 같아서 제거가 되지 않을까 이렇게 쾅쾅쾅 치는 사람이 없잖아요."
+    },
+    {
+      "segmentId": "M1-seg-002",
+      "startMs": 5000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그렇긴 하지 막 쾅쾅쾅 치는 사람 없고"
+    },
+    {
+      "segmentId": "M1-seg-003",
+      "startMs": 14000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "목소리가 제일 크니까 상관없을 것 같은데 뭔가 이게 키보드 소리로 인해서"
+    },
+    {
+      "segmentId": "M1-seg-004",
+      "startMs": 21000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "근데 다른 내용이 들어간다거나 이런 게 아니니까 문제점이 사람은 그걸 구별하는데 이게 AI는 구별 못할 수 있다는 거예요. 그러니까 우리 발음의 미세한 끄음이나 그런 것들을 바탕으로 AI가 구별할 텐데 그것들이 씹힐 수도 있다. 그러면 AI가 그걸 바탕으로 오류를 이제 치명적이지 않더라도 몇 번씩 틱틱 오류를 뱉어내버리면은 그게 성능 저하의 원인이 될 수 있어 가지고 그래서 아마 아까 뭐 음성 녹음하면서 끝나면 전처리 과정도 막 이야기했던 것 같고 일단 그게 되는지를 한번 알아봐야 되고 만약에 완벽하게 안 되더라도 어떻게든 최대한 좀 뭐 할 수 있는 방법이 없을까를 좀 알아보는 게 좀 우선 관건인 것 같아."
+    },
+    {
+      "segmentId": "M1-seg-005",
+      "startMs": 71000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "저는 오히려 클로드 좀 이용해서 찾아보니까 노이즈는 건드리지 말라고 하더라고요. 요 예 그 노이즈를 잘못 건드리게 되면은 그 사람이 내는 발음 중에 파차름이나 그 하여튼 그 시 지 씨 같은 소리를 구별을 못하게 하더라고요. 그 앞쪽에 나오는 그 하차량 같은 거를 잘라버려 가지고 노여질한 상태에서 이제 구별이 안 되는 그런 문제가 발생할 수 있다 하더라고요. 그래서 아예 노이즈를 건들지 말고 그냥 긴 공백이나 이런 쪽만 없애라라고 하더라고. 그럼"
+    },
+    {
+      "segmentId": "M1-seg-006",
+      "startMs": 106000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "키보드 소리조차도 그냥 일단 아뜰."
+    },
+    {
+      "segmentId": "M1-seg-007",
+      "startMs": 108000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그래서 일단은 클로바가 인식을 제대로 해주는지가 제일 우선일 것 같아요."
+    },
+    {
+      "segmentId": "M1-seg-008",
+      "startMs": 113000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그럼 지금 말하면서 한 1분 동안 키보드 쳐보"
+    },
+    {
+      "segmentId": "M1-seg-009",
+      "startMs": 117000,
+      "endMs": null,
+      "speakerLabel": "SPK_3",
+      "text": "아마 내려가라는 내려오라는 의미는 알고 있을 거예요. 지금 당장 지금 내려오라는 쳐볼까요? 올라"
+    },
+    {
+      "segmentId": "M1-seg-010",
+      "startMs": 124000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "오케이 치고 있으면서 우리 이제 아키텍처 얘기하죠."
+    },
+    {
+      "segmentId": "M1-seg-011",
+      "startMs": 128000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "좋습니다. 저희 그래서 파이썬 찾아보니까 3.13 쓰는 게 일단 제일 좋긴 하더라."
+    },
+    {
+      "segmentId": "M1-seg-012",
+      "startMs": 134000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그게 그게 정답입니까?"
+    },
+    {
+      "segmentId": "M1-seg-013",
+      "startMs": 135000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "네 이제 원래 1 2가 가장 안정적인 버전이었는데 이제 13도 이제 검증이 됐고 그래서 최근에는 13 버전으로 가장 안정적인 버전이라고 판단하더라고요. 그래서 일상 올려도 문제없을 것 같습니다. 근데 gil은 그대로 남아 있습니다. 남아 있어요. 예. gil 없는 버전을 사용하려면 뒤에 t가 붙은 버전을 따로 이용해야 되는데 이제 그걸 사용하면 라이브러리가 이제 또 호환이 되는지 안 되는지 각각 또 판단해야 되고 많이 복잡하다."
+    },
+    {
+      "segmentId": "M1-seg-014",
+      "startMs": 170000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "저희가 그쪽 부분에 대해서 뭐 병목 현상이 일어나거나 그러진 않겠죠."
+    },
+    {
+      "segmentId": "M1-seg-015",
+      "startMs": 176000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "예. 저희가 전처리 관련해서 좀 문제가 있을 것 같긴 한데 혹시 전 처리가 한 두세 시간 넘어가 버리면은 음성 파일이 그러면 좀 커서 그게 CPU가 한다더라고요. 그 전처리 부분은 그쪽에서 두세 시간을 안 넘으면 문제는 없을 거다라고 하더라고 직접 해봐야 되겠네. 해봐야"
+    },
+    {
+      "segmentId": "M1-seg-016",
+      "startMs": 200000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그만해도 될 듯."
+    },
+    {
+      "segmentId": "M1-seg-017",
+      "startMs": 203000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그럼 이제 아키텍처 부분에 대해서 한번 얘기해 볼까요? 히즈엠 메시징 큐"
+    },
+    {
+      "segmentId": "M1-seg-018",
+      "startMs": 210000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "저도 고민해 봤는데 일단 전처리를 어떻게 할지 알아야 정확하게 정할 수 있을 것 같고요. 그다음에 이런 작업들을 유시를 하면 안 돼서 메시징 큐를 쓰는 게 맞긴 한 것 같아요. 근데 안 써도 사실 어려워요. 제가 봤을 때 안 쓰는 게 더 어렵고 안 쓰면 비동기 처리는 무조건 해야 되는데 그 비동기 처리해서 콜백도 해야 되고 그게 더 과정이 복잡하고 사실 이럴 거면 그냥 SQS랑 메시지 큐를 쓰는 게 사실 별 차이는 없거든요. 그 비동기로 처리하거나 그냥 안정성만 더 올라가는 거고 처리하는 게 좀 더 쉬울 것 같고 다른 거는 이제 그 람다라는 걸 쓸 건데 얘가 그냥 함수를 서버에 올리는 거예요. 근데 이게 뭐 파이썬도 올릴 수 있고 자바도 올릴 수 있거든요."
+    },
+    {
+      "segmentId": "M1-seg-019",
+      "startMs": 258000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그래서 만약에 전처리를 어떻게 하냐에 따라 다르겠지만 그냥 모델에게 맡긴다 이렇게 하는 거면은 그냥 파이썬 코드를 올리고 q에서 약간 뭔가 회의록을 만들어줘라는 메시지를 받아서 꺼내서 그 람다에서 파이썬 코드를 실행시켜서 호출을 하고 결과를 봤잖아요. 그 결과 받은 거를 이제 다시 스프링 콜백으로 싸줘가지고 스프링이 처리하는데 실시간 알림을 받아야 되니까 그 SSE 써가지고 그 세션을 이제 커넥션을 가지고 있으니까 커넥션에다가 이제 쏴주면은 클라이언트가 받으니까 그렇게 처리하고 일단 그렇게 계획하고 있는데"
+    },
+    {
+      "segmentId": "M1-seg-020",
+      "startMs": 300000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "아켓이 한번 그리죠. 저희"
+    },
+    {
+      "segmentId": "M1-seg-021",
+      "startMs": 304000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "악센에서 별거 없어요. 제가 어제 메시징 큐도 테스트해 봤거든요. 그러니까 저희 ec2에서 제가 제 계정으로 만든 그 큐에 담을 수 있는지 확인해 봤거든요. 담아지더라고요. 그래서 그거는 상관이 없고"
+    },
+    {
+      "segmentId": "M1-seg-022",
+      "startMs": 318000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "저 궁금한 거 있습니다. 그럼 람다에서 실행된 파이썬 함수는 라이브러리 이용할 수 있습니까? 라이브러리가 이용됩니까?"
+    },
+    {
+      "segmentId": "M1-seg-023",
+      "startMs": 327000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그냥 파이썬 코드예요. 그냥 다 돼요. 파이썬은 다 돼요. 그러니까 자바는 자바 자르러 올리고 파이썬은 더 쉽다고 하더라고요. 파이썬은 저 폴을 못 돌려서 못 올렸고요. AWS라고 가정하고 뭐 x3는 그냥 간단하게 여기 있다 치고 여기다가 이제 저희가 빌린 ec2 있을 거고 그다음에 여기서 이제 q 하나 있을 거고 그다음에 여기도 ec2 있을 거고 ec2가 아니라 이제 이게 람다 이렇게 해서 q에 작업 담고 얘가 이제 꺼내가지고 다시 여기를 쏘면은 얘가 이제 커넥션 통해서 클라이언트로 이제 보내는 거지"
+    },
+    {
+      "segmentId": "M1-seg-024",
+      "startMs": 373000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그럼 파이썬 자체를 아예 그냥 파이썬 서브를 안 만들고 그냥 다 람다 처리를 하겠다 이거죠."
+    },
+    {
+      "segmentId": "M1-seg-025",
+      "startMs": 383000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "저도 이거 ec2 쓸까 아니면은 이제 람다 쓸까 고민했는데 이 람다 처리하는 게 비용이 서버 리스고 요청할 때마다 비용이 부과되거든요. 네 그렇죠 근데 최대 할 수 있는 게 15분이에요. 15분 넘어가는 작업은"
+    },
+    {
+      "segmentId": "M1-seg-026",
+      "startMs": 399000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "지금 15분 근데 15분 넘어가지는"
+    },
+    {
+      "segmentId": "M1-seg-027",
+      "startMs": 403000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "네 그래서 일단 고민했을 때 초창기 스타트업이나 이런 데는 요청이 많지 않잖아요. 그래서 이렇게 이시2를 띄우는 것보다 그냥 람다를 띄우는 게 비용상 더 저렴할 것 같고 람다 장점이 그냥 스케일링도 되거든요. 자기가 요청이 많으면 자기 스스로 이제 많이 처리해요. 그래서 ec2는 자기가 다 관리해 줘야 된단 말이에요."
+    },
+    {
+      "segmentId": "M1-seg-028",
+      "startMs": 426000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "어 맞다."
+    },
+    {
+      "segmentId": "M1-seg-029",
+      "startMs": 427000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "안녕하세요. 고맙다."
+    },
+    {
+      "segmentId": "M1-seg-030",
+      "startMs": 428000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "아니 캐치해 줘야 되는데 이제 좀 꺼"
+    },
+    {
+      "segmentId": "M1-seg-031",
+      "startMs": 430000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아까 말씀하시던데"
+    },
+    {
+      "segmentId": "M1-seg-032",
+      "startMs": 432000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "아까 저희 영상 보고 있었어요. 어떻게"
+    },
+    {
+      "segmentId": "M1-seg-033",
+      "startMs": 433000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "아니 아까 한 분 늦으셨네. 그래서 춤 추셔야겠는데"
+    },
+    {
+      "segmentId": "M1-seg-034",
+      "startMs": 441000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그래서 그 후보가 좀 몇 개 나왔거든 터미널 출랙"
+    },
+    {
+      "segmentId": "M1-seg-035",
+      "startMs": 446000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "어"
+    },
+    {
+      "segmentId": "M1-seg-036",
+      "startMs": 447000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "귀직해 줄래"
+    },
+    {
+      "segmentId": "M1-seg-037",
+      "startMs": 449000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "일단 출첵하고"
+    },
+    {
+      "segmentId": "M1-seg-038",
+      "startMs": 453000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "했는데 왜 우리 녹음도 하고 그렇죠"
+    },
+    {
+      "segmentId": "M1-seg-039",
+      "startMs": 456000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "제가 어제 만들어 왔거든요. 음성까지 이제 받을 수 있어요. 그래서 음성 지금 되는지 클로바에 던져보려고"
+    },
+    {
+      "segmentId": "M1-seg-040",
+      "startMs": 462000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "지금 다 다른 사람들 안에서 하는데"
+    },
+    {
+      "segmentId": "M1-seg-041",
+      "startMs": 464000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "회의하고 있잖아요."
+    },
+    {
+      "segmentId": "M1-seg-042",
+      "startMs": 465000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "데일리 스크럽 스"
+    },
+    {
+      "segmentId": "M1-seg-043",
+      "startMs": 473000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "잘 속네"
+    },
+    {
+      "segmentId": "M1-seg-044",
+      "startMs": 475000,
+      "endMs": null,
+      "speakerLabel": "SPK_6",
+      "text": "거짓말 잘한다"
+    },
+    {
+      "segmentId": "M1-seg-045",
+      "startMs": 476000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "그치 나 연극부에 왔어."
+    },
+    {
+      "segmentId": "M1-seg-046",
+      "startMs": 478000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "저도 고민해 봤는데 ec2 관리하는 게 귀찮아가지고 그럼 니가 람다나 큐에 들어오는 걸 제가 아스플링 하거든요. 이렇게 만들 수 있어요. 좋다. 그 그래가지고 다 정촉이 나왔던 것 같은데 근데 이거 아마 AWS여서 그람 다랑 다를 거예요. 그래요 네 이거 AWS에만 있는 거예요. 그래가지고 다른 걸 그 람다는 그 자바 람다에 나왔을 거예요. 바람 그래서 이렇게 될 것 같고 뭐 레디스 바깥에 있을 거고 이게 이게 레디스 아키텍처가 많지 않은데 이 내부 호출하는 과정이 매우 복잡해요. 그러니까 작업이 저희가 회의록 생성한다는 메시지 메시지를 큐에 담거든요. 그러니까 이 메시지가 두 개 종류가 있어요. 회의록 생성하고 그다음에 노드 만드는 거 두 개가 메시지가 될 거고 그래서 클로바는 콜랩을 준다 했으니까 저희가 막 이 둘 중에 하나 체크해서 요청 보냈잖아요."
+    },
+    {
+      "segmentId": "M1-seg-047",
+      "startMs": 539000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "먼저 ec2에서 자바 스프링 해서 그 작업을 받았으니까 먼저 클로바한테 이거 텍스트로 변환해 달라고 해야 되잖아요. 그럼 요청을 해요. 그러면 이거 비동기로 자동으로 되거든요. 왜냐하면 클로버가 콜백을 준다 했으니까 그럼 제가 콜백 URL로 컨트롤러 하나 만들어서 받고 그럼 받은 게 텍스트잖아요. 이 텍스트를 q에 담을 수 없어요. q는 그냥 메시지만 담을 수 있어요. 그래서 이 텍스트 파일을 3에 올려야 돼요. 그러면은 이제 람다한테 어떤 사람이 약간 회의록을 만들어 달라고 했어라고 메시지를 담고 그걸 람다가 꺼내요. 그럼 메시지 종류에 따라서 얘가 회의록을 만들어 달라고 했네. 그럼 회의록이 어디 있지 하고 이제 x3를 조회해 가지고 여기서 꺼내가지고 처리를 해가지고 처리가 끝나면 결과물이 나오잖아요. 회의록 결과물 같은 거 그런 걸 이제 다시 콜백 처리해서 ec2로 전송하면 저희가 받았잖아요."
+    },
+    {
+      "segmentId": "M1-seg-048",
+      "startMs": 586000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "근데 왜 여기로 보내냐면 여기에 커넥션이 있거든요. 클라이언트하고 그러면 그 클라이언트의 커넥션을 통해서 실시간 알림으로 전송하는 거예요. 아키텍처가 좀 복잡해요. 아니 그건 별게 없는데 과정이 복잡해"
+    },
+    {
+      "segmentId": "M1-seg-049",
+      "startMs": 601000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "그러면 전처리도 만약 한다고 하면은 전처리 함수를 람다 서버에 올리고 ec2에서 그 음성 파일을 3 올려서 메시징 q에 전처리해줘라고 하면은 가져가서 이렇게 그도 되는 거니까"
+    },
+    {
+      "segmentId": "M1-seg-050",
+      "startMs": 614000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "전처리를 어떻게 하는지 명확하게 알아야 되고 그 과정에 대해서 이제 어떻게 할지는 정해야 돼. 제가 어제 이제 자면서 생각한 아키텍처입니다. 좀 바뀌었어요. 아니요. 크게 달라진 건 없어요. 그러니까 그냥 굳이 파이썬을 서브로 안 두고 그냥 람다로 둬도 되니까"
+    },
+    {
+      "segmentId": "M1-seg-051",
+      "startMs": 637000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "크게 달라진 거 없다. 괜히 그러면 이제 뭐 여기다 파이썬 서버 두고 이제 q 두고 이러면 더 복잡해지네. 그냥 파이썬 자체로 그냥 람다로 올리면은 사실 파이썬 하는 것도 크게 없고 그냥 함수잖아요. 함수 몇 개니까 그냥 차라리 그냥 람다로 올리는 게 낫다 그러면 뭐 이렇게 모듈 3개 둘 필요도 없어"
+    },
+    {
+      "segmentId": "M1-seg-052",
+      "startMs": 657000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "전처리 이런 것도 되는 거예요. 안다에서 네"
+    },
+    {
+      "segmentId": "M1-seg-053",
+      "startMs": 659000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "전처리 할 수 있어요."
+    },
+    {
+      "segmentId": "M1-seg-054",
+      "startMs": 662000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "그러면 똑같이 그냥 람노에서 3에 올리고"
+    },
+    {
+      "segmentId": "M1-seg-055",
+      "startMs": 665000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "스3는 일단 ec2에서 저희가 클로버 그 하면은 텍스트 파일 나오잖아요. 음성을 텍스트로 바꿨으니까 그러면 ec2한테 콜백이 올 거잖아요. 그럼 콜백이 오면 에스3를 일단 올려요. 이 시트에서 그러면 저희가 뭐 회의록이나 뭐 그 노드 만드는 거 체크돼 있잖아요. 그럼 그거를 메시지에 던져요. 너는 회의록 만들어라 했던 메시지 던지라 약간 노드 만들려고 했던 메시지 던져요. 그거를 이제 람다에서 꺼내가지고 처리하는 거죠. 그러면 약간 람다도 그 텍스트가 필요하니까 s3 조회해 가지고 그 텍스트 가지고 와가지고 그래서 클로버나 AI 호출해가지고 여기서 처리하는 거지"
+    },
+    {
+      "segmentId": "M1-seg-056",
+      "startMs": 700000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "저 근데 이게 다가 람다가 얼마큼 함수를 처리할 수 있을지 제가 잘 모르겠거든요. 그러니까"
+    },
+    {
+      "segmentId": "M1-seg-057",
+      "startMs": 712000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "그럼 이렇게 되는 거예요. 음성 파일 보내고 그 처음에 클로바한테 보내서 받은 텍스트를 얘한테 다시 보내면 얘가 s3 저장하고"
+    },
+    {
+      "segmentId": "M1-seg-058",
+      "startMs": 722000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "네 그다음에 체크한 메시지가 사실 콜백을 했을 때 이게 뭐 노드 생성이랑 회의록 생성이랑 모드 생성이랑 뭔지 모르거든요. 콜백에는 없잖아요. 그냥 텍스트만 줄 거 아니에요 네이버 클로바 그래서 일단 그거를 처음 요청 봤을 때 DB에 저장을 해놔야 돼요."
+    },
+    {
+      "segmentId": "M1-seg-059",
+      "startMs": 739000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "DB 저장해 놔야지"
+    },
+    {
+      "segmentId": "M1-seg-060",
+      "startMs": 741000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "DB 저장을 해두고 그다음에 네이버 콜백이 왔을 때 이전에 이 사람이 요청한 게 뭐였는지 DB 조회해 가지고 회의록이랑 뭐 놓네. 그럼 메시지를 던지는 거죠. 그럼 이거는 이 텍스트는 3에 올려놓을게"
+    },
+    {
+      "segmentId": "M1-seg-061",
+      "startMs": 753000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "DB에 그걸 저장한다는 거야 뭐 체크했는"
+    },
+    {
+      "segmentId": "M1-seg-062",
+      "startMs": 755000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "네 아니면 콜백 왔을 때 뭐 체크했는지 알 수가 없어 콜백은 그냥 텍스트로 올 거니까"
+    },
+    {
+      "segmentId": "M1-seg-063",
+      "startMs": 760000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그리고 클로바한테서 콜백 온 데이터 자체도 데이터 자체도 좀 저장을 좀 해놔야 될 것 같아요. 그건 s3에 저장하죠."
+    },
+    {
+      "segmentId": "M1-seg-064",
+      "startMs": 771000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "네 그냥 다 여기 내려"
+    },
+    {
+      "segmentId": "M1-seg-065",
+      "startMs": 773000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "트리 저장하고 왜냐하면 우리가 나중에 회의록을 만들 회의록을 만들 때 그거 STD 쓸 테고 노드 만들 때도 STD 쓸 거잖아요. 근데 만약에 기존에 회의록 생성해서 LCD를 써가지고 그 테이크를 추출했는데 오드 만든다고 굳이 또 STT를 생성할 STT를 또 호출할 필요는 없으니까."
+    },
+    {
+      "segmentId": "M1-seg-066",
+      "startMs": 800000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "네"
+    },
+    {
+      "segmentId": "M1-seg-067",
+      "startMs": 800000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그렇죠 그래서 그건 재활용하면 될 것 같고 그리고 파이썬에서 전처리 자체가 은근히 좀 복잡할 것 같더라고요."
+    },
+    {
+      "segmentId": "M1-seg-068",
+      "startMs": 809000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "저도 그래가지고 이거 확정은 못"
+    },
+    {
+      "segmentId": "M1-seg-069",
+      "startMs": 811000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "이게 뭐냐 하면은 제가 어제 그거 좀 실험을 좀 해봤었는데 약간 좀 순차적으로 메시지를 읽어가면서 AI가 처리하잖아요. 그러면은 얘가 우리가 번복한 결정을 확정으로 지어가지고 의사결정에서 좀 실패가 일어나더라고요. 그러니까 예를 들어 가지고 저희가 이 메시지 인큐를 쓰기로 했는데 이제 후반부에 한 몇 판 조금 뒤에 나중에 메시지 인큐는 좀 사실 좀 어려울 것 같은데 하면서 이건 취소하자 했던 게 AI가 이제 메시징 q를 디시즌에 올린 거예요. 그런 경우가 있는 게 제가 찾아 이게 보니까 제가 지금 제가 설계한 게 순차적으로 쭉 읽으면서 분별하는 거였는데 그래서 지금 제가 생각하는 거는 처음 일단은 그 문맥 단위로 다 청크를 나눈 다음에 한 번 판단하고 마지막에 일단 후보군 몇 개 추스린 다음에 얘는 얘는 디시전이야 얘는 이슈야 뭐 이런 식으로 후보군 놔두고 나중에 한 번 더 쭉 읽으면서 이게 맞는지 안 맞는지 재차 확인하는 그런 식으로 갈 것 같단 말이죠. 그러면 살짝 복잡해져요."
+    },
+    {
+      "segmentId": "M1-seg-070",
+      "startMs": 885000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "근데 이게 라이브하게 버전 2로 지금 제가 생각한 거라 가지고 그 버전 3 버전 4 점점 제가 더 다듬어 가면서 이게 처리 과정이 더 복잡해질 수도 있어 가지고 이게 람다로 처리가 될지 제가 지금 궁금해 가지고 한번 물어보는 거예요. 이게 얘가 얼마만큼 그거 함수를 처리해 줄 수 있는지 제가 이걸 안 써봐 가지고 잘 몰라가지고"
+    },
+    {
+      "segmentId": "M1-seg-071",
+      "startMs": 910000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "저도 잡아만 올려봤는데 그냥 하나의 함수만 올라갈 수 있고 그 하나의 함수에서 분기 처리는 가능"
+    },
+    {
+      "segmentId": "M1-seg-072",
+      "startMs": 915000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "하나의 함수만 올라갈 수 있다는 거죠. 그러면은 안 될 수 있어"
+    },
+    {
+      "segmentId": "M1-seg-073",
+      "startMs": 921000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "이건 한번 찾아봐야 돼요. 저도 람다를 한 번밖에 안 사용해 봤고 그래서 여러 개의 함수도 올라갈 수 있는지 한번 확인해 봐야 돼요."
+    },
+    {
+      "segmentId": "M1-seg-074",
+      "startMs": 928000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "만약 전철이 람다에 올린다 하면 15분 안 될 것 같은데요."
+    },
+    {
+      "segmentId": "M1-seg-075",
+      "startMs": 932000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "STT는요."
+    },
+    {
+      "segmentId": "M1-seg-076",
+      "startMs": 934000,
+      "endMs": null,
+      "speakerLabel": "SPK_4",
+      "text": "예 저거 음성 파일 전처리해서 넘기기 전에 이제 전처리 과정에서 회의가 회의가 근데 30분 넘어가면 그러니까 1시간 15분은 넘지 않을까 싶어"
+    },
+    {
+      "segmentId": "M1-seg-077",
+      "startMs": 948000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "체험판만. 근데 일단 일단은 제가 말하는 게 과정은 복잡해도 어차피 컴퓨터가 처리하는 거라 가지고 속도는 아마 좀 빠를 거예요. 속도는 빨라가지고 뭐 속도적인 측면에서는 뭐 그렇게 문제가 없을 것 같은데 다만 이제 함수가 몇 개 올라가느냐가 그렇죠 함수가 어떻게든 다 분리돼 있을 거라 가지고"
+    },
+    {
+      "segmentId": "M1-seg-078",
+      "startMs": 972000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "정 힘들면 그냥 ec2 하나 띄우면 된다."
+    },
+    {
+      "segmentId": "M1-seg-079",
+      "startMs": 975000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그렇죠 만약에 찾아보고 안 되면"
+    },
+    {
+      "segmentId": "M1-seg-080",
+      "startMs": 977000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "이스트 하나 띄우면 되는 거라서"
+    },
+    {
+      "segmentId": "M1-seg-081",
+      "startMs": 979000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "관리하기 귀찮아가지고"
+    },
+    {
+      "segmentId": "M1-seg-082",
+      "startMs": 980000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "그럼 파이썬 원래 띄우려고 했었잖아요. 그러면 바뀌는 거예요."
+    },
+    {
+      "segmentId": "M1-seg-083",
+      "startMs": 984000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그러니까 람다 자체도 그냥 파이썬도 되고 잡아도 되거든."
+    },
+    {
+      "segmentId": "M1-seg-084",
+      "startMs": 987000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "근데 이제 파이썬 서버니까 안에 뭐 몇 개가 들어가든 상관은 없잖아요. 전처리 함수가 들어갈 수도 있고"
+    },
+    {
+      "segmentId": "M1-seg-085",
+      "startMs": 994000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "응응 맞지 근데 제가 볼 때 회의록도 제가 전처리가 회의록 전처리는 그렇게 까다롭진 않을 것 같긴 한데 어쨌든 회의록 전처리도 있어야 되고 그다음에 노드 관련해서 노드도 따로 전처리가 노드는 전처리가 조금 복잡할 것 같아 갖고 일단 람다를 찾아보고 함수가 여러 개 올라간다. 카면은 람다 써도 되고 만약에 아니라고 하면은 그래 ec2 파서 올리는 게 ec2 파서 뭘 어떤 거 올린다고 ec2 파서 발선 서버 자체를 올리는 거 그러니까 람다를 쓰면은 람다를 쓰면 서브리스로 가면 되는데 이제 만약에 서브리스로 처리하기 힘들다 그러면은 이 시2 판 개 파가지고 올리고 여기 시2에는 내가 볼 때 그 희지 m이 아까 말씀했던 게 그 외 알티시가 생각보다 좀 그거 스토리지도 많이 차지하고 그리고 복잡하다고 원래 우리가 하려고 했던 그래서 그냥 얘는 에서 준 거 준 거"
+    },
+    {
+      "segmentId": "M1-seg-086",
+      "startMs": 1060000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "짬처리용으로 쓰고"
+    },
+    {
+      "segmentId": "M1-seg-087",
+      "startMs": 1061000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "괜찮은 이슈2 있잖아 접근은 안 되지만 그것들에다가 외부 RTC 넣고 그다음에 우리가 생성하는 ec2 우리가 컨트롤 할 수 있는 ec2에다가 좀 여기 자바 안 넣죠 자스 자바 스크림 이시트 한 개 파면"
+    },
+    {
+      "segmentId": "M1-seg-088",
+      "startMs": 1080000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "넣을 필요 없는 거 아니야 넣을 필요 없는 거 아니에요 이쪽에"
+    },
+    {
+      "segmentId": "M1-seg-089",
+      "startMs": 1082000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그냥 파이썬으로 파는 거 아니야"
+    },
+    {
+      "segmentId": "M1-seg-090",
+      "startMs": 1084000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "자바스크립트 자바까지 같이 오케이 오케"
+    },
+    {
+      "segmentId": "M1-seg-091",
+      "startMs": 1089000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "짬소리 다 하고"
+    },
+    {
+      "segmentId": "M1-seg-092",
+      "startMs": 1090000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "말을"
+    },
+    {
+      "segmentId": "M1-seg-093",
+      "startMs": 1094000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "근데 이게 어차피 q를 쓰는 게 맞는 게 제가 ac2에서 뭐 어싱크나 이런 걸 생각해 봤는데 결국 이 서버 터지면 다 날아가거든요. 그래서 그냥 뭐 면접 때 말할 것도 없고 그냥 그럴 바에는 그냥 큐 하나 두는 게 두 번 근데 그거야 더 문제가 이게 사실 그냥 날아가면은 끝이거든요. 그다음에 심지어 처리도 어려워요. 어싱크 처리하잖아요. 그럼 이 비동기로 처리 완료를 해야 되거든요. 처리 완료를 했을 때 얘가 뭐 어떻게 완료를 하지 더 약간 좀 까다롭더라고요."
+    },
+    {
+      "segmentId": "M1-seg-094",
+      "startMs": 1122000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "메싱큐를 안 썼을 때 제가 해봤는데 메시큐 안 쓰면 있잖아요. 그 에러 시나리오 다 작성해 갖고 그거 그냥 API로 다 만들어야 돼요. 게 귀찮습니다."
+    },
+    {
+      "segmentId": "M1-seg-095",
+      "startMs": 1134000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그래서 저도 이거 고민했던 게 어싱크 쓰면 결국 그 메시지가 2개 타입이 오는데 회의록이랑 노드 만드는 거 이 두 개가 오는데 그럼 디비에 일단 저장해 둔다고 했을 때 그럼 만약에 하나가 잘못되잖아요. 만약에 얘가 계속 시도하다가 회의록 생성에 계속 실패하는 거예요. 그럼 얘 계속 페일로 뜨는 거잖아요. 디비에 그럼 얘는 뭐 어떻게 처리하지?"
+    },
+    {
+      "segmentId": "M1-seg-096",
+      "startMs": 1155000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그 폐일 처리하는 거에 대해서 에러 코드를 다 만들어야 돼 시나리오를 다 만들어서"
+    },
+    {
+      "segmentId": "M1-seg-097",
+      "startMs": 1160000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "뭐 리트라이 걸어가지고 재시도 한다 치잖아요. 그럼 결국 세 번 동안 돌고 그럼 세 번에 마지막에 이게 또 페일이 뜨면 클라이언트한테 실시간 알림을 준다. 뭔가 흐름이 정리가 안 돼가지고"
+    },
+    {
+      "segmentId": "M1-seg-098",
+      "startMs": 1172000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그거 정리하는 데도 시간 걸려요."
+    },
+    {
+      "segmentId": "M1-seg-099",
+      "startMs": 1176000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "근데 사실 이렇게 할 바에 그냥 메시지 큐 쓰는 게 더 깔끔하다 생각 들어 가지고"
+    },
+    {
+      "segmentId": "M1-seg-100",
+      "startMs": 1180000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "q로드면 저렇게 에러 처리 안 해도 돼요."
+    },
+    {
+      "segmentId": "M1-seg-101",
+      "startMs": 1182000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "큐로 두면 에러 처리할 수 있는데 그 약간 분리시킬 수 있어요. 지금 보면 어싱크 안에다 뭐 리트라이더 달아놓고 그다음에 에러 처리 달아놓고 난리 나잖아요. 근데 큐 두면은 작업을 분리할 수 있어 가지고 일단 노드를 생성 노드 생성한다. 회의록 생성한다는 작업을 일단 얘한테 던져요. 그다음에 얘는 이제 끝난"
+    },
+    {
+      "segmentId": "M1-seg-102",
+      "startMs": 1202000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "동기적인 흐름이 아니지"
+    },
+    {
+      "segmentId": "M1-seg-103",
+      "startMs": 1204000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그러니까 비동기를 일단 가정하고 하는데 비동기가 어싱크로 하면 너무 복잡하고 그냥 q로 들어서 메시지 처리하는 거 그냥 람다에서 다 처리하는 거나 아니면 이ct를 처리하면은 이 작업이 다 분리되니까 만약에 eq는 작업을 보장하는 게 메시지가 안에 들어 있거든요. 회의록 생성이나 이런 거 그럼 이게 몇 번 약간 실패했는지 그런 게 헤더에 들어간단 말이에요. 예를 들어 이게 q가 삭제되는 원리가 람다에서 정상 응답을 반환하면은 이게 삭제돼요. QA 메시지가 사라져요. 근데 실패하잖아요. 그러면 한 그 시간 설정하는 게 있거든요. 그 비저블 타임이라고 해서 얘가 30초 동안 만약 실패했어요. 그럼 다시 그 메시지가 나타나요. 그럼 다시 꺼내봐요."
+    },
+    {
+      "segmentId": "M1-seg-104",
+      "startMs": 1242000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "한 반복이에요."
+    },
+    {
+      "segmentId": "M1-seg-105",
+      "startMs": 1244000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "네 그래 가지고 이거를 실행을 보장한다는 게 이런 의미인 거예요."
+    },
+    {
+      "segmentId": "M1-seg-106",
+      "startMs": 1247000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그러면 회수 제한도 둬야겠네. 그래서"
+    },
+    {
+      "segmentId": "M1-seg-107",
+      "startMs": 1249000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "이거 실패하면 사실 데드레터 q라고 DLQ라고 해가지고 만약에 세 번 실패하면은 여기 나타났잖아요. 그럼 얘는 일로 보내라 하면 여기서 뭐 로그 찍고 그러죠. 그러니까 약간 실패하고 성공 흐름을 다 분리할 수 있잖아요. 근데 어싱크 하나 쓰면 거기다 리트라이 달고 이제 세 번 실패하면 에러 로그 찍고 뭐 다 그냥 다 여기 있잖아. 그러면 사실 이렇게 쓸 바에는 그냥 q 하나 두는 게 더 낫다."
+    },
+    {
+      "segmentId": "M1-seg-108",
+      "startMs": 1272000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "제가 지난 토동사한테 그렇게 했거든요. 에러 시나리오 다 만들어갖고"
+    },
+    {
+      "segmentId": "M1-seg-109",
+      "startMs": 1277000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "약간 그래가지고 그리고 저도 약간 저렇게 쓰면 그냥 면접 때 뭐 말할 것도 없고"
+    },
+    {
+      "segmentId": "M1-seg-110",
+      "startMs": 1284000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "바라고 있습니다. 왜 왜 메시징 글을 써야 되는지를 알았으면"
+    },
+    {
+      "segmentId": "M1-seg-111",
+      "startMs": 1290000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "어제 어제 컨설턴트님께서 말씀해 주신 그 메시즌 큐 말고 다른 큐 한 개 있었잖아요."
+    },
+    {
+      "segmentId": "M1-seg-112",
+      "startMs": 1297000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "다른 q가 어떤 거죠?"
+    },
+    {
+      "segmentId": "M1-seg-113",
+      "startMs": 1298000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "이름이 기억이 안 나는데 그러니까 이거 뭐 적혀 있는 거 보고 이건 뭐냐 해서"
+    },
+    {
+      "segmentId": "M1-seg-114",
+      "startMs": 1303000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "mq 있고 카프카 있잖아"
+    },
+    {
+      "segmentId": "M1-seg-115",
+      "startMs": 1310000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "카톡카였나 근데 그 메시징 큐랑 차이가 뭐예요? 이거랑 요거"
+    },
+    {
+      "segmentId": "M1-seg-116",
+      "startMs": 1315000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "다 메시징 큐 SQS 레비 덴큐"
+    },
+    {
+      "segmentId": "M1-seg-117",
+      "startMs": 1321000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "그냥 그냥 툴이다는 거예요. 이거"
+    },
+    {
+      "segmentId": "M1-seg-118",
+      "startMs": 1323000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그 종류가 달라 그러니까 SQS는 최소한의 메시지 q 최소"
+    },
+    {
+      "segmentId": "M1-seg-119",
+      "startMs": 1328000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "로그 찍고 이런 거 하려면 밑에 갈아야 되고"
+    },
+    {
+      "segmentId": "M1-seg-120",
+      "startMs": 1330000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "로그 찍고 그다음에 약간 어떻게 작업되는지 로그 다 찍으려면 카프컷 그래서 실무에서는 카프컷"
+    },
+    {
+      "segmentId": "M1-seg-121",
+      "startMs": 1336000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "근데 우리는 그런 게 필요 없어"
+    },
+    {
+      "segmentId": "M1-seg-122",
+      "startMs": 1337000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "그는 이제 라우팅 토픽하고 구독해가지고 라우팅 하는 거 예를 들어 이렇게 다 보내는 거나 아니면 다이렉트로 보내는 거나 그런 거 있잖아요. 우리는 필요 없으니까 저희는 라우팅 필요 없고 그냥 메시징 q만 필요하니까 SQS라고"
+    },
+    {
+      "segmentId": "M1-seg-123",
+      "startMs": 1353000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "작업 흐름을 알려 하면 카프가 써야겠네요."
+    },
+    {
+      "segmentId": "M1-seg-124",
+      "startMs": 1356000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "근데 이거 사실 러닝 커브 커서 못 쓴다고 말하면 되기 때문에"
+    },
+    {
+      "segmentId": "M1-seg-125",
+      "startMs": 1362000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "그럼 일단 람다가 되는지를 테스트를 해봐야겠네요."
+    },
+    {
+      "segmentId": "M1-seg-126",
+      "startMs": 1365000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "네 그래서 일단 제가 어제 집 가서 테스트한 건 이 다른 계정 이시2에서 제가 아이엠 사용자 만들어서 이 q에 올라가는지 테스트해 봤는데 되거든요. 그러니까 저희 교육용 ec2에서 저희 제가 만든 그 큐에 들어가요. 그러면 제 이슈2에는 무조건 될 거니까 그렇네요. 그거는 보장을 할 수 있습니다. 근데 이 과정에 전처리하고 이런 게 좀 머리가 아파서 그렇지 이제 그건 경희 님이 해주실 거니까 저는 이제 좀 전처리"
+    },
+    {
+      "segmentId": "M1-seg-127",
+      "startMs": 1391000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "근데 전처리를 스프링에서 해야 되나 파이썬 쪽에서 해야 되나 파이썬에서 해야 되나 AI 쪽에서"
+    },
+    {
+      "segmentId": "M1-seg-128",
+      "startMs": 1398000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그럼 녹음 끌 거야. 이제"
+    },
+    {
+      "segmentId": "M1-seg-129",
+      "startMs": 1400000,
+      "endMs": null,
+      "speakerLabel": "SPK_1",
+      "text": "오늘 할 일 그 구분할 수 있게 할 일 한번 말해보자."
+    },
+    {
+      "segmentId": "M1-seg-130",
+      "startMs": 1404000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "오늘 어제 뭐 지라에 스프린트 올린 거 그냥 그거 그냥 계속 개발하는 게 나지 않을까"
+    },
+    {
+      "segmentId": "M1-seg-131",
+      "startMs": 1412000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "지라에서 스프린트 올린 거 그것만 해도 이번 주는 할 일 뚝딱일 것 같은데"
+    },
+    {
+      "segmentId": "M1-seg-132",
+      "startMs": 1417000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "근데 뭔가 올린 거 보면 프론트가 할 게 없긴 해요."
+    },
+    {
+      "segmentId": "M1-seg-133",
+      "startMs": 1420000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "아 내 프론트 지금 쉬어"
+    },
+    {
+      "segmentId": "M1-seg-134",
+      "startMs": 1422000,
+      "endMs": null,
+      "speakerLabel": "SPK_7",
+      "text": "왜냐하면 나중에"
+    },
+    {
+      "segmentId": "M1-seg-135",
+      "startMs": 1424000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "지금 지금 쉬어둬야지 왜 왜 벌써 일하라 카노"
+    },
+    {
+      "segmentId": "M1-seg-136",
+      "startMs": 1430000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "오늘 해본 게 저 집에 와서 그것도 해봤잖아요. 이제 그 화면 내 화면 공유하기랑 그다음 마이크 키고 끄기랑 카메라 끄기 그거 해서 방금 테스트해 보니까 되고 그다음에 음성 조회도 해가지고 음성도 잘 나오더라고 거기까지 했는데 이제 설정은 저도 몰라요. 그거는 클로드가 있습니다. MP3로 받는 거죠. 아니야 webm인가 그걸로 바뀌어 webm 근데 실행하면 이제 음성 나와요."
+    },
+    {
+      "segmentId": "M1-seg-137",
+      "startMs": 1454000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그 MP3로 굳이 바꾸지 말라고 하더라고요. MP3가 이제 압축하는 거라서 결국에 음질이 안 좋아지니까 그 사람이 들을 수 있는 것만 남기고 기계가 들을 수 있는 건 다 자르는 것 같더라."
+    },
+    {
+      "segmentId": "M1-seg-138",
+      "startMs": 1466000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "난 상황이어서 제가 달려가고"
+    },
+    {
+      "segmentId": "M1-seg-139",
+      "startMs": 1470000,
+      "endMs": null,
+      "speakerLabel": "SPK_2",
+      "text": "그럼 일단 녹음 끄고 끄고"
+    },
+    {
+      "segmentId": "M1-seg-140",
+      "startMs": 1473000,
+      "endMs": null,
+      "speakerLabel": "SPK_5",
+      "text": "근데 좀 디테일."
+    }
+  ]
+}

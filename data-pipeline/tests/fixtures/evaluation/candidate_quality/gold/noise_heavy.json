@@ -1,0 +1,26 @@
+{
+  "scenario": "noise_heavy",
+  "description": "회의 진행 잡음 다수 + 불명확 기술어 1건 + 실제 후보 2건. 잡음 제외율과 기술어 보존 검증.",
+  "segments": [
+    {"segmentId": "n1", "startMs": 5000, "speakerLabel": "A", "text": "안녕하세요. 오늘도 와 주셔서 감사합니다."},
+    {"segmentId": "n2", "startMs": 10000, "speakerLabel": "B", "text": "제 목소리 잘 들리나요? 마이크 음량이 좀 작은 것 같은데요."},
+    {"segmentId": "n3", "startMs": 15000, "speakerLabel": "C", "text": "네 잘 들립니다. 방금 뭐라고 하셨죠? 다시 한 번만 말씀해 주세요."},
+    {"segmentId": "n4", "startMs": 20000, "speakerLabel": "B", "text": "그 오픈 리더라는 걸로 마이크 미사용 상태를 잡아 보겠습니다."},
+    {"segmentId": "n5", "startMs": 25000, "speakerLabel": "A", "text": "인증 토큰 만료 처리는 리프레시 토큰 방식으로 가기로 하죠. 이견 없으시죠?"},
+    {"segmentId": "n6", "startMs": 30000, "speakerLabel": "C", "text": "네. 그럼 저는 리프레시 토큰 저장소부터 구현하겠습니다."},
+    {"segmentId": "n7", "startMs": 35000, "speakerLabel": "A", "text": "오늘 고생 많으셨습니다. 다음 주에 뵙겠습니다."}
+  ],
+  "required": [
+    {"key": "refresh-decision", "type": "DECISION", "titleAnyOf": ["리프레시", "토큰"]},
+    {"key": "refresh-store-action", "type": "ACTION", "titleAnyOf": ["리프레시", "저장소"]}
+  ],
+  "forbiddenTitleKeywords": ["마이크 음량", "잘 들리", "다시 한 번", "감사합니다", "고생 많"],
+  "expectedParentEdges": [
+    {"childKey": "refresh-store-action", "parentKey": "refresh-decision"}
+  ],
+  "uncertainTermGuard": {
+    "sourcePhrase": "오픈 리더",
+    "forbiddenCanonicalizations": ["OpenLidar", "OpenLeader", "OpenLiDAR"],
+    "note": "n4의 '오픈 리더'는 확정 근거가 없으므로 원문 표기 보존 또는 일반 표현이어야 한다."
+  }
+}

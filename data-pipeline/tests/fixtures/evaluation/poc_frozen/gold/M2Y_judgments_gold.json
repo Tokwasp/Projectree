@@ -1,0 +1,61 @@
+{
+  "meetingId": "M2Y",
+  "judgments": [
+    {
+      "itemId": "m1",
+      "result": "UPDATE_ACTION",
+      "targetActionId": "A-M2X-01",
+      "changes": {
+        "status": "COMPLETED"
+      },
+      "note": "기존 액션 완료 보고 — UPDATE 대표 사례"
+    },
+    {
+      "itemId": "m2",
+      "result": "ATTACH",
+      "attachTo": "D-M1-03",
+      "note": "함정: 같은 결정(SQS) 밑의 신규 작업 — A-M2X-01의 UPDATE가 아니라 CREATE"
+    },
+    {
+      "itemId": "m3",
+      "result": "ATTACH",
+      "attachTo": "A-M2X-02",
+      "note": "기존 액션에 이슈 붙이기 (1차에서 미룬 깊이 케이스)"
+    },
+    {
+      "itemId": "m4",
+      "result": "UPDATE_ACTION",
+      "targetActionId": "A-M2X-02",
+      "changes": {
+        "dueDate": "NEXT_TUESDAY"
+      },
+      "note": "기한 연기 — UPDATE, 새 액션 생성 금지"
+    },
+    {
+      "itemId": "m5",
+      "result": "UPDATE_ACTION",
+      "targetActionId": "A-M2X-03",
+      "changes": {
+        "status": "COMPLETED"
+      }
+    },
+    {
+      "itemId": "m6",
+      "result": "ATTACH",
+      "attachTo": "D-M2X-01",
+      "note": "경계 사례: 초안 공유(완료된 기존 액션)와 별개의 후속 실행 단위 — CREATE"
+    },
+    {
+      "itemId": "m7",
+      "result": "ATTACH",
+      "attachTo": "D-M1-06",
+      "note": "기존 결정(WebM 유지)의 파생 이슈(용량)에 대한 대응 작업 — CREATE"
+    },
+    {
+      "itemId": "m8",
+      "result": "MINUTES_ONLY",
+      "reason": "NOT_CONFIRMED",
+      "note": "조사 결과 + 보류 — R3"
+    }
+  ]
+}

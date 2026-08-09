@@ -1,0 +1,229 @@
+{
+  "meetingId": "M1",
+  "items": [
+    {
+      "id": "m1",
+      "type": "DECISION",
+      "predictedCategory": "AI",
+      "title": "음성 전처리에서 노이즈 제거는 하지 않고 긴 공백 제거만 한다",
+      "content": "노이즈 제거가 발음 구분을 훼손할 수 있어 노이즈는 건드리지 않고 긴 공백만 제거하기로 함.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-005",
+          "quote": "아예 노이즈를 건들지 말고 그냥 긴 공백이나 이런 쪽만 없애라"
+        }
+      ]
+    },
+    {
+      "id": "m2",
+      "type": "ACTION",
+      "predictedCategory": "AI",
+      "title": "키보드 소음 환경에서 클로바 STT 인식 테스트",
+      "content": "회의 중 키보드를 치면서 클로바가 음성을 제대로 인식하는지 확인.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-007",
+          "quote": "일단은 클로바가 인식을 제대로 해주는지가 제일 우선일 것 같아요"
+        },
+        {
+          "segmentId": "M1-seg-008",
+          "quote": "지금 말하면서 한 1분 동안 키보드 쳐보"
+        }
+      ]
+    },
+    {
+      "id": "m3",
+      "type": "DECISION",
+      "predictedCategory": "AI",
+      "title": "파이썬 3.13 버전을 사용한다",
+      "content": "3.13이 현재 안정 버전으로 판단되어 채택.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-011",
+          "quote": "파이썬 찾아보니까 3.13 쓰는 게 일단 제일 좋긴 하더라"
+        },
+        {
+          "segmentId": "M1-seg-013",
+          "quote": "최근에는 13 버전으로 가장 안정적인 버전이라고 판단하더라고요"
+        }
+      ]
+    },
+    {
+      "id": "m4",
+      "type": "ISSUE",
+      "predictedCategory": "AI",
+      "title": "파이썬 3.13에 GIL 잔존, free-threaded 버전은 라이브러리 호환 불확실",
+      "content": "GIL 없는 t 버전은 라이브러리 호환성 검증 부담이 있음.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-013",
+          "quote": "gil은 그대로 남아 있습니다"
+        }
+      ]
+    },
+    {
+      "id": "m5",
+      "type": "ISSUE",
+      "predictedCategory": "AI",
+      "title": "음성 전처리 소요 시간이 2~3시간 초과 시 문제 가능",
+      "content": "긴 음성 파일 전처리는 CPU 작업이라 소요 시간 검증 필요.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-015",
+          "quote": "그 전처리 부분은 그쪽에서 두세 시간을 안 넘으면 문제는 없을 거다"
+        }
+      ]
+    },
+    {
+      "id": "m6",
+      "type": "DECISION",
+      "predictedCategory": "INFRA",
+      "title": "비동기 처리는 메시지 큐 기반으로 하고 AWS SQS를 사용한다",
+      "content": "async 직접 구현 대비 에러 처리·재시도·DLQ 분리가 깔끔하여 SQS 채택. 라우팅 불필요하므로 카프카 제외.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-099",
+          "quote": "이렇게 할 바에 그냥 메시지 큐 쓰는 게 더 깔끔하다"
+        },
+        {
+          "segmentId": "M1-seg-122",
+          "quote": "저희는 라우팅 필요 없고 그냥 메시징 q만 필요하니까 SQS"
+        }
+      ]
+    },
+    {
+      "id": "m7",
+      "type": "DECISION",
+      "predictedCategory": "INFRA",
+      "title": "파이썬 처리(전처리·AI 호출)는 별도 서버 없이 Lambda 서버리스로 한다",
+      "content": "EC2 관리 부담과 비용 대비 Lambda가 유리. 단 다중 함수 배포 가능 여부 검증 후 확정.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-051",
+          "quote": "차라리 그냥 람다로 올리는 게 낫다"
+        }
+      ]
+    },
+    {
+      "id": "m8",
+      "type": "ISSUE",
+      "predictedCategory": "INFRA",
+      "title": "Lambda 최대 실행 시간 15분 제한",
+      "content": "전처리가 15분을 넘길 경우 Lambda로 처리 불가.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-025",
+          "quote": "최대 할 수 있는 게 15분이에요"
+        }
+      ]
+    },
+    {
+      "id": "m9",
+      "type": "ISSUE",
+      "predictedCategory": "INFRA",
+      "title": "Lambda에 여러 함수 배포 가능한지 불확실",
+      "content": "하나의 함수만 올라가는지 다중 함수 가능한지 미확인.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-073",
+          "quote": "여러 개의 함수도 올라갈 수 있는지 한번 확인해 봐야 돼요"
+        }
+      ]
+    },
+    {
+      "id": "m10",
+      "type": "ACTION",
+      "predictedCategory": "INFRA",
+      "title": "Lambda 다중 함수 배포 가능 여부 확인",
+      "content": "람다 채택 여부를 가르는 검증 작업.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-125",
+          "quote": "그럼 일단 람다가 되는지를 테스트를 해봐야겠네요"
+        }
+      ]
+    },
+    {
+      "id": "m11",
+      "type": "DECISION",
+      "predictedCategory": "BACKEND",
+      "title": "요청 타입(회의록/노드 생성)을 최초 요청 시 DB에 저장한다",
+      "content": "클로바 콜백에는 요청 타입 정보가 없어 사전 저장 후 콜백 시 조회.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-058",
+          "quote": "일단 그거를 처음 요청 봤을 때 DB에 저장을 해놔야 돼요"
+        }
+      ]
+    },
+    {
+      "id": "m12",
+      "type": "DECISION",
+      "predictedCategory": "BACKEND",
+      "title": "클로바 STT 콜백 결과를 S3에 저장하고 회의록·노드 생성에 재활용한다",
+      "content": "STT 결과를 저장해 두고 노드 생성 시 STT 재호출 없이 재사용.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-063",
+          "quote": "콜백 온 데이터 자체도 데이터 자체도 좀 저장을 좀 해놔야 될 것 같아요"
+        },
+        {
+          "segmentId": "M1-seg-065",
+          "quote": "굳이 또 STT를 생성할 STT를 또 호출할 필요는 없으니까"
+        }
+      ]
+    },
+    {
+      "id": "m13",
+      "type": "ISSUE",
+      "predictedCategory": "AI",
+      "title": "순차 처리 시 번복된 결정을 AI가 확정으로 오판",
+      "content": "회의 후반에 취소된 결정을 AI가 Decision으로 추출하는 실패 사례 발생.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-069",
+          "quote": "얘가 우리가 번복한 결정을 확정으로 지어가지고 의사결정에서 좀 실패가 일어나더라고요"
+        }
+      ]
+    },
+    {
+      "id": "m14",
+      "type": "ACTION",
+      "predictedCategory": "AI",
+      "title": "노드 추출 로직을 청크 분할 + 2차 검증 방식으로 개선",
+      "content": "문맥 단위 청크 분할 후 후보군을 재검토하는 방식으로 변경 구상.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-069",
+          "quote": "문맥 단위로 다 청크를 나눈 다음에 한 번 판단하고"
+        }
+      ]
+    },
+    {
+      "id": "m15",
+      "type": "DECISION",
+      "predictedCategory": "INFRA",
+      "title": "녹음 파일은 WebM 원본을 유지하고 MP3로 변환하지 않는다",
+      "content": "MP3 압축이 기계가 인식할 대역을 잘라 STT 품질을 떨어뜨림.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-137",
+          "quote": "그 MP3로 굳이 바꾸지 말라고 하더라고요"
+        }
+      ]
+    },
+    {
+      "id": "m16",
+      "type": "ISSUE",
+      "predictedCategory": "AI",
+      "title": "전처리 담당 위치(스프링/파이썬/AI) 미정",
+      "content": "전처리를 어느 컴포넌트가 담당할지 결론 없음.",
+      "evidence": [
+        {
+          "segmentId": "M1-seg-127",
+          "quote": "근데 전처리를 스프링에서 해야 되나 파이썬 쪽에서 해야 되나"
+        }
+      ]
+    }
+  ]
+}

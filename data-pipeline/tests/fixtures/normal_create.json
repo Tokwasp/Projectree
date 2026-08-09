@@ -1,0 +1,28 @@
+{
+  "requestId": "req-normal-001",
+  "projectId": "proj-01",
+  "externalMeetingId": "M-NORMAL",
+  "runType": "NODE_GENERATION",
+  "segments": [
+    {"segmentId": "seg-1", "startMs": 1000, "speakerLabel": "SPK_1", "text": "소음 전처리는 클로바 STT 전에 넣는 걸로 결정합시다."},
+    {"segmentId": "seg-2", "startMs": 5000, "speakerLabel": "SPK_2", "text": "그 전처리 필터는 이번 주에 제가 구현할게요."},
+    {"segmentId": "seg-3", "startMs": 9000, "speakerLabel": "SPK_1", "text": "리프레시 토큰 재사용 공격도 반드시 막아야 합니다."}
+  ],
+  "items": [
+    {"id": "m1", "type": "DECISION", "predictedCategory": "BACKEND",
+     "title": "소음 전처리 파이프라인 도입", "content": "STT 앞단에 소음 전처리 필터를 둔다.",
+     "evidence": [{"segmentId": "seg-1", "quote": "소음 전처리는 클로바 STT 전에 넣는 걸로 결정합시다."}]},
+    {"id": "m2", "type": "ACTION", "predictedCategory": "BACKEND",
+     "title": "전처리 필터 구현", "content": "이번 주 내 전처리 필터 구현.",
+     "evidence": [{"segmentId": "seg-2", "quote": "그 전처리 필터는 이번 주에 제가 구현할게요."}]},
+    {"id": "m3", "type": "ISSUE", "predictedCategory": "BACKEND",
+     "title": "리프레시 토큰 재사용 공격 대응", "content": "탈취된 리프레시 토큰 재사용 차단 필요.",
+     "evidence": [{"segmentId": "seg-3", "quote": "리프레시 토큰 재사용 공격도 반드시 막아야 합니다."}]}
+  ],
+  "judgments": [
+    {"itemId": "m1", "result": "NEW_DECISION", "category": "BACKEND"},
+    {"itemId": "m2", "result": "ATTACH", "attachTo": "m1"},
+    {"itemId": "m3", "result": "ATTACH", "attachTo": "m2"}
+  ],
+  "candidates": {"decisions": []}
+}

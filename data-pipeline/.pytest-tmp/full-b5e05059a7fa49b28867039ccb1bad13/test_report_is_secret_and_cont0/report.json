@@ -1,0 +1,54 @@
+{
+  "runId": "test-run",
+  "startedAt": "2026-08-05T14:27:59.812563+00:00",
+  "completedAt": "2026-08-05T14:27:59.820609+00:00",
+  "mode": "DRY_RUN",
+  "projectId": "embedding-backfill-project",
+  "states": [
+    "ACTIVE",
+    "UNATTACHED"
+  ],
+  "embeddingModel": "text-embedding-3-small",
+  "embeddingVersion": "node-embedding-v2-no-category",
+  "embeddingDimension": 1536,
+  "batchSize": 100,
+  "limit": null,
+  "maxCalls": null,
+  "afterNodeId": null,
+  "lastScannedNodeId": "71a07d41-0143-492b-b993-1ee2ce02edd3",
+  "counts": {
+    "scanned": 1,
+    "eligible": 1,
+    "reusable": 0,
+    "wouldGenerate": 1,
+    "generated": 0,
+    "markedStale": 0,
+    "changedDuringEmbed": 0,
+    "concurrentReadyReused": 0,
+    "skipped": 0,
+    "deferred": 0,
+    "failed": 0
+  },
+  "providerCalls": {
+    "attempted": 0,
+    "succeeded": 0,
+    "failed": 0,
+    "estimated": 1,
+    "estimatedExceedsMax": false
+  },
+  "providerUsage": [],
+  "latency": {
+    "totalMs": 8,
+    "averageProviderMs": 0
+  },
+  "results": [
+    {
+      "nodeId": "71a07d41-0143-492b-b993-1ee2ce02edd3",
+      "status": "WOULD_GENERATE",
+      "reason": "MISSING",
+      "previousStatus": null,
+      "hashPrefix": "57e62d53cd4f",
+      "latencyMs": 5
+    }
+  ]
+}

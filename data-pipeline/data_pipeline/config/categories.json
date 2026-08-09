@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "cat-v1",
+  "note": "§T-2 팀 결정 대기 임시값. 리뷰어 권장안은 DATA 포함(PLANNING/DESIGN/FRONTEND/BACKEND/AI/INFRA/DATA/ETC). 값 교체는 이 파일 수정 + 재시딩 마이그레이션 1개로 끝난다 (data_pipeline.storage.categories.reseed_categories). node.category 는 이 목록을 참조하는 reference 테이블(category)로 검증된다.",
+  "values": [
+    "PLANNING",
+    "DESIGN",
+    "FRONTEND",
+    "BACKEND",
+    "AI",
+    "INFRA",
+    "ETC"
+  ]
+}

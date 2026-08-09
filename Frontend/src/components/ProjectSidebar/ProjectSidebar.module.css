@@ -1,0 +1,150 @@
+.container {
+  display: flex;
+  box-sizing: border-box;
+  height: 100%;
+  flex-direction: column;
+  width: 100%;
+  padding: var(--space-4) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-white);
+  border-right: 1px solid var(--color-border);
+}
+
+/* 노드·회의 화면 전용 — 사이드바를 어둡게 깔고 글자는 흰색으로 뒤집는다 */
+.containerDark {
+  color: var(--color-white);
+  background: var(--color-background);
+  border-right-color: var(--color-meeting-border);
+}
+
+.containerDark .memberSection {
+  background: var(--color-meeting-panel);
+}
+
+.containerDark .memberLabel {
+  color: var(--color-gray-300);
+}
+
+.containerDark .memberAvatar,
+.containerDark .memberMore {
+  color: var(--color-white);
+  background: var(--color-meeting-bg);
+  border-color: var(--color-meeting-border);
+}
+
+.containerDark .projectMenuButton {
+  color: var(--color-white);
+}
+
+.containerDark .projectMenuButton:hover:not(:disabled) {
+  background: var(--color-meeting-panel);
+}
+
+.containerDark .projectMenuButtonActive {
+  color: var(--color-white);
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 22%,
+    var(--color-background)
+  );
+}
+
+.containerDark .projectMenuButton:disabled {
+  color: var(--color-gray-500);
+}
+
+.memberSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding: var(--space-3);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-md);
+}
+
+.memberLabel {
+  color: var(--color-gray-600);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.memberList {
+  display: flex;
+  align-items: center;
+}
+
+.memberAvatar,
+.memberMore {
+  display: flex;
+  width: var(--space-6);
+  height: var(--space-6);
+  align-items: center;
+  justify-content: center;
+  margin-left: -4px;
+  color: var(--color-gray-600);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: 9px;
+}
+
+.memberAvatar:first-child {
+  margin-left: 0;
+}
+
+.memberMore {
+  background: var(--color-gray-50);
+}
+
+.projectNavigation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+}
+
+.projectMenuButton {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: var(--space-10);
+  align-items: center;
+  padding: 0 var(--space-3);
+  color: var(--color-gray-700);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.projectMenuButton:hover:not(:disabled) {
+  background: var(--color-gray-50);
+}
+
+.projectMenuButtonActive {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-white));
+  font-weight: var(--font-semibold);
+}
+
+.projectMenuButtonActive::after {
+  position: absolute;
+  top: 25%;
+  right: var(--space-2);
+  bottom: 25%;
+  width: 3px;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  content: "";
+}
+
+.projectMenuButton:disabled {
+  color: var(--color-gray-400);
+  cursor: not-allowed;
+}

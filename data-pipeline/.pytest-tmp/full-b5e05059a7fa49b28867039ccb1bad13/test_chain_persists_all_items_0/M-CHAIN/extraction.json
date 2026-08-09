@@ -1,0 +1,55 @@
+{
+  "promptSha256": "d719d6bcfbf544268bede4a79b17cf04eeffd2ce81f50c86eb624db3482b7b1d",
+  "attempts": 1,
+  "error": null,
+  "errorCode": null,
+  "inputTokens": 100,
+  "outputTokens": 50,
+  "totalTokens": 150,
+  "latencyMs": 1,
+  "creditUsage": 8.75,
+  "attemptDiagnostics": [
+    {
+      "attempt": 1,
+      "success": true,
+      "errorCode": null,
+      "inputTokens": 100,
+      "outputTokens": 50,
+      "totalTokens": 150,
+      "creditUsage": 8.75,
+      "latencyMs": 1
+    }
+  ],
+  "rawResponse": "{\"meetingId\": \"M-CHAIN\", \"items\": [{\"id\": \"m1\", \"type\": \"DECISION\", \"predictedCategory\": \"BACKEND\", \"title\": \"소음 전처리 파이프라인 도입\", \"content\": \"STT 앞단 전처리.\", \"evidence\": [{\"segmentId\": \"seg-1\", \"quote\": \"소음 전처리는 CLOVA STT 전에 넣는 걸로 결정합시다.\"}]}, {\"id\": \"m2\", \"type\": \"ISSUE\", \"predictedCategory\": \"BACKEND\", \"title\": \"레디스 캐시 도입 여부 미확정\", \"content\": \"도입 여부 보류.\", \"evidence\": [{\"segmentId\": \"seg-2\", \"quote\": \"Redis 캐시 도입은 나중에 다시 논의해 봐야 할 것 같아요.\"}]}]}",
+  "parsed": {
+    "meetingId": "M-CHAIN",
+    "items": [
+      {
+        "id": "m1",
+        "type": "DECISION",
+        "predictedCategory": "BACKEND",
+        "title": "소음 전처리 파이프라인 도입",
+        "content": "STT 앞단 전처리.",
+        "evidence": [
+          {
+            "segmentId": "seg-1",
+            "quote": "소음 전처리는 CLOVA STT 전에 넣는 걸로 결정합시다."
+          }
+        ]
+      },
+      {
+        "id": "m2",
+        "type": "ISSUE",
+        "predictedCategory": "BACKEND",
+        "title": "레디스 캐시 도입 여부 미확정",
+        "content": "도입 여부 보류.",
+        "evidence": [
+          {
+            "segmentId": "seg-2",
+            "quote": "Redis 캐시 도입은 나중에 다시 논의해 봐야 할 것 같아요."
+          }
+        ]
+      }
+    ]
+  }
+}
