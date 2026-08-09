@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError } from "../../../../api/apiClient";
+import { apiErrorMessage } from "../../../../api/apiClient";
 import {
   acceptInvitation as requestAcceptInvitation,
   getInvitation,
@@ -34,12 +34,9 @@ export default function useInvitationLanding(token: string | null) {
         }
       } catch (caughtError) {
         if (!isCancelled) {
-          const message =
-            caughtError instanceof ApiError
-              ? caughtError.message
-              : "초대 정보를 불러오지 못했습니다.";
-
-          setError(message);
+          setError(
+            apiErrorMessage(caughtError, "초대 정보를 불러오지 못했습니다."),
+          );
         }
       } finally {
         if (!isCancelled) {
@@ -67,12 +64,7 @@ export default function useInvitationLanding(token: string | null) {
       const response = await requestAcceptInvitation(token);
       return response.projectId;
     } catch (caughtError) {
-      const message =
-        caughtError instanceof ApiError
-          ? caughtError.message
-          : "초대를 수락하지 못했습니다.";
-
-      setError(message);
+      setError(apiErrorMessage(caughtError, "초대를 수락하지 못했습니다."));
       return null;
     } finally {
       setIsAccepting(false);
@@ -96,12 +88,7 @@ export default function useInvitationLanding(token: string | null) {
       );
       return true;
     } catch (caughtError) {
-      const message =
-        caughtError instanceof ApiError
-          ? caughtError.message
-          : "초대를 거절하지 못했습니다.";
-
-      setError(message);
+      setError(apiErrorMessage(caughtError, "초대를 거절하지 못했습니다."));
       return false;
     } finally {
       setIsRejecting(false);

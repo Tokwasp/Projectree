@@ -7,15 +7,19 @@ export const nodeVertexShader = /* glsl */ `
   // 밝기는 인스턴스마다 달라야 한다(결정 선택 시 일부만 강조) — uniform으로는 표현할 수 없어
   // 인스턴스 어트리뷰트로 받고, 인스턴싱이 아닌 root는 uniform만 쓴다
   uniform float uBrightness;
+  // 삭제 대상으로 고른 노드(0=평소, 1=죽은 행성). 인스턴싱이 아닌 root만 uniform을 쓴다
+  uniform float uDead;
 
   #ifdef USE_INSTANCING
     attribute float aBrightness;
+    attribute float aDead;
   #endif
 
   varying vec3 vLocalPos;
   varying vec3 vWorldNormal;
   varying vec3 vWorldPos;
   varying float vBrightness;
+  varying float vDead;
 
   void main() {
     vLocalPos = position;
@@ -24,10 +28,12 @@ export const nodeVertexShader = /* glsl */ `
       vec4 worldPos = instanceMatrix * vec4(position, 1.0);
       vec3 worldNormal = normalize(mat3(instanceMatrix) * normal);
       vBrightness = uBrightness * aBrightness;
+      vDead = aDead;
     #else
       vec4 worldPos = vec4(position, 1.0);
       vec3 worldNormal = normalize(normal);
       vBrightness = uBrightness;
+      vDead = uDead;
     #endif
 
     vWorldNormal = worldNormal;
@@ -35,6 +41,23 @@ export const nodeVertexShader = /* glsl */ `
 
     vec4 mvPosition = modelViewMatrix * worldPos;
     gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+/**
+ * 죽은 행성 — 채도를 빼서 재처럼 만들되 완전히 꺼뜨리지는 않는다.
+ * 표면은 어둡게 누르고(ash), 원래 밝던 프레넬 림만 창백하게 남겨 Bloom 임계값(0.25)
+ * 위로 올린다. 그래서 색은 회색인데 다른 노드처럼 테두리가 은은히 빛난다.
+ */
+const deadColorFn = /* glsl */ `
+  vec3 applyDead(vec3 color, float dead) {
+    float luma = dot(color, vec3(0.299, 0.587, 0.114));
+
+    vec3 ash = vec3(luma * 0.5);
+    vec3 rim = vec3(0.72, 0.76, 0.85) * smoothstep(0.6, 1.4, luma) * 0.9;
+
+    // 살짝 푸른 재 — 완전한 무채색은 배경(#000006)에서 죽은 게 아니라 흐린 것처럼 보인다
+    return mix(color, (ash + rim) * vec3(0.96, 0.98, 1.06), dead);
   }
 `;
 
@@ -74,8 +97,10 @@ export const planetFragmentShader = /* glsl */ `
   varying vec3 vWorldNormal;
   varying vec3 vWorldPos;
   varying float vBrightness;
+  varying float vDead;
 
   ${noiseFn}
+  ${deadColorFn}
 
   void main() {
     vec3 normal = normalize(vWorldNormal);
@@ -92,7 +117,7 @@ export const planetFragmentShader = /* glsl */ `
     float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.5);
     vec3 color = surfaceColor + uGlowColor * fresnel * 1.3;
 
-    gl_FragColor = vec4(color * vBrightness, 1.0);
+    gl_FragColor = vec4(applyDead(color, vDead) * vBrightness, 1.0);
   }
 `;
 
@@ -107,8 +132,10 @@ export const starFragmentShader = /* glsl */ `
   varying vec3 vWorldNormal;
   varying vec3 vWorldPos;
   varying float vBrightness;
+  varying float vDead;
 
   ${noiseFn}
+  ${deadColorFn}
 
   void main() {
     vec3 normal = normalize(vWorldNormal);
@@ -121,7 +148,7 @@ export const starFragmentShader = /* glsl */ `
     float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 1.8);
     vec3 color = core + uGlowColor * fresnel * 2.1;
 
-    gl_FragColor = vec4(color * vBrightness, 1.0);
+    gl_FragColor = vec4(applyDead(color, vDead) * vBrightness, 1.0);
   }
 `;
 

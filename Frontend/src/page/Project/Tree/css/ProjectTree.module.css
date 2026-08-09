@@ -79,6 +79,146 @@
   font-size: var(--text-sm);
 }
 
+/* 네 모서리는 카테고리 필터·범례·보기 전환·줌이 쓴다 — 하단 가운데가 유일하게 빈 자리 */
+.actionBar {
+  position: absolute;
+  bottom: var(--space-6);
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  color: #f2f4ff;
+  background: rgba(6, 8, 20, 0.55);
+  border: 1px solid rgba(127, 216, 255, 0.4);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(3px);
+  transform: translateX(-50%);
+}
+
+.actionHint {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.actionButton,
+.editConfirm,
+.deleteConfirm {
+  padding: var(--space-1) var(--space-4);
+  color: #f2f4ff;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  background: transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.actionButton {
+  border: none;
+}
+
+.actionButton:hover:not(:disabled) {
+  border-color: rgba(127, 216, 255, 0.9);
+}
+
+/* 실행 버튼은 테두리를 세워 취소와 구분한다 */
+.editConfirm {
+  border: 1px solid rgba(127, 216, 255, 0.55);
+}
+
+.editConfirm:hover:not(:disabled) {
+  color: #061020;
+  background: #7fd8ff;
+  border-color: #7fd8ff;
+}
+
+/* 되돌릴 수 없는 동작이라 붉은 계열로 따로 세운다 */
+.deleteConfirm {
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.55);
+}
+
+.deleteConfirm:hover:not(:disabled) {
+  color: #1b1c1e;
+  background: #f87171;
+  border-color: #f87171;
+}
+
+.actionButton:disabled,
+.editConfirm:disabled,
+.deleteConfirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 하단 바 바로 위 — 고른 노드가 많아지면 위로 쌓이다 스크롤된다 */
+.editPanel {
+  position: absolute;
+  bottom: calc(var(--space-6) + 52px);
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 420px;
+  max-height: 40vh;
+  padding: var(--space-3) var(--space-4);
+  overflow-y: auto;
+  background: rgba(6, 8, 20, 0.82);
+  border: 1px solid rgba(127, 216, 255, 0.4);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(6px);
+  transform: translateX(-50%);
+}
+
+.editRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.editInput {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  color: #f2f4ff;
+  font-size: var(--text-xs);
+  background: rgba(127, 216, 255, 0.08);
+  border: 1px solid rgba(127, 216, 255, 0.3);
+  border-radius: var(--radius-sm);
+}
+
+.editInput:focus {
+  border-color: rgba(127, 216, 255, 0.9);
+  outline: none;
+}
+
+.editRemove {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: #f2f4ff;
+  font-size: var(--text-sm);
+  line-height: 1;
+  background: transparent;
+  border: 1px solid rgba(127, 216, 255, 0.4);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+.editRemove:hover:not(:disabled) {
+  color: #1b1c1e;
+  background: #f87171;
+  border-color: #f87171;
+}
+
+.editRemove:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .taskList {
   display: flex;
   flex-direction: column;

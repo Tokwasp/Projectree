@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError } from "../../../api/apiClient";
+import { apiErrorMessage } from "../../../api/apiClient";
 import {
   getCachedMemberProfile,
   getMemberProfile,
@@ -29,14 +29,11 @@ export default function useMemberProfile() {
           setProfile(response);
         }
       } catch (caughtError) {
-        const message =
-          caughtError instanceof ApiError
-            ? caughtError.message
-            : "회원 정보를 불러오지 못했습니다.";
-
         if (!isCancelled) {
           setProfile(null);
-          setError(message);
+          setError(
+            apiErrorMessage(caughtError, "회원 정보를 불러오지 못했습니다."),
+          );
         }
       } finally {
         if (!isCancelled) {

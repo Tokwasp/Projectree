@@ -49,7 +49,45 @@ export const toTreeNodeInput = (
   children: node.children?.map(toTreeNodeInput),
 });
 
+/**
+ * 노드별 nodeVersion을 id로 찾을 수 있게 모은다 — 화면에 그리는 TreeNodeInput은
+ * 버전을 들고 있지 않아서, 수정 요청에 실을 값을 여기서 따로 챙겨 둔다.
+ */
+export const collectNodeVersions = (
+  node: ProjectTreeNodeResponse,
+  versions = new Map<string, number>(),
+): Map<string, number> => {
+  versions.set(node.id, node.nodeVersion ?? 0);
+  node.children?.forEach((child) => collectNodeVersions(child, versions));
+  return versions;
+};
+
 export const getProjectTree = (
   projectId: number,
 ): Promise<ProjectTreeResponse> =>
   apiRequest<ProjectTreeResponse>(`/projects/${projectId}/nodes/tree`);
+
+export const deleteProjectNodes = (
+  projectId: number,
+  nodeIds: string[],
+  expectedGraphVersion: number,
+): Promise<void> =>
+  apiRequest<void>(`/projects/${projectId}/nodes/delete`, {
+    method: "POST",
+    body: JSON.stringify({ nodeIds, expectedGraphVersion }),
+  });
+
+export interface ProjectNodeTitleUpdate {
+  id: string;
+  title: string;
+  expectedNodeVersion: number;
+}
+
+export const updateProjectNodeTitles = (
+  projectId: number,
+  nodes: ProjectNodeTitleUpdate[],
+): Promise<void> =>
+  apiRequest<void>(`/projects/${projectId}/nodes`, {
+    method: "PATCH",
+    body: JSON.stringify({ nodes }),
+  });

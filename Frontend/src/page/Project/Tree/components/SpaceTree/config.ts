@@ -141,6 +141,21 @@ export const SELECTION_BRIGHTNESS = {
 /** 마우스를 올린 결정 노드를 키우는 배율. 누를 수 있다는 신호는 커서만으로는 약하다. */
 export const HOVER_SCALE = 1.3;
 
+/** 노드를 고르는 모드. null이면 평소대로 결정 노드만 클릭 대상이다. */
+export type PickMode = "delete" | "edit";
+
+/**
+ * 노드 고르기 모드에서 전체 노드에 곱하는 밝기. 화면이 통째로 살짝 밝아지는 것으로
+ * "지금은 아무 노드나 고를 수 있다"를 알린다.
+ */
+export const PICK_MODE_BRIGHTNESS = 1.45;
+
+/**
+ * 수정 대상으로 고른 노드의 밝기. 삭제는 고른 노드를 셰이더에서 회색으로 죽이지만,
+ * 수정은 지우는 게 아니라 반대로 더 밝혀서 "이 노드를 고쳤다"를 알린다.
+ */
+export const PICKED_BRIGHTNESS = 2.2;
+
 /** 연관 없는 노드의 라벨에 곱하는 투명도. 아예 감추면 트리 모양이 읽히지 않는다. */
 export const SELECTION_LABEL_DIM = 0.3;
 

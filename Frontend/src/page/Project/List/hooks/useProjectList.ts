@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError } from "../../../../api/apiClient";
+import { apiErrorMessage } from "../../../../api/apiClient";
 import type { ProjectSummary } from "../../../../types/Project";
 import {
   getCachedProjectList,
@@ -83,13 +83,10 @@ export default function useProjectList(
           );
         }
       } catch (caughtError) {
-        const message =
-          caughtError instanceof ApiError
-            ? caughtError.message
-            : "프로젝트 목록 조회에 실패했습니다.";
-
         if (isActive) {
-          setError(message);
+          setError(
+            apiErrorMessage(caughtError, "프로젝트 목록 조회에 실패했습니다."),
+          );
         }
       } finally {
         if (isActive) {

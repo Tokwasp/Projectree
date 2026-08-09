@@ -8,6 +8,8 @@ import {
   HOVER_SCALE,
   LABEL_FADE_DISTANCE,
   NODE_VISUALS,
+  PICKED_BRIGHTNESS,
+  PICK_MODE_BRIGHTNESS,
   SELECTION_BRIGHTNESS,
   SELECTION_LABEL_DIM,
   SPACE,
@@ -15,6 +17,7 @@ import {
   highlightFadeRange,
   type FlatTreeNode,
   type OrbitControlsRef,
+  type PickMode,
   type TreeEdge,
 } from "./config";
 import {
@@ -47,6 +50,10 @@ interface TreeSceneProps {
   /** 선택된 결정과 연관된 노드 id. null이면 선택 없음 — 전부 기본 상태로 둔다. */
   highlightIds: Set<string> | null;
   onSelectDecision: (id: string) => void;
+  /** 노드 고르기 모드 — 결정 클릭 대신 아무 노드나 삭제·수정 대상으로 고른다. */
+  pickMode: PickMode | null;
+  pickedIds: Set<string>;
+  onTogglePick: (id: string) => void;
 }
 
 export function TreeScene({
@@ -56,6 +63,9 @@ export function TreeScene({
   is2D,
   highlightIds,
   onSelectDecision,
+  pickMode,
+  pickedIds,
+  onTogglePick,
 }: TreeSceneProps) {
   const runtime = useTreeRuntime(flat);
   // 노드를 지날 때만 바뀌므로 state로 둬도 리렌더가 잦지 않다. 라벨까지 같이 강조해야 해서
@@ -96,6 +106,7 @@ export function TreeScene({
         controlsRef={controlsRef}
         highlightIds={highlightIds}
         onHover={setHoveredNodeId}
+        pickMode={pickMode}
       />
       {PLANET_TYPES.map((type) =>
         flat.byType[type].length > 0 ? (
@@ -104,8 +115,22 @@ export function TreeScene({
             nodes={flat.byType[type]}
             runtime={runtime}
             highlightIds={highlightIds}
-            // 클릭 대상은 결정 노드뿐이다
-            onSelect={type === "decision" ? onSelectDecision : undefined}
+            /*
+             * 평소 클릭 대상은 결정 노드뿐이다. 고르기 모드에서는 실제 그래프 노드
+             * (결정·작업·이슈)를 모두 고를 수 있다 — 카테고리는 서버가 만드는
+             * 묶음이라 지우지도 고치지도 못한다.
+             */
+            onSelect={
+              pickMode
+                ? type === "category"
+                  ? undefined
+                  : onTogglePick
+                : type === "decision"
+                  ? onSelectDecision
+                  : undefined
+            }
+            pickMode={pickMode}
+            pickedIds={pickedIds}
             // hover는 전 타입에서 받는다 — 라벨을 펼치는 신호라서.
             // 포인터가 움직일 때마다 타입별 인스턴스를 레이캐스팅하게 되지만,
             // 인스턴스당 경계구 판정이라 삼각형 검사까지 가는 건 실제로 맞은 하나뿐이다
@@ -269,6 +294,8 @@ function PlanetNodes({
   onSelect,
   hoveredId,
   onHover,
+  pickMode,
+  pickedIds,
 }: {
   nodes: FlatTreeNode[];
   runtime: TreeRuntime;
@@ -276,10 +303,14 @@ function PlanetNodes({
   onSelect?: (id: string) => void;
   hoveredId: string | null;
   onHover?: (id: string | null) => void;
+  pickMode: PickMode | null;
+  /** 고른 노드 — 삭제 모드면 셰이더에서 회색으로 죽고, 수정 모드면 더 밝아진다. */
+  pickedIds: Set<string>;
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const brightnessRef = useRef<THREE.InstancedBufferAttribute>(null);
+  const deadRef = useRef<THREE.InstancedBufferAttribute>(null);
   const pressPointRef = useRef<{ x: number; y: number } | null>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const visual = NODE_VISUALS[nodes[0].type];
@@ -290,6 +321,8 @@ function PlanetNodes({
       uGlowColor: { value: new THREE.Color(visual.glowColor) },
       uTime: { value: 0 },
       uBrightness: { value: 1 },
+      // 인스턴싱 쪽은 aDead를 쓰지만, 셰이더가 root와 공용이라 선언은 채워 둔다
+      uDead: { value: 0 },
     }),
     [visual],
   );
@@ -298,6 +331,21 @@ function PlanetNodes({
     () => new Float32Array(nodes.length).fill(1),
     [nodes],
   );
+
+  const dead = useMemo(() => new Float32Array(nodes.length), [nodes]);
+
+  useEffect(() => {
+    const attr = deadRef.current;
+    if (!attr) return;
+
+    const array = attr.array as Float32Array;
+    for (let i = 0; i < nodes.length; i++) {
+      // 죽이는 건 삭제뿐이다 — 수정 대상은 밝기로만 구분한다
+      array[i] =
+        pickMode === "delete" && pickedIds.has(nodes[i].id) ? 1 : 0;
+    }
+    attr.needsUpdate = true;
+  }, [nodes, pickMode, pickedIds]);
 
   // 크기와 밝기를 매 프레임 비교하지 않도록 인덱스로 한 번 찾아둔다
   const hoveredIndex = useMemo(
@@ -316,14 +364,20 @@ function PlanetNodes({
       array[i] =
         i === emphasizedIndex
           ? SELECTION_BRIGHTNESS.HOVER
-          : !highlightIds
-            ? 1
-            : highlightIds.has(nodes[i].id)
-              ? SELECTION_BRIGHTNESS.HIGHLIGHT
-              : SELECTION_BRIGHTNESS.DIM;
+          : // 고르기 모드에서는 전체를 고르게 밝힌다 — 결정 선택 강조와 섞이면 신호가 흐려진다.
+            // 수정 대상으로 고른 노드만 그 위로 한 단계 더 올려 구분한다
+            pickMode
+            ? pickMode === "edit" && pickedIds.has(nodes[i].id)
+              ? PICKED_BRIGHTNESS
+              : PICK_MODE_BRIGHTNESS
+            : !highlightIds
+              ? 1
+              : highlightIds.has(nodes[i].id)
+                ? SELECTION_BRIGHTNESS.HIGHLIGHT
+                : SELECTION_BRIGHTNESS.DIM;
     }
     attr.needsUpdate = true;
-  }, [nodes, highlightIds, emphasizedIndex]);
+  }, [nodes, highlightIds, emphasizedIndex, pickMode, pickedIds]);
 
   /**
    * 클릭 판정용 경계구. three는 이 구를 한 번 계산해 캐시하는데 인스턴스는 매 프레임
@@ -426,6 +480,11 @@ function PlanetNodes({
           attach="attributes-aBrightness"
           args={[brightness, 1]}
         />
+        <instancedBufferAttribute
+          ref={deadRef}
+          attach="attributes-aDead"
+          args={[dead, 1]}
+        />
       </sphereGeometry>
       <shaderMaterial
         ref={materialRef}
@@ -444,12 +503,14 @@ function RootNode({
   controlsRef,
   highlightIds,
   onHover,
+  pickMode,
 }: {
   id: string;
   runtime: TreeRuntime;
   controlsRef: OrbitControlsRef;
   highlightIds: Set<string> | null;
   onHover: (id: string | null) => void;
+  pickMode: PickMode | null;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
@@ -467,16 +528,20 @@ function RootNode({
       uGlowColor: { value: new THREE.Color(visual.glowColor) },
       uTime: { value: 0 },
       uBrightness: { value: 1 },
+      // 루트는 고르기 대상이 아니라 항상 0이다 — 셰이더가 선언을 요구해서 채워 둔다
+      uDead: { value: 0 },
     }),
     [visual],
   );
 
   // 루트는 인스턴싱이 아니라 uniform 하나로 끝난다
-  const brightness = !highlightIds
-    ? 1
-    : highlightIds.has(id)
-      ? SELECTION_BRIGHTNESS.HIGHLIGHT
-      : SELECTION_BRIGHTNESS.DIM;
+  const brightness = pickMode
+    ? PICK_MODE_BRIGHTNESS
+    : !highlightIds
+      ? 1
+      : highlightIds.has(id)
+        ? SELECTION_BRIGHTNESS.HIGHLIGHT
+        : SELECTION_BRIGHTNESS.DIM;
 
   useFrame((_, delta) => {
     const state = runtime.nodeStates.get(id);

@@ -11,6 +11,7 @@ import {
   UI_FONT,
   UI_SURFACE,
   type OrbitControlsRef,
+  type PickMode,
   type TreeNodeInput,
 } from "./config";
 import { TreeScene } from "./TreeScene";
@@ -31,13 +32,25 @@ interface SpaceTreeProps {
   onSelectDecision: (id: string) => void;
   /** 우측 패널이 덮는 폭 — 줌·보기 전환 버튼을 그만큼 왼쪽으로 밀어낸다. */
   rightInset?: number;
+  /**
+   * 노드 고르기 모드 — 전체 노드가 밝아지고 아무 노드나 클릭 대상이 된다.
+   * 고른 노드는 삭제면 회색으로 죽고, 수정이면 반대로 더 밝아진다.
+   */
+  pickMode?: PickMode | null;
+  pickedIds?: Set<string>;
+  onTogglePick?: (id: string) => void;
 }
+
+const NO_PICKED_IDS: Set<string> = new Set();
 
 export function SpaceTree({
   data,
   highlightIds,
   onSelectDecision,
   rightInset = 0,
+  pickMode = null,
+  pickedIds = NO_PICKED_IDS,
+  onTogglePick = () => {},
 }: SpaceTreeProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const [is2D, setIs2D] = useState(false);
@@ -75,6 +88,9 @@ export function SpaceTree({
           is2D={is2D}
           highlightIds={highlightIds}
           onSelectDecision={onSelectDecision}
+          pickMode={pickMode}
+          pickedIds={pickedIds}
+          onTogglePick={onTogglePick}
         />
 
         <OrbitControls

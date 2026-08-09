@@ -27,6 +27,13 @@ export class ApiError extends Error {
 const isErrorResponse = (body: unknown): body is ApiErrorResponse =>
   typeof body === "object" && body !== null && "errorCode" in body;
 
+/**
+ * 실패 사유는 서버가 가장 정확히 안다 — 응답을 받았다면 서버 메시지를 그대로 띄운다.
+ * fallback은 네트워크가 끊겨 서버에 닿지도 못한 경우에만 쓰인다.
+ */
+export const apiErrorMessage = (caught: unknown, fallback: string): string =>
+  caught instanceof ApiError ? caught.message : fallback;
+
 export const apiRequest = async <T>(
   path: string,
   init: RequestInit = {},

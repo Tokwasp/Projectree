@@ -4,7 +4,7 @@ import {
   getCategories,
   type NodeCategory,
 } from "../api/categoryApi";
-import { ApiError } from "../../../../api/apiClient";
+import { apiErrorMessage } from "../../../../api/apiClient";
 
 export default function useCategories() {
   const cachedCategories = getCachedCategories();
@@ -26,13 +26,8 @@ export default function useCategories() {
           setCategories(categoryData);
         }
       } catch (caughtError) {
-        const message =
-          caughtError instanceof ApiError
-            ? caughtError.message
-            : "카테고리 조회에 실패했습니다.";
-
         if (isActive) {
-          setError(message);
+          setError(apiErrorMessage(caughtError, "카테고리 조회에 실패했습니다."));
         }
       } finally {
         if (isActive) {
