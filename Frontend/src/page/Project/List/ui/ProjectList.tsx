@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ProjectGrid from "../../../../components/ProjectGrid/ProjectGrid";
 import ProjectGridSkeleton from "../../../../components/ProjectGridSkeleton/ProjectGridSkeleton";
 import CreateProjectIcon from "../../../Home/assets/create_project_icon.png";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import useProjectList from "../hooks/useProjectList";
 import style from "../css/ProjectList.module.css";
 
@@ -12,8 +13,14 @@ const SKELETON_CARD_COUNT = 8;
 export default function ProjectList() {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedKeyword = useDebouncedValue(searchInput, 300);
   const { projects, totalElements, totalPages, isLoading, error } =
-    useProjectList(currentPage, PROJECTS_PER_PAGE);
+    useProjectList(
+      currentPage,
+      PROJECTS_PER_PAGE,
+      debouncedKeyword,
+    );
 
   const pages = Array.from({ length: totalPages }, (_, index) => index);
 
@@ -22,8 +29,8 @@ export default function ProjectList() {
       <div className={style.heading}>
         <h1 className={style.title}>프로젝트</h1>
         <p className={style.description}>
-          총 <strong className={style.projectCount}>{totalElements}</strong>개의
-          프로젝트에 참여하고 있어요.
+          {debouncedKeyword ? "검색된 프로젝트가 " : "참여 중인 프로젝트가 "}
+          총 <strong className={style.projectCount}>{totalElements}</strong>개예요.
         </p>
       </div>
 
@@ -34,6 +41,11 @@ export default function ProjectList() {
             type="search"
             placeholder="프로젝트 검색..."
             aria-label="프로젝트 검색"
+            value={searchInput}
+            onChange={(event) => {
+              setSearchInput(event.target.value);
+              setCurrentPage(0);
+            }}
           />
         </div>
 
@@ -60,7 +72,11 @@ export default function ProjectList() {
       ) : (
         <ProjectGrid
           projects={projects}
-          emptyMessage="참여 중인 프로젝트가 없습니다."
+          emptyMessage={
+            debouncedKeyword
+              ? "검색 결과가 없습니다."
+              : "참여 중인 프로젝트가 없습니다."
+          }
         />
       )}
 
