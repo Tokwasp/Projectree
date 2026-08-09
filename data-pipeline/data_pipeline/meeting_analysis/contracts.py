@@ -37,6 +37,22 @@ class NodeContentUpdateCommandMessage:
 
 
 @dataclass(frozen=True)
+class NodeContentBatchUpdateItem:
+    node_id: uuid.UUID
+    expected_node_version: int
+    title: str
+
+
+@dataclass(frozen=True)
+class NodeContentBatchUpdateCommandMessage:
+    command_id: uuid.UUID
+    project_id: str
+    nodes: tuple[NodeContentBatchUpdateItem, ...]
+    requested_by_member_id: str
+    requested_at: datetime
+
+
+@dataclass(frozen=True)
 class NodeDeleteCommandMessage:
     """Seed Node ids for one logical delete; Python computes the closure."""
 
@@ -51,6 +67,7 @@ class NodeDeleteCommandMessage:
 JavaCommandMessage: TypeAlias = (
     MeetingAnalysisCommandMessage
     | NodeContentUpdateCommandMessage
+    | NodeContentBatchUpdateCommandMessage
     | NodeDeleteCommandMessage
 )
 
@@ -145,18 +162,21 @@ class AnalysisCommandParser:
 
 
 class NodeContentUpdateCommandParser:
-    """Strict parser for canonical Node title/content update commands."""
+    """Strict parser for V1 single and V2 batch Node update commands."""
 
-    def parse(self, body: str) -> NodeContentUpdateCommandMessage:
+    def parse(
+        self, body: str
+    ) -> NodeContentUpdateCommandMessage | NodeContentBatchUpdateCommandMessage:
         payload = _json_object(body)
         return self.parse_payload(payload)
 
-    def parse_payload(self, payload: dict) -> NodeContentUpdateCommandMessage:
-        if type(payload.get("commandSchemaVersion")) is not int or payload.get(
-            "commandSchemaVersion"
-        ) != 1:
+    def parse_payload(
+        self, payload: dict
+    ) -> NodeContentUpdateCommandMessage | NodeContentBatchUpdateCommandMessage:
+        schema_version = payload.get("commandSchemaVersion")
+        if type(schema_version) is not int or schema_version not in {1, 2}:
             raise AnalysisCommandValidationError(
-                "commandSchemaVersion must be 1"
+                "commandSchemaVersion must be 1 or 2"
             )
         if payload.get("commandType") != "NODE_CONTENT_UPDATE_REQUESTED":
             raise AnalysisCommandValidationError(
@@ -174,6 +194,13 @@ class NodeContentUpdateCommandParser:
         nested = payload.get("payload")
         if not isinstance(nested, dict):
             raise AnalysisCommandValidationError("payload must be an object")
+        if schema_version == 2:
+            return self._parse_v2(
+                command_id=command_id,
+                project_id=project_id,
+                requested_at=requested_at,
+                nested=nested,
+            )
         node_id = AnalysisCommandParser._uuid(nested.get("nodeId"), "nodeId")
         expected = nested.get("expectedNodeVersion")
         if (
@@ -219,6 +246,84 @@ class NodeContentUpdateCommandParser:
             expected_node_version=expected,
             title=title,
             content=content,
+            requested_by_member_id=member_id,
+            requested_at=requested_at,
+        )
+
+    @staticmethod
+    def _parse_v2(
+        *,
+        command_id: uuid.UUID,
+        project_id: str,
+        requested_at: datetime,
+        nested: dict,
+    ) -> NodeContentBatchUpdateCommandMessage:
+        raw_nodes = nested.get("nodes")
+        if not isinstance(raw_nodes, list):
+            raise AnalysisCommandValidationError("nodes must be an array")
+        if not raw_nodes:
+            raise AnalysisCommandValidationError(
+                "nodes must contain at least one item"
+            )
+        if len(raw_nodes) > 100:
+            raise AnalysisCommandValidationError(
+                "nodes must contain at most 100 items"
+            )
+
+        nodes: list[NodeContentBatchUpdateItem] = []
+        seen_node_ids: set[uuid.UUID] = set()
+        for index, raw_item in enumerate(raw_nodes):
+            if not isinstance(raw_item, dict):
+                raise AnalysisCommandValidationError(
+                    f"nodes[{index}] must be an object"
+                )
+            if "content" in raw_item:
+                raise AnalysisCommandValidationError(
+                    f"nodes[{index}].content is not supported in schema version 2"
+                )
+            node_id = AnalysisCommandParser._uuid(
+                raw_item.get("nodeId"), f"nodes[{index}].nodeId"
+            )
+            if node_id in seen_node_ids:
+                raise AnalysisCommandValidationError(
+                    "nodes must not contain duplicate nodeId values"
+                )
+            seen_node_ids.add(node_id)
+            expected = raw_item.get("expectedNodeVersion")
+            if (
+                isinstance(expected, bool)
+                or not isinstance(expected, int)
+                or expected <= 0
+                or expected > 2**31 - 1
+            ):
+                raise AnalysisCommandValidationError(
+                    f"nodes[{index}].expectedNodeVersion must be a positive "
+                    "JSON integer"
+                )
+            title = raw_item.get("title")
+            if not isinstance(title, str) or not title.strip():
+                raise AnalysisCommandValidationError(
+                    f"nodes[{index}].title must be a non-blank string"
+                )
+            if len(title) > 255:
+                raise AnalysisCommandValidationError(
+                    f"nodes[{index}].title must be at most 255 characters"
+                )
+            nodes.append(
+                NodeContentBatchUpdateItem(
+                    node_id=node_id,
+                    expected_node_version=expected,
+                    title=title,
+                )
+            )
+
+        member_id = AnalysisCommandParser._positive_int(
+            nested.get("requestedByMemberId"), "requestedByMemberId"
+        )
+        return NodeContentBatchUpdateCommandMessage(
+            command_id=command_id,
+            project_id=project_id,
+            nodes=tuple(nodes),
             requested_by_member_id=member_id,
             requested_at=requested_at,
         )
@@ -337,6 +442,8 @@ __all__ = [
     "JavaCommandMessage",
     "JavaCommandParser",
     "MeetingAnalysisCommandMessage",
+    "NodeContentBatchUpdateCommandMessage",
+    "NodeContentBatchUpdateItem",
     "NodeContentUpdateCommandMessage",
     "NodeContentUpdateCommandParser",
     "NodeDeleteCommandMessage",

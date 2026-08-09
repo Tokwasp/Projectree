@@ -27,12 +27,25 @@ PROJECT_GRAPH_CHANGED = "PROJECT_GRAPH_CHANGED"
 MEETING_SUMMARY_READY = "MEETING_SUMMARY_READY"
 ANALYSIS_TASK_STATUS_CHANGED = "ANALYSIS_TASK_STATUS_CHANGED"
 NODE_DELETE_REJECTED = "NODE_DELETE_REJECTED"
+NODE_CONTENT_UPDATE_REJECTED = "NODE_CONTENT_UPDATE_REJECTED"
 
 NODE_DELETE_REJECTION_REASONS = frozenset(
     {
         "GRAPH_VERSION_CONFLICT",
         "NODE_NOT_FOUND",
         "NODE_PROJECT_MISMATCH",
+    }
+)
+
+NODE_CONTENT_UPDATE_REJECTION_REASONS = frozenset(
+    {
+        "NODE_NOT_FOUND",
+        "NODE_NOT_EDITABLE",
+        "MERGED_SOURCE_NOT_EDITABLE",
+        "NODE_VERSION_CONFLICT",
+        "INVALID_CURRENT_REVISION",
+        "NO_CHANGE",
+        "GRAPH_SNAPSHOT_TOO_LARGE",
     }
 )
 
@@ -192,6 +205,33 @@ def stage_node_delete_rejected_v3(
     )
 
 
+def stage_node_content_update_rejected_v3(
+    session,
+    *,
+    command: MeetingAnalysisCommand,
+    reason_code: str,
+    failed_node_id: str | None,
+) -> OutboxEvent:
+    """Stage one terminal V2 Node update rejection for Java."""
+
+    if reason_code not in NODE_CONTENT_UPDATE_REJECTION_REASONS:
+        raise ValueError(
+            f"unsupported NODE_CONTENT_UPDATE_REJECTED reasonCode: {reason_code}"
+        )
+    return _stage_v3(
+        session,
+        event_type=NODE_CONTENT_UPDATE_REJECTED,
+        command=command,
+        aggregate_type="project_graph",
+        aggregate_id=command.project_id,
+        payload={
+            "sourceType": "NODE_CONTENT_UPDATE",
+            "reasonCode": reason_code,
+            "failedNodeId": failed_node_id,
+        },
+    )
+
+
 def stage_task_failed_v3(
     session,
     *,
@@ -232,9 +272,12 @@ __all__ = [
     "MEETING_SUMMARY_READY",
     "NODE_DELETE_REJECTED",
     "NODE_DELETE_REJECTION_REASONS",
+    "NODE_CONTENT_UPDATE_REJECTED",
+    "NODE_CONTENT_UPDATE_REJECTION_REASONS",
     "PROJECT_GRAPH_CHANGED",
     "stage_meeting_summary_ready_v3",
     "stage_node_delete_rejected_v3",
+    "stage_node_content_update_rejected_v3",
     "stage_project_graph_changed_v3",
     "stage_task_failed_v3",
 ]

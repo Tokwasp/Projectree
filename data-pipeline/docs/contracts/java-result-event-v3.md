@@ -3,7 +3,8 @@
 ## 공통 envelope
 
 모든 Result event는 `eventSchemaVersion=3`, 안정적인 UUID `eventId`, `eventType`, UTC
-`occurredAt`, 숫자 `projectId`, 숫자 `meetingId`, UUID `commandId`, `payload`를 가진다.
+`occurredAt`, 숫자 `projectId`, 숫자 또는 사후 Graph 명령의 `null`인 `meetingId`, UUID
+`commandId`, `payload`를 가진다.
 전달은 at-least-once이며 Java Inbox가 `eventId`로 중복을 제거한다.
 
 Command 기반 성공 경로는 다음과 같이 분리한다.
@@ -11,6 +12,7 @@ Command 기반 성공 경로는 다음과 같이 분리한다.
 - `NODES` 성공: Result SQS의 `PROJECT_GRAPH_CHANGED`
 - `SUMMARY` 성공: Result event가 아니라 Java meeting-record HTTP Callback
 - task 최종 실패: Result SQS의 `ANALYSIS_TASK_STATUS_CHANGED`
+- V2 Node 제목 Batch 수정 거절: Result SQS의 `NODE_CONTENT_UPDATE_REJECTED`
 
 따라서 command 기반 `SUMMARY` 성공에 `MEETING_SUMMARY_READY`를 발행하지 않는다. 이
 상수와 stage 함수는 command가 없는 legacy 경로의 호환을 위해서만 남아 있다.
@@ -38,6 +40,12 @@ Command 기반 성공 경로는 다음과 같이 분리한다.
 
 `MEETING_RECORD_SUMMARY_ALREADY_FAILED` 응답은 Java가 이미 실패를 확정한 상태이므로
 동일 실패 event를 중복 생성하지 않는다.
+
+V2 Node 제목 Batch 수정의 결정적 실패는 `NODE_CONTENT_UPDATE_REJECTED`를 사용한다.
+특정 Node가 원인이면 `failedNodeId`에 canonical UUID를 넣는다. V2 `NO_CHANGE`는 첫
+no-op Node UUID를 넣고, `GRAPH_SNAPSHOT_TOO_LARGE`처럼 특정 Node가 없는 Batch 전체
+실패만 `null`을 넣는다. V1 단건 수정에는 호환성을 위해 이 rejection event를 소급
+적용하지 않는다.
 
 ## Graph claim-check
 

@@ -79,6 +79,7 @@ S3 및 Result SQS 실패는 기존 Outbox Publisher가 같은 Artifact와 eventI
 Snapshot도 top-level `meetingId=null`이며 기존 Full Graph Snapshot v1 serializer를
 사용한다. 각 Node의 `sourceMeetingId`와 Evidence의 `meetingId`는 바꾸지 않는다.
 
-Java에 Node mutation 전용 실패 Event 계약은 아직 없으므로 business failure는
-Python command inbox에 `FAILED`와 failure code로 기록하고 성공 Snapshot/Event를
-만들지 않는다. 잘못된 JSON/schema는 기존 SQS redrive/DLQ 정책을 따른다.
+V2 Batch에 추가된 `NODE_CONTENT_UPDATE_REJECTED`는 V1 wire 동작에 소급 적용하지
+않는다. V1 business failure는 기존처럼 Python command inbox에 `FAILED`와 failure
+code로 기록하고 성공 Snapshot/Event를 만들지 않는다. 잘못된 JSON/schema는 기존
+SQS redrive/DLQ 정책을 따른다.

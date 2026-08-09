@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from data_pipeline.config import load_settings
 from data_pipeline.storage import (
+    MeetingAnalysisCommand,
     Node,
     NodeCandidate,
     NodeCandidateEvidence,
@@ -568,7 +570,7 @@ def test_clean_alembic_baseline_round_trip(tmp_path, monkeypatch):
     engine.dispose()
     assert (
         ScriptDirectory.from_config(config).get_current_head()
-            == "0012_node_delete_command"
+            == "0013_node_content_batch_update"
     )
 
 
@@ -593,6 +595,39 @@ def test_node_update_command_schema_generalizes_existing_inbox(session_factory):
         for column in inspector.get_columns("graph_snapshot_artifact")
     }
     assert artifact_columns["meeting_id"]["nullable"] is True
+
+
+@pytest.mark.parametrize(
+    ("target_node_id", "expected_node_version"),
+    [
+        (uuid.uuid4(), None),
+        (None, 1),
+    ],
+)
+def test_node_update_command_shape_rejects_half_batch_rows(
+    session_factory, target_node_id, expected_node_version
+):
+    with session_factory() as session:
+        session.add(
+            MeetingAnalysisCommand(
+                command_id=uuid.uuid4(),
+                command_type="NODE_CONTENT_UPDATE_REQUESTED",
+                project_id="15",
+                meeting_id=None,
+                room_name=None,
+                generate_summary=None,
+                generate_nodes=None,
+                target_node_id=target_node_id,
+                expected_node_version=expected_node_version,
+                expected_graph_version=None,
+                requested_by_member_id="15",
+                requested_at=datetime.now(timezone.utc),
+                status="FAILED",
+                payload_hash="a" * 64,
+            )
+        )
+        with pytest.raises(IntegrityError):
+            session.commit()
 
 
 def test_0008_to_0009_upgrade_preserves_meeting_and_adds_graph_contract(
@@ -958,7 +993,82 @@ def test_revision_files_do_not_use_live_orm_metadata():
         "0010_meeting_analysis_join_and_result_v3.py",
         "0011_node_content_update_command.py",
         "0012_node_delete_command.py",
+        "0013_node_content_batch_update.py",
     }
+
+
+def test_0013_allows_batch_shape_and_blocks_unsafe_downgrade(
+    tmp_path, monkeypatch
+):
+    database_url = f"sqlite:///{tmp_path / 'node-update-batch.db'}"
+    _set_database_url(monkeypatch, database_url)
+    config = _alembic_config()
+    command.upgrade(config, "0012_node_delete_command")
+    command.upgrade(config, "head")
+    engine = make_engine(database_url)
+    command_id = uuid.uuid4().hex
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO meeting_analysis_command ("
+                "id, command_id, command_type, project_id, meeting_id, "
+                "room_name, generate_summary, generate_nodes, "
+                "target_node_id, expected_node_version, "
+                "expected_graph_version, requested_by_member_id, "
+                "requested_at, status, payload_hash, created_at, updated_at"
+                ") VALUES ("
+                ":id, :command_id, 'NODE_CONTENT_UPDATE_REQUESTED', "
+                "'15', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '15', "
+                "CURRENT_TIMESTAMP, 'FAILED', :payload_hash, "
+                "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            ),
+            {
+                "id": uuid.uuid4().hex,
+                "command_id": command_id,
+                "payload_hash": "a" * 64,
+            },
+        )
+    engine.dispose()
+
+    with pytest.raises(
+        RuntimeError,
+        match="cannot downgrade while V2 Node content batch commands exist",
+    ):
+        command.downgrade(config, "0012_node_delete_command")
+
+
+def test_0013_downgrades_when_no_batch_rows_exist(tmp_path, monkeypatch):
+    database_url = f"sqlite:///{tmp_path / 'node-update-batch-empty.db'}"
+    _set_database_url(monkeypatch, database_url)
+    config = _alembic_config()
+    command.upgrade(config, "head")
+    command.downgrade(config, "0012_node_delete_command")
+    command.upgrade(config, "head")
+
+
+@pytest.mark.skipif(
+    not os.getenv("DATABASE_URL_TEST", "").startswith("postgresql"),
+    reason="requires a disposable PostgreSQL base URL",
+)
+def test_0013_postgresql_upgrade_downgrade_reupgrade(monkeypatch):
+    database_url, admin_engine = _create_isolated_postgresql_database(
+        os.environ["DATABASE_URL_TEST"]
+    )
+    try:
+        _set_database_url(monkeypatch, database_url)
+        config = _alembic_config()
+        command.upgrade(config, "0012_node_delete_command")
+        command.upgrade(config, "head")
+        command.downgrade(config, "0012_node_delete_command")
+        command.upgrade(config, "head")
+        engine = make_engine(database_url)
+        with engine.connect() as connection:
+            assert connection.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar_one() == "0013_node_content_batch_update"
+        engine.dispose()
+    finally:
+        _drop_isolated_postgresql_database(database_url, admin_engine)
 
 
 @pytest.mark.skipif(
