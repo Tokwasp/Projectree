@@ -6,6 +6,10 @@ import com.ssafy.projectree.domain.mail.entity.MailSendStatus;
 import com.ssafy.projectree.domain.mail.repository.InvitationMailRepository;
 import com.ssafy.projectree.domain.member.Member;
 import com.ssafy.projectree.domain.member.repository.MemberRepository;
+import com.ssafy.projectree.domain.notification.entity.Notification;
+import com.ssafy.projectree.domain.notification.entity.NotificationType;
+import com.ssafy.projectree.domain.notification.repository.NotificationRepository;
+import com.ssafy.projectree.domain.notification.service.NotificationPublisher;
 import com.ssafy.projectree.domain.project.entity.InvitationStatus;
 import com.ssafy.projectree.domain.project.entity.Project;
 import com.ssafy.projectree.domain.project.entity.ProjectInvitation;
@@ -26,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +39,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class ProjectInvitationServiceTest extends IntegrationTestSupport {
@@ -61,8 +67,15 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
     @Autowired
     private InvitationMailRepository invitationMailRepository;
 
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @MockitoBean
+    private NotificationPublisher notificationPublisher;
+
     @AfterEach
     void clearDatabase() {
+        notificationRepository.deleteAll();
         invitationMailRepository.deleteAll();
         projectInvitationRepository.deleteAll();
         projectMemberRepository.deleteAll();
@@ -502,6 +515,13 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         assertThat(mail.getInvitationId()).isEqualTo(invitation.getId());
         assertThat(mail.getInviteLink()).startsWith(INVITATION_BASE_URL);
         assertThat(invitationTokenGenerator.hash(rawToken)).isEqualTo(invitation.getTokenHash());
+        assertThat(notificationRepository.findAll())
+                .singleElement()
+                .extracting(Notification::getType, Notification::getReceiverId)
+                .containsExactly(
+                        NotificationType.PROJECT_INVITATION_RECEIVED,
+                        invitee.getId()
+                );
     }
 
     @DisplayName("쿨다운이 지난 PENDING 초대를 다시 요청하면 토큰을 갱신하고 메일을 추가한다.")
@@ -531,6 +551,7 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         });
         assertThat(found.getTokenHash()).isNotEqualTo("old-token");
         assertThat(invitationMailRepository.findAll()).hasSize(2);
+        assertThat(notificationRepository.findAll()).isEmpty();
     }
 
     @DisplayName("방금 만든 초대를 다시 요청하면 쿨다운으로 처리되고 메일을 추가하지 않는다.")
@@ -559,6 +580,13 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         assertThat(projectInvitationRepository.findById(invitation.getId()).orElseThrow().getTokenHash())
                 .isEqualTo(previousTokenHash);
         assertThat(invitationMailRepository.findAll()).hasSize(1);
+        assertThat(notificationRepository.findAll())
+                .hasSize(1)
+                .extracting(Notification::getType, Notification::getReceiverId)
+                .containsExactly(tuple(
+                        NotificationType.PROJECT_INVITATION_RECEIVED,
+                        invitee.getId()
+                ));
     }
 
     @DisplayName("거절된 초대를 다시 요청하면 PENDING 상태의 새 초대로 되살린다.")
@@ -590,6 +618,13 @@ class ProjectInvitationServiceTest extends IntegrationTestSupport {
         });
         assertThat(projectInvitationRepository.findById(invitation.getId()).orElseThrow().getStatus())
                 .isEqualTo(InvitationStatus.PENDING);
+        assertThat(notificationRepository.findAll())
+                .singleElement()
+                .extracting(Notification::getType, Notification::getReceiverId)
+                .containsExactly(
+                        NotificationType.PROJECT_INVITATION_RECEIVED,
+                        invitee.getId()
+                );
     }
 
     @DisplayName("다건 초대는 대상별 실패를 결과로 반환하고 정상 대상만 저장한다.")

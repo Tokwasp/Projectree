@@ -7,12 +7,14 @@ import com.ssafy.projectree.domain.member.repository.MemberRepository;
 import com.ssafy.projectree.domain.project.controller.dto.response.InviteTargetResponse;
 import com.ssafy.projectree.domain.project.entity.ProjectInvitation;
 import com.ssafy.projectree.domain.project.entity.InvitationStatus;
+import com.ssafy.projectree.domain.project.event.ProjectInvitationReceivedNotificationEvent;
 import com.ssafy.projectree.domain.project.repository.ProjectInvitationRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectMemberRepository;
 import com.ssafy.projectree.domain.project.repository.ProjectRepository;
 import com.ssafy.projectree.domain.project.service.result.InviteResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class ProjectInvitationProcessor {
     private final ProjectInvitationRepository projectInvitationRepository;
     private final InvitationMailRepository invitationMailRepository;
     private final InvitationTokenGenerator invitationTokenGenerator;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Value("${app.invitation.base-url}")
     private String invitationBaseUrl;
@@ -87,6 +90,7 @@ public class ProjectInvitationProcessor {
                 .build();
         ProjectInvitation savedInvitation = projectInvitationRepository.save(invitation);
         queueMail(savedInvitation.getId(), invitee.getEmail(), token.rawToken());
+        publishInvitationReceivedNotification(invitee.getId());
 
         return result(invitee.getId(), InviteResult.INVITED);
     }
@@ -111,8 +115,15 @@ public class ProjectInvitationProcessor {
         InvitationToken token = invitationTokenGenerator.generate();
         invitation.reinvite(token.tokenHash(), now);
         queueMail(invitation.getId(), invitee.getEmail(), token.rawToken());
+        publishInvitationReceivedNotification(invitee.getId());
 
         return result(invitee.getId(), InviteResult.INVITED);
+    }
+
+    private void publishInvitationReceivedNotification(int inviteeMemberId) {
+        applicationEventPublisher.publishEvent(
+                new ProjectInvitationReceivedNotificationEvent(inviteeMemberId)
+        );
     }
 
     private void queueMail(int invitationId, String recipientEmail, String rawToken) {
