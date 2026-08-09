@@ -100,7 +100,8 @@ class MeetingAnalysisRequestServiceTest {
     @CsvSource({
             "true, true, PROCESSING, PROCESSING",
             "true, false, PROCESSING, SKIPPED",
-            "false, true, SKIPPED, PROCESSING"
+            "false, true, SKIPPED, PROCESSING",
+            "false, false, SKIPPED, SKIPPED"
     })
     void confirmsOptionsAndSavesOutbox(
             boolean generateSummary,
@@ -162,29 +163,6 @@ class MeetingAnalysisRequestServiceTest {
         lockOrder.verify(projectRepository).findByIdForUpdate(PROJECT_ID);
         lockOrder.verify(meetingRepository)
                 .findByProjectIdAndRoomNameForUpdate(PROJECT_ID, ROOM_NAME);
-    }
-
-    @Test
-    void rejectsRequestWithNoSelectedTaskBeforeRepositoriesAndGuard() {
-        assertThatThrownBy(() -> service.requestAnalysis(
-                PROJECT_ID,
-                ROOM_NAME,
-                MEMBER_ID,
-                new MeetingAnalysisRequest(false, false)
-        ))
-                .isInstanceOf(CustomException.class)
-                .extracting(exception -> ((CustomException) exception).getErrorCode())
-                .isEqualTo(MeetingErrorCode.ANALYSIS_TASK_NOT_SELECTED);
-
-        verify(meetingRepository, never())
-                .findByProjectIdAndRoomNameForUpdate(any(Integer.class), any());
-        verify(graphOperationGuard, never()).acquire(
-                any(Integer.class),
-                any(),
-                any(),
-                any()
-        );
-        verify(outboxRepository, never()).saveAndFlush(any());
     }
 
     @Test
