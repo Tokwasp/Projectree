@@ -19,7 +19,7 @@ pipeline {
                     branches: [[name: '*/Develop_BE']],
                     userRemoteConfigs: [[
                         credentialsId: "${GITLAB_CREDENTIAL_ID}",
-                        url: 'https://lab.ssafy.com/s15-webmobile1-sub1/S15P11D205.git'
+                        url: 
                     ]]
                 )
             }
