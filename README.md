@@ -97,6 +97,7 @@ S15P11D205/
 ## 📄 문서 / 트러블슈팅
 
 - [메시징 큐 적용](docs/troubleshooting/messaging-queue.md)
+- [실시간 알림 예외 처리](docs/troubleshooting/realtime-notification-exception-handling.md)
 
 ## 👥 팀 소개
 
