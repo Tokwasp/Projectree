@@ -135,11 +135,12 @@ docker compose up -d   # http://localhost:5173
 - [data-pipeline 자동 그래프 생성 개요](data-pipeline/docs/architecture/automatic-graph-overview.md)
 - [data-pipeline 노드 자동 병합 계약](data-pipeline/docs/AUTOMATIC_NODE_MERGE_CONTRACT.md)
 - [포팅 매뉴얼](exec/Projectree_포팅매뉴얼.pdf)
+- [메시징 큐 적용](docs/troubleshooting/messaging-queue.md)
 
 주요 트러블슈팅 하이라이트:
 - **트리 노드 라벨 렌더링 성능**: 노드 수만큼 DOM 라벨이 늘어나 1,000개 기준 평균 9.3 FPS까지 저하 → 표시할 라벨을 고정하고 리렌더를 제거해 라벨 DOM -85%, 평균 45.4 FPS(4.9배), JS 힙 -66% 개선
 - **트리 노드 저장 구조**: 최단 경로 탐색에는 Neo4j가 유리하지만 팀 상황을 고려해 RDB + JSON 구조를 선택
-- **노드 생성 요청 유실**: 단순 요청/응답 구조에서 노드 생성 요청이 유실되는 문제 → SQS 기반 생산/소비 + 콜백 구조로 전환해 해결
+- **[노드 생성 요청 유실 → 메시징 큐 적용](docs/troubleshooting/messaging-queue.md)**: HTTP + `@Async` 콜백 구조에서 서버 종료 시 요청이 애플리케이션 메모리와 함께 유실되는 문제 → AWS SQS + DLQ 기반 비동기 큐로 전환해 요청을 서버 외부에 영속시키고, 3회 이상 실패한 작업은 DLQ로 격리해 해결
 
 ## 👥 팀 소개
 
