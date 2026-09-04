@@ -57,6 +57,7 @@
    - Mixed-Audio Queue → EC2 FastAPI Worker → Naver Clova STT → LLM 분석 → 회의록·노드 그래프 생성
    - Personal-Audio Queue → EC2 Spring AI Worker → OpenAI 호환 API → 개인별 피드백 생성
 
+---
 ## 📦 폴더 구조
 
 ```text
