@@ -51,11 +51,21 @@
 
 <img width="3963" height="2436" alt="Projectree" src="https://github.com/user-attachments/assets/80f1d5c1-5ee0-4c25-8171-89254aa668e7" />
 
-
 1. **화상 회의** — OpenVidu 3를 별도 EC2로 분리해 WebRTC 화상 회의/녹음을 처리
 2. **파이프라인** — 녹음 오디오를 Mixed-Audio Queue / Personal-Audio Queue(SQS) 두 개로 나눠 비동기 처리
    - Mixed-Audio Queue → EC2 FastAPI Worker → Naver Clova STT → LLM 분석 → 회의록·노드 그래프 생성
    - Personal-Audio Queue → EC2 Spring AI Worker → OpenAI 호환 API → 개인별 피드백 생성
+
+---
+## Jira 활용 방식
+
+### 이슈 계층 구조
+`에픽(Epic) → 스토리(Story) → 하위 작업(Sub-task)` 3단계로 업무를 분해해 관리
+
+- **에픽**: 기능 단위의 큰 묶음 (예: `사용자 인증`)
+- **스토리**: 사용자 관점의 기능 (예: `소셜 로그인`, `로그아웃`, `회원 탈퇴`, `프로필 조회`)
+- **하위 작업**: 실제 구현 단위 작업 (예: `[BE] 회원 탈퇴 API 만들기`)
+<img width="1414" height="556" alt="image" src="https://github.com/user-attachments/assets/6a3eb968-3730-49de-b332-08e4f8eca372" />
 
 ---
 ## 📦 폴더 구조
