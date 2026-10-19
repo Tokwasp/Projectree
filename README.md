@@ -41,7 +41,7 @@
     <td align="center" width="50%">
       <b>AI 개인 피드백</b><br><br>
       <img src="docs/images/feature-personal-feedback.png" width="400"><br>
-      참석자별 발화를 분석해 말하기 속도·습관 피드백과<br>팀원별 발화 비율 제공
+      참석자마다 말하기 습관 피드백 제공<br>팀원별 발화 비율 확인
     </td>
   </tr>
 </table>
