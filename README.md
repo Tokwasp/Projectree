@@ -4,17 +4,54 @@
 
 화상 회의 음성을 AI를 통해 회의록을 만들고, 결정·작업·이슈를 **3D 그래프**로 시각화하여 프로젝트 관리하는 서비스
 
-<img width="1920" height="975" alt="image" src="https://github.com/user-attachments/assets/2d795455-1bc2-414a-ad3f-30188f415345" />
-<img width="2879" height="1456" alt="image" src="https://github.com/user-attachments/assets/a7dfdc0f-ce34-4039-813b-bc7a117c012b" />
-
-
 ---
 ## 🚀 주요 기능
 
-- **실시간 녹음 화상 회의** — OpenVidu 기반 화상 회의를 진행하며 음성을 녹음합니다.
-- **회의 분석 기반 회의록 생성** — 녹음된 음성을 STT로 텍스트화하고 LLM으로 요약해 회의 요약을 자동 생성합니다.
-- **회의 분석 기반 프로젝트 시각화** — 회의에서 추출한 결정/작업/이슈를 노드로 만들어 three.js 기반 3D 그래프로 시각화합니다.
-- **개인별 회의 피드백** — 화자 분리를 통해 참석자별 발화를 분석하고 개인별 피드백을 제공합니다.
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <b>프로젝트 생성</b><br><br>
+      <img src="docs/images/feature-project-create.png" width="400"><br>
+      프로젝트를 만들면 분야별(Frontend·Backend·AI 등)<br>기본 노드가 자동으로 생성
+    </td>
+    <td align="center" width="50%">
+      <b>팀원 초대</b><br><br>
+      <img src="docs/images/feature-team-invite.png" width="400"><br>
+      이메일로 여러 명의 팀원을 한 번에 초대
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <b>실시간 녹음 화상 회의</b><br><br>
+      <img src="https://github.com/user-attachments/assets/2d795455-1bc2-414a-ad3f-30188f415345" width="400"><br>
+      화상 회의를 진행하며 음성을 자동으로 녹음
+    </td>
+    <td align="center" width="50%">
+      <b>회의 종료 후 AI 산출물 선택</b><br><br>
+      <img src="docs/images/feature-meeting-end.png" width="400"><br>
+      회의를 마치면 필요한 산출물<br>(회의록·노드)을 골라 생성
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <b>AI 회의록</b><br><br>
+      <img src="docs/images/feature-meeting-minutes.png" width="400"><br>
+      회의 음성을 텍스트로 바꾸고<br>요약·결정 사항·다음 할 일을 자동 정리
+    </td>
+    <td align="center" width="50%">
+      <b>3D 노드 시각화</b><br><br>
+      <img src="https://github.com/user-attachments/assets/a7dfdc0f-ce34-4039-813b-bc7a117c012b" width="400"><br>
+      회의에서 나온 결정·작업·이슈를<br>노드로 연결해 프로젝트 흐름을 한눈에 확인
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <b>AI 개인 피드백</b><br><br>
+      <img src="docs/images/feature-personal-feedback.png" width="600"><br>
+      참석자별 발화를 분석해 말하기 속도·습관 피드백과 팀원별 발화 비율 제공
+    </td>
+  </tr>
+</table>
 
 ---
 ## 🛠️ 기술 스택
