@@ -117,7 +117,7 @@ S15P11D205/
 
 ## 📄 문서 / 트러블슈팅
 
-- [메시징 큐 적용](docs/troubleshooting/messaging-queue.md)
+- [SQS 도입으로 회의 분석 요청 유실 방지](docs/troubleshooting/messaging-queue.md)
 
 ## 👥 팀 소개
 
