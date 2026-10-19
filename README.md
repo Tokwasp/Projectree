@@ -18,30 +18,21 @@
 
 ---
 ## 🛠️ 기술 스택
-### Frontend (`Frontend/`)
-- React 19 + TypeScript, Vite 8
-- React Router DOM, Zustand (상태 관리)
-- three.js / React Three Fiber / drei — 3D 노드 그래프 렌더링
 
-### Backend (`Backend/`)
-- Java 21, Spring Boot 4.1.0 (Spring MVC, Spring Data JPA, QueryDSL)
-- MySQL 8.0, Redis
-- AWS SDK(SQS, S3)
-- 배포: AWS ECS Fargate
+### Frontend
+- React, TypeScript, Vite
+- Zustand, React Router
+- three.js, React Three Fiber (3D 노드 그래프)
 
-### data-pipeline (`data-pipeline/`)
-- Python 3.11, FastAPI + Uvicorn
-- SQLAlchemy + Alembic, PostgreSQL(pgvector)
-- Naver Clova Speech(STT), OpenAI 호환 GMS Client(LLM)
+### Backend
+- Java 21, Spring Boot, Spring Data JPA, QueryDSL
+- Python, FastAPI, SQLAlchemy
+- MySQL, PostgreSQL(pgvector), Redis
+- Naver Clova Speech(STT), LLM(GMS), ffmpeg
 
-### personal-audio-backend (`personal-audio-backend/`)
-- Java 21, Spring Boot 4.1.0
-- MySQL, AWS SQS/S3, ffmpeg(음성 처리)
-- OpenAI 호환 GMS Client — 개인별 회의 피드백 생성
-- 배포: EC2
-
-### Infra / CI-CD
-- AWS: Route 53, ALB, VPC, ECS Fargate, EC2, RDS, S3, SQS
+### Infra
+- AWS ECS Fargate, EC2, RDS, S3, SQS, ALB, Route 53, VPC
+- OpenVidu (화상 회의 서버)
 - Upstash Redis, Jenkins, Vercel
 
 ---
