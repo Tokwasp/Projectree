@@ -103,16 +103,16 @@
 
 ```text
 S15P11D205/
-├─ Backend/                 # Spring Boot API 서버 (회원/프로젝트/회의/노드 도메인)
+├─ Backend/                 # API 서버
 │  └─ src/main/java/com/ssafy/projectree/domain/
 │     ├─ member/ project/ meeting/ meetingreview/ nodeCategory/ notification/ mail/ uploadfile/
-├─ Frontend/                # React + Vite SPA
-│  └─ src/page/             # Auth/ Home/ Landing/ MyPage/ Project(Create/Home/Meeting/Tree/Member/...)
-├─ data-pipeline/            # Python FastAPI 기반 회의 분석·노드 생성 파이프라인
-│  └─ data_pipeline/         # api/ meeting_analysis/ stt/ llm/ storage/ worker/ outbox_publisher/ ...
-├─ personal-audio-backend/  # 개인별 회의 피드백 생성 Spring Boot 서버
+├─ Frontend/                # 웹 화면
+│  └─ src/page/
+├─ data-pipeline/           # 회의 분석·노드 생성
+│  └─ data_pipeline/
+├─ personal-audio-backend/  # 개인 피드백 서버
 │  └─ src/main/java/ssafy/personal_audio_backend/domain/review/
-└─ exec/                     # 포팅 매뉴얼 등 실행/배포 산출물
+└─ exec/                    # 포팅 매뉴얼
 ```
 
 ## 📄 문서 / 트러블슈팅
