@@ -12,7 +12,7 @@
     <td align="center" width="50%">
       <b>프로젝트 생성</b><br><br>
       <img src="docs/images/feature-project-create.png" width="400"><br>
-      프로젝트를 만들면 분야별(Frontend·Backend·AI 등)<br>기본 노드가 자동으로 생성
+      프로젝트명, 소개, 대표 이미지를 입력받아<br>프로젝트를 생성
     </td>
     <td align="center" width="50%">
       <b>팀원 초대</b><br><br>
