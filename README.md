@@ -29,7 +29,7 @@
     <td align="center" width="50%">
       <b>회의록 요약</b><br><br>
       <img src="docs/images/feature-meeting-minutes.png" width="400"><br>
-      회의 음성을 STT로 변환 후<br>요약, 결정 사항, 다음 할 일 등으로 정리
+      회의 음성을 텍스트로 변환<br>핵심 내용을 자동으로 요약
     </td>
   </tr>
   <tr>
