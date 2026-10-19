@@ -36,7 +36,7 @@
     <td align="center" width="50%">
       <b>3D 노드 시각화</b><br><br>
       <img src="https://github.com/user-attachments/assets/a7dfdc0f-ce34-4039-813b-bc7a117c012b" width="400"><br>
-      회의에서 나온 결정·작업·이슈를<br>노드로 연결해 프로젝트 흐름을 한눈에 확인
+      회의 내용을 노드로 3D 시각화<br>프로젝트 흐름을 한눈에 확인
     </td>
     <td align="center" width="50%">
       <b>AI 개인 피드백</b><br><br>
