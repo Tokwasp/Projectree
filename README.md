@@ -124,7 +124,7 @@ S15P11D205/
 
 ## 📄 문서 / 트러블슈팅
 
-- [SQS 도입으로 회의 분석 요청 유실 방지](docs/troubleshooting/messaging-queue.md)
+- [서버 배포 중 발생한 회의 분석 요청 유실 문제를 SQS·DLQ 도입으로 해결](docs/troubleshooting/messaging-queue.md)
 
 ## 👥 팀 소개
 
